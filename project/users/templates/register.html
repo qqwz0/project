@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Реєстрація </title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+   </head>
+<body>
+ <div class="wrapper">
+  <h2>Реєстрація</h2>
+  <form action="#">
+<div class="input-box">
+  <input type="email" placeholder="Корпоративна скринька" required>
+</div>
+<div class="input-box">
+  <input type="text" placeholder="Академічна група" required>
+</div>
+<div class="input-box">
+  <input type="text" placeholder="Пароль" required>
+</div>
+<div class="input-box">
+  <input type="text" placeholder="Підтвердити пароль" required>
+</div>
+{% comment %} <div class="policy">
+  <input type="checkbox" >
+  <h3>I accept terms and conditions</h3>
+
+</div> {% endcomment %}
+<div class="input-box button">
+  <input type="submit" value="Зареєструватися">
+</div>
+<div class="text">
+  <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
+</div>
+  </form>
+ </div>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Вхід </title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+   </head>
+<body>
+ <div class="wrapper">
+  <h2>Вхід</h2>
+  <form action="#">
+<div class="input-box">
+  <input type="email" placeholder="Корпоративна скринька" required>
+</div>
+<div class="input-box">
+  <input type="text" placeholder="Пароль" required>
+</div>
+{% comment %} <div class="policy">
+  <input type="checkbox" >
+  <h3>I accept terms and conditions</h3>
+
+</div> {% endcomment %}
+<div class="input-box button">
+  <input type="submit" value="Увійти">
+</div>
+<div class="text">
+  <h3>Ще не маєш облікового запису?<a href="{% url 'register' %}">Зареєструйся!</a></h3>
+</div>
+  </form>
+ </div>
+
+</body>
+</html>
