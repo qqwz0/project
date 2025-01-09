@@ -1,0 +1,28 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+
+# Django
+*.log
+*.pot
+db.sqlite3
+media/
+staticfiles/
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+venv.bak/
+*.egg-info/
+
+# Pytest
+.cache/
