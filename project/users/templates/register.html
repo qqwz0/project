@@ -3,39 +3,79 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Реєстрація </title>
+    <title>Реєстрація</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/register.css' %}">
-   </head>
+    <script>
+      function updateField(role) {
+        const groupContainer = document.getElementById("group-or-department-container");
+
+        if (role === "student") {
+          // Replace dropdown with input field for "Академічна група"
+          groupContainer.innerHTML = `
+            <input type="text" id="group-or-department" placeholder="Академічна група" name="academic_group" required>
+          `;
+        } else if (role === "teacher") {
+          // Replace input field with dropdown for "Кафедра"
+          groupContainer.innerHTML = `
+            <select id="group-or-department" name="department" required>
+              <option value="opto">Оптоелектроніки та інформаційних технологій</option>
+              <option value="rks">Радіоелектроніки і комп'ютерних систем</option>
+              <option value="rkt">Радіофізики та комп'ютерних технологій</option>
+              <option value="sne">Сенсорної та напівпровідникової електроніки</option>
+              <option value="sp">Системного проектування</option>
+              <option value="kfbe">Кафедра фізичної та біомедичної електроніки</option>
+            </select>
+          `;
+        }
+      }
+
+      // Initialize "Студент" role as default on page load
+      window.onload = () => {
+        updateField('student');
+      };
+    </script>
+  </head>
 <body>
- <div class="wrapper">
-  <h2>Реєстрація</h2>
-  <form action="#">
-<div class="input-box">
-  <input type="email" placeholder="Корпоративна скринька" required>
-</div>
-<div class="input-box">
-  <input type="text" placeholder="Академічна група" required>
-</div>
-<div class="input-box">
-  <input type="text" placeholder="Пароль" required>
-</div>
-<div class="input-box">
-  <input type="text" placeholder="Підтвердити пароль" required>
-</div>
-{% comment %} <div class="policy">
-  <input type="checkbox" >
-  <h3>I accept terms and conditions</h3>
-
-</div> {% endcomment %}
-<div class="input-box button">
-  <input type="submit" value="Зареєструватися">
-</div>
-<div class="text">
-  <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
-</div>
-  </form>
- </div>
-
+  <div class="wrapper">
+    <h2>Реєстрація</h2>
+    <form action="#">
+      <!-- Role Selection -->
+      <div class="role-selection">
+        <h3>Ви студент чи викладач?</h3>
+        <label>
+          <input type="radio" name="role" value="student" required onclick="updateField('student')" checked>
+          Студент
+        </label>
+        <label>
+          <input type="radio" name="role" value="teacher" required onclick="updateField('teacher')">
+          Викладач
+        </label>
+      </div>
+      <!-- Email -->
+      <div class="input-box">
+        <input type="email" placeholder="Корпоративна скринька" required>
+      </div>
+      <!-- Group or Department -->
+      <div class="input-box" id="group-or-department-container">
+        <!-- This will be dynamically replaced by JavaScript -->
+      </div>
+      <!-- Password -->
+      <div class="input-box">
+        <input type="password" placeholder="Пароль" required>
+      </div>
+      <div class="input-box">
+        <input type="password" placeholder="Підтвердити пароль" required>
+      </div>
+      <!-- Submit -->
+      <div class="input-box button">
+        <input type="submit" value="Зареєструватися">
+      </div>
+      <!-- Login Link -->
+      <div class="text">
+        <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
+      </div>
+    </form>
+  </div>
 </body>
 </html>
