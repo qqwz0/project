@@ -10,72 +10,134 @@
       function updateField(role) {
         const groupContainer = document.getElementById("group-or-department-container");
 
-        if (role === "student") {
-          // Replace dropdown with input field for "Академічна група"
+        if (role === "Студент") {
           groupContainer.innerHTML = `
-            <input type="text" id="group-or-department" placeholder="Академічна група" name="academic_group" required>
+            <div class="input-box">
+              {{ form.group }}
+            </div>
+            {% if form.group.errors %}
+              <div class="error-message">
+                {% for error in form.group.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
           `;
-        } else if (role === "teacher") {
-          // Replace input field with dropdown for "Кафедра"
+        } else if (role === "Викладач") {
           groupContainer.innerHTML = `
-            <select id="group-or-department" name="department" required>
-              <option value="opto">Оптоелектроніки та інформаційних технологій</option>
-              <option value="rks">Радіоелектроніки і комп'ютерних систем</option>
-              <option value="rkt">Радіофізики та комп'ютерних технологій</option>
-              <option value="sne">Сенсорної та напівпровідникової електроніки</option>
-              <option value="sp">Системного проектування</option>
-              <option value="kfbe">Кафедра фізичної та біомедичної електроніки</option>
-            </select>
+            <div class="input-box">
+              <label for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>
+                {{ form.department }}
+            </div>
+
+            {% if form.group.errors %}
+              <div class="error-message">
+                {% for error in form.department.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
           `;
         }
       }
 
-      // Initialize "Студент" role as default on page load
       window.onload = () => {
-        updateField('student');
+        // Set the initial field based on the default selected role
+        const role = document.querySelector('input[name="role"]:checked').value;
+        updateField(role);
+
+        // Add an event listener to the radio buttons to update the field dynamically
+        const roleRadios = document.querySelectorAll('input[name="role"]');
+        roleRadios.forEach(radio => {
+          radio.addEventListener('change', function() {
+            updateField(this.value);
+          });
+        });
       };
     </script>
   </head>
-<body>
-  <div class="wrapper">
-    <h2>Реєстрація</h2>
-    <form action="#">
-      <!-- Role Selection -->
-      <div class="role-selection">
-        <h3>Ви студент чи викладач?</h3>
-        <label>
-          <input type="radio" name="role" value="student" required onclick="updateField('student')" checked>
-          Студент
-        </label>
-        <label>
-          <input type="radio" name="role" value="teacher" required onclick="updateField('teacher')">
-          Викладач
-        </label>
-      </div>
-      <!-- Email -->
-      <div class="input-box">
-        <input type="email" placeholder="Корпоративна скринька" required>
-      </div>
-      <!-- Group or Department -->
-      <div class="input-box" id="group-or-department-container">
-        <!-- This will be dynamically replaced by JavaScript -->
-      </div>
-      <!-- Password -->
-      <div class="input-box">
-        <input type="password" placeholder="Пароль" required>
-      </div>
-      <div class="input-box">
-        <input type="password" placeholder="Підтвердити пароль" required>
-      </div>
-      <!-- Submit -->
-      <div class="input-box button">
-        <input type="submit" value="Зареєструватися">
-      </div>
-      <!-- Login Link -->
-      <div class="text">
-        <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
-      </div>
-    </form>
-  </div>
-</body>
+  <body>
+    <div class="wrapper">
+      <h2>Реєстрація</h2>
+      <form method="POST" action="{% url 'register' %}">
+        {% csrf_token %}
+        <div class="role-selection">
+          <h3>Ви студент чи викладач?</h3>
+          <label>
+            {{ form.role }}
+            {% if form.role.errors %}
+              <div class="error-message">
+                {% for error in form.role.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </label>
+        </div>
+
+        <!-- Email input field with error handling -->
+        <div class="input-box">
+          {{ form.email }}
+        </div>
+        {% if form.email.errors %}
+            <div class="error-message">
+              {% for error in form.email.errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+        <div id="group-or-department-container">
+          <!-- Initially empty, JavaScript will populate based on role selection -->
+        </div>
+
+        <!-- Password input fields with error handling -->
+        <div class="input-box">
+          {{ form.password1 }}
+        </div>
+        {% if form.password1.errors %}
+          <div class="error-message">
+            {% for error in form.password1.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="input-box">
+          {{ form.password2 }}
+          {% if form.password2.errors %}
+            <div class="error-message">
+              {% for error in form.password2.errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="error-message">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="input-box button">
+          <button type="submit" class="register-button">Зареєструватися</button>
+        </div>
+        <div class="text">
+          <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
+        </div>
+      </form>
+    </div>
+
+    <style>
+      .error-message {
+        color: red;
+        font-weight: bold;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+    </style>
+  </body>
 </html>
