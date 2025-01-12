@@ -56,6 +56,30 @@ class RegistrationForm(forms.Form):
         widget=forms.Select,
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Check if self.data is empty
+        if not self.data:
+            role = self.initial.get('role', 'Студент')  # Default to 'Студент' if no data
+        else:
+            role = self.data.get('role')  # Get the role from the submitted data
+
+        # Dynamically set 'required' based on the role
+        if role == 'Студент':
+            self.fields['group'].required = True
+            self.fields['department'].required = False
+        elif role == 'Викладач':
+            self.fields['department'].required = True
+            self.fields['group'].required = False
+        else:
+            self.fields['group'].required = False
+            self.fields['department'].required = False
+
+        # Ensure that the correct 'required' attribute is reflected in the widget
+        self.fields['group'].widget.attrs['required'] = self.fields['group'].required
+        self.fields['department'].widget.attrs['required'] = self.fields['department'].required
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if not email.endswith('@lnu.edu.ua'):
@@ -80,6 +104,17 @@ class RegistrationForm(forms.Form):
             if not re.match(pattern, group):
                 raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕМ-33 тощо.")
         return group
+    
+    def clean_department(self):
+        department = self.cleaned_data.get('department')
+        role = self.cleaned_data.get('role')
+
+        # If the role is "Студент", check if the group matches the required pattern
+        if role == 'Викладач':
+            if not department:
+                raise ValidationError("Це поле обов'язкове.")
+        
+        return department
     
     def clean_password1(self):
         password = self.cleaned_data.get('password1')

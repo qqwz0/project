@@ -11,6 +11,7 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
     academic_group = models.CharField(max_length=6, blank=False, null=True)  # For students
     department = models.CharField(max_length=100, blank=False, null=True)   # For teachers
+    is_active = models.BooleanField(default=False)
 
     username = None
 

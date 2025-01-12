@@ -119,6 +119,6 @@ form h3{
 }
 
 .register-button:active {
-  background: #5c1f8a;
+  background: #ded2e8;
   transform: translateY(1px);
 }

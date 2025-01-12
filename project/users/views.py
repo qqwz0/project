@@ -1,13 +1,42 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, get_user_model
 from .forms import RegistrationForm
 from .models import CustomUser
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.template.loader import render_to_string
+
+logger = logging.getLogger(__name__)
 
 def login(request):
     return render(request, 'login.html')
+
+def send_confirmation_email(first_name, last_name, email):
+    try:
+        # Log the email details for debugging
+        logger.debug(f"Надсилаю лист підтвердження на пошту {email}...")
+        
+        # Send the email
+        send_mail(
+            'Підтвердження реєстрації',
+            f'Вітаю {first_name} {last_name},\n\nДякуємо за реєстрацію на нашій платформі.',
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+        logger.info(f"Лист успішно надіслано на пошту {email}")
+    
+    except Exception as e:
+        # Log the error
+        logger.error(f"Не вийшло надіслати лист на {email}. Помилка: {str(e)}")
+        # Optionally, print the error for immediate feedback during development
+        print(f"Виникла помилка з надсиланням листа: {e}")
 
 
 def register(request):
@@ -52,6 +81,9 @@ def register(request):
                     )
 
                 user.save()
+
+                send_confirmation_email(first_name, last_name, email)
+
                 return redirect('login')
             except IntegrityError as e:
                 # Catch IntegrityError (duplicate email in this case)
