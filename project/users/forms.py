@@ -81,7 +81,7 @@ class RegistrationForm(forms.Form):
         self.fields['department'].widget.attrs['required'] = self.fields['department'].required
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get('email').lower()
         if not email.endswith('@lnu.edu.ua'):
             raise ValidationError("Email повинен закінчуватися на '@lnu.edu.ua'")
         return email
