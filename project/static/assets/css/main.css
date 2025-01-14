@@ -1,0 +1,203 @@
+:root {
+  --default-font: "EB Garamond", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --heading-font: "EB Garamond", sans-serif;
+  --nav-font: "Inter", sans-serif;
+
+  --background-color: #ffffff;
+  --default-color: #212529;
+  --heading-color: #535353;
+  --accent-color: #465367;
+  
+  --nav-color: #6a6a6a;
+  --nav-hover-color: #465367;
+  --stars-color: #535353;
+}
+
+body {
+  color: var(--default-color);
+  background-color: var(--background-color);
+  font-family: var(--default-font);
+}
+
+a {
+  color: var(--accent-color);
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+a:hover {
+  color: color-mix(in srgb, var(--accent-color), transparent 25%);
+  text-decoration: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--heading-color);
+  font-family: var(--heading-font);
+}
+
+.header {
+  --background-color: #f2f2f2;
+  color: var(--default-color);
+  height: 70px;
+  background-color: var(--background-color);
+  padding: 10px 0;
+  transition: all 0.5s;
+  z-index: 997;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header .logo h1 {
+  font-size: 30px;
+  margin-left:auto;
+  margin: 0;
+  font-weight: 500;
+  color: var(--heading-color);
+}
+
+.navmenu {
+  display: flex;
+  margin-left: auto;
+
+}
+
+.navmenu ul {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navmenu a {
+  color: var(--nav-color);
+  padding: 10px 15px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--nav-font);
+  transition: 0.3s;
+}
+.navmenu a:hover {
+  color: var(--nav-hover-color);
+  transform: translateY(-2px);
+}
+
+.navmenu li:hover {
+  border-bottom: 2px solid var(--nav-hover-color);
+}
+
+@media (min-width: 1200px) {
+  .navmenu ul {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .navmenu li {
+    position: relative;
+    padding: 10px 0;
+  }
+
+  .navmenu a {
+    color: var(--nav-color);
+    padding: 10px 15px;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: var(--nav-font);
+    transition: 0.3s;
+  }
+
+  .navmenu a:hover,
+  .navmenu .active {
+    color: var(--nav-hover-color);
+  }
+}
+
+.main {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.teacher-info {
+  padding: 25px;
+  background-color: #ffffff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.teacher-card {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  flex-direction: row;
+}
+
+.teacher-photo {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.teacher-photo img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.photo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.teacher-details {
+  flex: 1;
+}
+.teacher-info:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+}
+
+.rating-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+ 
+}
+
+.stars {
+  position: relative;
+  font-size: 12px;
+  color: var(--stars-color);
+}
+
+.stars i.fas {
+  color: var(--stars-color);
+}
+
+.stars i.far {
+  color: #ccc;
+}
+
+
+@media (max-width: 768px) {
+  .teacher-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
