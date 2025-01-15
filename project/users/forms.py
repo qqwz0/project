@@ -1,7 +1,10 @@
+import logging
 from django import forms
-from .models import CustomUser
 from django.core.exceptions import ValidationError
 import re  # Regular expressions
+
+# Set up logging for debugging
+logger = logging.getLogger(__name__)
 
 class RegistrationForm(forms.Form):
     ROLE_CHOICES = [
@@ -20,27 +23,9 @@ class RegistrationForm(forms.Form):
 
     role = forms.ChoiceField(
         choices=ROLE_CHOICES,
-        widget=forms.RadioSelect,
+        widget=forms.RadioSelect(attrs={'class': 'custom-radio-class'}),
         required=True,
         initial="Студент"
-    )
-
-    email = forms.EmailField(
-        label='Корпоративна скринька',
-        required=True,
-        widget=forms.EmailInput(attrs={'placeholder': 'Корпоративна скринька'})
-    )
-
-    password1 = forms.CharField(
-        label='Пароль', 
-        widget=forms.PasswordInput(attrs={'placeholder': 'Введіть пароль'}), 
-        required=True
-    )
-
-    password2 = forms.CharField(
-        label='Підтвердити пароль',
-        widget=forms.PasswordInput(attrs={'placeholder': 'Підтвердьте пароль'}),
-        required=True
     )
 
     group = forms.CharField(
@@ -63,7 +48,10 @@ class RegistrationForm(forms.Form):
         if not self.data:
             role = self.initial.get('role', 'Студент')  # Default to 'Студент' if no data
         else:
-            role = self.data.get('role')  # Get the role from the submitted data
+            role = self.data.get('role', 'Студент')  # Get the role from the submitted data, default to 'Студент'
+
+        # Debugging log for the role selection
+        logger.debug(f"Initializing form with role: {role}")
 
         # Dynamically set 'required' based on the role
         if role == 'Студент':
@@ -80,17 +68,13 @@ class RegistrationForm(forms.Form):
         self.fields['group'].widget.attrs['required'] = self.fields['group'].required
         self.fields['department'].widget.attrs['required'] = self.fields['department'].required
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email').lower()
-        if not email.endswith('@lnu.edu.ua'):
-            raise ValidationError("Email повинен закінчуватися на '@lnu.edu.ua'")
-        return email
-
     def clean_group(self):
         group = self.cleaned_data.get('group')
         role = self.cleaned_data.get('role')
 
-        # If the role is "Студент", check if the group matches the required pattern
+        # Debugging log for group validation
+        logger.debug(f"Cleaning 'group' field with value: {group} for role: {role}")
+
         if role == 'Студент':
             if not group:
                 raise ValidationError("Це поле обов'язкове для студентів.")
@@ -103,47 +87,21 @@ class RegistrationForm(forms.Form):
             pattern = r'^ФЕ[ЇСМЛП]-[1-4][1-9]$'
             if not re.match(pattern, group):
                 raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕМ-33 тощо.")
+        
+        # Debugging log after successful group validation
+        logger.debug(f"Group cleaned successfully: {group}")
+        
         return group
     
     def clean_department(self):
         department = self.cleaned_data.get('department')
         role = self.cleaned_data.get('role')
 
-        # If the role is "Студент", check if the group matches the required pattern
+        # Debugging log for department validation
+        logger.debug(f"Cleaning 'department' field with value: {department} for role: {role}")
+
         if role == 'Викладач':
             if not department:
                 raise ValidationError("Це поле обов'язкове.")
         
         return department
-    
-    def clean_password1(self):
-        password = self.cleaned_data.get('password1')
-
-        # Check password length
-        if len(password) < 8:
-            raise ValidationError("Пароль має бути довжиною не менше 8 символів.")
-        if len(password) > 25:
-            raise ValidationError("Довжина паролю не має перевищувати 25 символів.")
-        
-        # Return the password as-is to retain the value
-        return password
-
-    def clean_password2(self):
-        password1 = self.cleaned_data.get('password1')
-        password2 = self.cleaned_data.get('password2')
-
-        if password1 and password2 and password1 != password2:
-            raise ValidationError("Паролі не співпадають")
-        
-        # Return the second password as-is to retain the value
-        return password2
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password1 = cleaned_data.get('password1')
-        password2 = cleaned_data.get('password2')
-
-        if password1 and password2 and password1 != password2:
-            raise forms.ValidationError("Паролі не співпадають")
-
-        return cleaned_data

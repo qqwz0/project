@@ -1,114 +1,156 @@
+import logging
+import os
+from urllib.parse import urlencode
+
+import requests
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.utils.encoding import force_str
 from django.db import IntegrityError
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-import logging
+from dotenv import load_dotenv
+
 from .forms import RegistrationForm
 from .models import CustomUser
 
+# Load environment variables
+load_dotenv()
+
+# Set up logging
 logger = logging.getLogger(__name__)
 
-def login(request):
-    return render(request, 'login.html')
+# Constants
+MICROSOFT_AUTH_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/authorize"
+MICROSOFT_TOKEN_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/token"
+MICROSOFT_GRAPH_ME_ENDPOINT = f"{settings.MICROSOFT_GRAPH_ENDPOINT}/me"
+CSRF_STATE = "random_string_for_csrf_protection"
 
-def send_confirmation_email(user):
-    try:
-        # Generate confirmation token
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(str(user.pk).encode())
-
-        email_body = (
-            f"Шановний(а) {user.first_name} {user.last_name},\n\n"
-            f"Дякуємо за реєстрацію! Щоб підтвердити ваш обліковий запис, "
-            f"перейдіть за посиланням нижче:\n\n"
-            f"http://localhost:8000/users/confirm/{uid}/{token}/\n\n"
-            f"Якщо ви не реєструвалися на нашому сайті, проігноруйте цей лист.\n\n"
-            f"З повагою,\nКоманда підтримки."
-        )
-
-        send_mail(
-            subject='Підтвердження реєстрації',
-            message=email_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-        logger.info(f"Лист підтвердження надіслано {user.email}")
-    except Exception as e:
-        logger.error(f"Не вийшло надіслати лист до {user.email}. Помилка: {e}")
-
-def confirm_registration(request, uidb64, token):
-    try:
-        uid = urlsafe_base64_decode(uidb64).decode()
-        user = get_object_or_404(CustomUser, pk=uid)
-
-        if default_token_generator.check_token(user, token):
-            user.is_active = True
-            user.save()
-            return render(request, 'success.html')
-        else:
-            return render(request, 'fail.html')
-    except Exception as e:
-        logger.error(f"Помилка підтвердження: {e}")
-        return HttpResponse("Виникла помилка під час підтвердження.")
-
-def register(request):
-    if request.method == 'POST':
+def microsoft_register(request):
+    """
+    Handle the registration process using Microsoft OAuth.
+    """
+    logger.debug("Request method: %s", request.method)
+    if request.method == "POST":
+        logger.debug("POST request received")
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            try:
-                email = form.cleaned_data['email'].lower()
-                password = form.cleaned_data['password1']
-                role = form.cleaned_data['role']
-
-                # Extract names from the email
-                name_part = email.split('@')[0]
-                name_parts = name_part.split('.')
-                if len(name_parts) != 2:
-                    form.add_error('email', "Корпоративна пошта має мати вигляд: ivan.franko@lnu.edu.ua")
-                first_name = name_parts[0].capitalize()
-                last_name = name_parts[1].capitalize()
-
-                if role == 'Студент':
-                    academic_group = form.cleaned_data.get('group')
-                    user = CustomUser(
-                        email=email,
-                        password=make_password(password),
-                        role=role,
-                        academic_group=academic_group,
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_active=False
-                    )
-                elif role == 'Викладач':
-                    department = form.cleaned_data.get('department')
-                    user = CustomUser(
-                        email=email,
-                        password=make_password(password),
-                        role=role,
-                        department=department,
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_active=False
-                    )
-
-                user.save()
-                send_confirmation_email(user)
-
-                return redirect('login')
-            except IntegrityError as e:
-                if 'Duplicate entry' in str(e):
-                    form.add_error('email', "Цей email вже зареєстрований.")
-                else:
-                    form.add_error(None, f"Трапилася неочікувана помилка: {str(e)}")
-            except Exception as e:
-                logger.error(f"Помилка реєстрації: {e}")
-                form.add_error(None, "Виникла помилка при обробці даних.")
+            logger.debug("Form is valid")
+            # Store form data in session
+            request.session["role"] = form.cleaned_data["role"]
+            request.session["group"] = form.cleaned_data.get("group")
+            request.session["department"] = form.cleaned_data.get("department")
+            
+            # Redirect to Microsoft OAuth
+            params = {
+                "client_id": settings.MICROSOFT_CLIENT_ID,
+                "response_type": "code",
+                "redirect_uri": settings.MICROSOFT_REDIRECT_URI,
+                "response_mode": "query",
+                "scope": " ".join(settings.MICROSOFT_SCOPES),
+                "state": CSRF_STATE,
+            }
+            authorization_url = f"{MICROSOFT_AUTH_URL}?{urlencode(params)}"
+            logger.debug("Redirecting to: %s", authorization_url)
+            return redirect(authorization_url)
+        else:
+            logger.debug("Form errors: %s", form.errors)
+            return render(request, "register.html", {"form": form, "errors": form.errors})
     else:
+        logger.debug("GET request received")
         form = RegistrationForm()
 
-    return render(request, 'register.html', {'form': form})
+    return render(request, "register.html", {"form": form})
+
+
+def microsoft_callback(request):
+    """
+    Handle Microsoft's OAuth callback for registration.
+    """
+    code = request.GET.get("code")
+    state = request.GET.get('state')
+    if not code or not state:
+        return JsonResponse({"error": "Authorization code or state not provided"}, status=400)
+
+    data = {
+        "client_id": settings.MICROSOFT_CLIENT_ID,
+        "scope": " ".join(settings.MICROSOFT_SCOPES),
+        "code": code,
+        "redirect_uri": settings.MICROSOFT_REDIRECT_URI,
+        "grant_type": "authorization_code",
+        "client_secret": settings.MICROSOFT_CLIENT_SECRET,
+    }
+
+    try:
+        # Request access token
+        token_response = requests.post(MICROSOFT_TOKEN_URL, data=data)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+        access_token = tokens.get("access_token")
+
+        if not access_token:
+            raise ValidationError("Failed to obtain access token")
+
+        # Fetch user info
+        headers = {"Authorization": f"Bearer {access_token}"}
+        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
+
+        # Extract user details
+        email = user_info.get("mail") or user_info.get("userPrincipalName")
+        first_name = user_info.get("givenName", "")
+        last_name = user_info.get("surname", "")
+        job_title = user_info.get("jobTitle", "Not specified")
+
+        derived_role = "Студент" if "Student" in job_title else "Викладач"
+
+        submitted_role = request.session.get("role")
+        group = request.session.get("group")
+        department = request.session.get("department")
+
+        if submitted_role != derived_role:
+            messages.error(request, "Please specify the correct role")
+            return redirect('register')
+
+        # Check if user already exists
+        user, created = CustomUser.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": first_name,
+                "last_name": last_name,
+                "password": make_password(None),
+                "is_active": True,
+                "role": derived_role,
+                "academic_group": group if derived_role == "Студент" else None,
+                "department": department if derived_role == "Викладач" else None,
+            },
+        )
+
+        if not created:
+            messages.error(request, "Такий користувач вже зареєстрований.")
+            return redirect('register')
+
+        if created:
+            logger.info("New user: %s", email)
+
+        # Redirect user to the desired page after registration
+        return redirect("login") 
+
+    except ValidationError as e:
+        error_message = str(e)
+        return JsonResponse({"error": error_message}, status=400)
+    except requests.exceptions.RequestException as e:
+        logger.error("Error during Microsoft OAuth callback: %s", e)
+        return JsonResponse({"error": "Failed to complete authentication"}, status=500)
+
+
+def login(request):
+    """
+    Render the login page.
+    """
+    return render(request, 'login.html')
+

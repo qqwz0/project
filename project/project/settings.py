@@ -125,6 +125,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'project', 'static')
+]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -133,10 +136,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # Replace with your email
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Replace with your email password 'NAME': os.getenv('DB_NAME')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'project', 'static')
-]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -167,4 +166,14 @@ LOGGING = {
         },
     },
 }
+
+# Microsoft OAuth Configuration
+MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID')
+MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')
+# MICROSOFT_AUTHORITY = "https://login.microsoftonline.com/common"  # Or tenant-specific if needed
+MICROSOFT_TENANT_ID = '70a28522-969b-451f-bdb2-abfea3aaa5bf'
+MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
+MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
+MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
+MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
 

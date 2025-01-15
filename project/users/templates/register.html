@@ -27,10 +27,9 @@
           groupContainer.innerHTML = `
             <div class="input-box">
               <label for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>
-                {{ form.department }}
+              {{ form.department }}
             </div>
-
-            {% if form.group.errors %}
+            {% if form.department.errors %}
               <div class="error-message">
                 {% for error in form.department.errors %}
                   <p>{{ error }}</p>
@@ -59,8 +58,10 @@
   <body>
     <div class="wrapper">
       <h2>Реєстрація</h2>
-      <form method="POST" action="{% url 'register' %}">
+      <form method="POST" action="{% url 'microsoft_register' %}">
         {% csrf_token %}
+        
+        <!-- Role selection -->
         <div class="role-selection">
           <h3>Ви студент чи викладач?</h3>
           <label>
@@ -75,45 +76,10 @@
           </label>
         </div>
 
-        <!-- Email input field with error handling -->
-        <div class="input-box">
-          {{ form.email }}
-        </div>
-        {% if form.email.errors %}
-            <div class="error-message">
-              {% for error in form.email.errors %}
-                <p>{{ error }}</p>
-              {% endfor %}
-            </div>
-          {% endif %}
+        <!-- Group or Department container, populated by JavaScript -->
+        <div id="group-or-department-container"></div>
 
-        <div id="group-or-department-container">
-          <!-- Initially empty, JavaScript will populate based on role selection -->
-        </div>
-
-        <!-- Password input fields with error handling -->
-        <div class="input-box">
-          {{ form.password1 }}
-        </div>
-        {% if form.password1.errors %}
-          <div class="error-message">
-            {% for error in form.password1.errors %}
-              <p>{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <div class="input-box">
-          {{ form.password2 }}
-          {% if form.password2.errors %}
-            <div class="error-message">
-              {% for error in form.password2.errors %}
-                <p>{{ error }}</p>
-              {% endfor %}
-            </div>
-          {% endif %}
-        </div>
-
+        <!-- Non-field errors -->
         {% if form.non_field_errors %}
           <div class="error-message">
             {% for error in form.non_field_errors %}
@@ -122,23 +88,18 @@
           </div>
         {% endif %}
 
+        <!-- Microsoft Register Button -->
         <div class="input-box button">
-          <button type="submit" class="register-button">Зареєструватися</button>
+          <button href="{% url 'microsoft_register' %}" class="register-button microsoft-button" type="submit">
+            Зареєструватися з Microsoft
+          </button>
         </div>
+
+        <!-- Link to login page -->
         <div class="text">
           <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
         </div>
       </form>
     </div>
-
-    <style>
-      .error-message {
-        color: red;
-        font-weight: bold;
-        font-size: 12px;
-        margin-top: 5px;
-      }
-
-    </style>
   </body>
 </html>
