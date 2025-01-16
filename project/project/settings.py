@@ -146,26 +146,22 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': False,  # Keep existing loggers enabled
     'handlers': {
         'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': 'errors.log',
+            'level': 'DEBUG',  # Set the logging level to DEBUG or higher
+            'class': 'logging.StreamHandler',  # This handler sends logs to the console
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'handlers': ['console'],  # Use the 'console' handler for the Django logger
+            'level': 'DEBUG',  # Set the minimum level to 'DEBUG' to capture all logs
             'propagate': True,
         },
     },
 }
+
 
 # Microsoft OAuth Configuration
 MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID')

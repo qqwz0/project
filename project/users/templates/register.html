@@ -58,7 +58,7 @@
   <body>
     <div class="wrapper">
       <h2>Реєстрація</h2>
-      <form method="POST" action="{% url 'microsoft_register' %}">
+      <form method="POST" action="{% url 'register' %}">
         {% csrf_token %}
         
         <!-- Role selection -->
@@ -88,9 +88,18 @@
           </div>
         {% endif %}
 
+        <!-- Messages -->
+        {% if messages %}
+          <div class="error-message">
+            {% for message in messages %}
+              <p>{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
         <!-- Microsoft Register Button -->
         <div class="input-box button">
-          <button href="{% url 'microsoft_register' %}" class="register-button microsoft-button" type="submit">
+          <button href="{% url 'register' %}" class="register-button microsoft-button" type="submit">
             Зареєструватися з Microsoft
           </button>
         </div>

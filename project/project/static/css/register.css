@@ -85,7 +85,7 @@ form h3 {
   font-weight: 500;
 }
 
-.input-box.button button,
+/* .input-box.button button, */
 .input-box.button input {
   color: #fff;
   background: #7128ee;
@@ -100,7 +100,7 @@ form h3 {
   transition: background 0.3s ease, transform 0.3s ease;
 }
 
-.input-box.button button:hover,
+/* .input-box.button button:hover, */
 .input-box.button input:hover {
   background: #8265b3;
   transform: translateY(-2px);
