@@ -9,7 +9,8 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.crypto import get_random_string
 from dotenv import load_dotenv
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, logout
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import update_last_login
 
 from .forms import RegistrationForm
@@ -101,38 +102,42 @@ def microsoft_callback(request):
     state = request.GET.get("state")
 
     if not code or not state:
-        logger.error("Missing authorization code or state parameter.")
-        return JsonResponse({"error": "Authorization code or state not provided"}, status=400)
+        logger.error("Відсутній авторизаційний код або параметр стану.")
+        messages.error(request, "Авторизаційний код або параметр стану не надано")
+        return redirect("login")
 
     try:
-        logger.debug("Incoming state: %s", state)
-        logger.debug("Session csrf_state: %s", request.session.get('csrf_state'))
+        logger.debug("Вхідний стан: %s", state)
+        logger.debug("CSRF стан сесії: %s", request.session.get('csrf_state'))
 
-        # Parse state
+        # Розбір стану
         state_data = parse_qs(state)
-        logger.debug("Parsed state data: %s", state_data)
+        logger.debug("Розібрані дані стану: %s", state_data)
 
         action = state_data.get("action", [None])[0]
         received_csrf = state_data.get("csrf", [None])[0]
 
-        # Validate CSRF state
+        # Перевірка CSRF стану
         if received_csrf != request.session.get('csrf_state'):
-            logger.error("CSRF validation failed. Received: %s, Expected: %s",
+            logger.error("Перевірка CSRF не вдалася. Отримано: %s, Очікувано: %s",
                          received_csrf, request.session.get('csrf_state'))
-            return JsonResponse({"error": "Invalid state parameter"}, status=400)
+            messages.error(request, "Недійсний параметр стану")
+            return redirect("login")
 
-        # Handle actions
+        # Обробка дій
         if action == "register":
             return handle_registration_callback(request, code)
         elif action == "login":
             return handle_login_callback(request, code)
         else:
-            logger.error("Invalid action in state parameter: %s", action)
-            return JsonResponse({"error": "Invalid action in state parameter"}, status=400)
+            logger.error("Недійсна дія в параметрі стану: %s", action)
+            messages.error(request, "Недійсна дія в параметрі стану")
+            return redirect("login")
 
     except Exception as e:
-        logger.error("Unexpected error in microsoft_callback: %s", e, exc_info=True)
-        return JsonResponse({"error": "An unexpected error occurred"}, status=500)
+        logger.error("Неочікувана помилка в microsoft_callback: %s", e, exc_info=True)
+        messages.error(request, "Сталася неочікувана помилка")
+        return redirect("login")
 
 def handle_registration_callback(request, code):
     """
@@ -157,7 +162,8 @@ def handle_registration_callback(request, code):
         access_token = tokens.get("access_token")
 
         if not access_token:
-            raise ValidationError("Failed to obtain access token")
+            messages.error(request, "Не вдалося отримати токен доступу.")
+            return redirect('register')
 
         # Fetch user info
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -176,7 +182,7 @@ def handle_registration_callback(request, code):
         department = request.session.get("department")
 
         if submitted_role != derived_role:
-            messages.error(request, "Будь ласка, вкажи правильну роль.")
+            messages.error(request, "Будь ласка, вкажіть правильну роль.")
             return redirect('register')
 
         # Check if user already exists
@@ -205,10 +211,12 @@ def handle_registration_callback(request, code):
 
     except ValidationError as e:
         error_message = str(e)
-        return JsonResponse({"error": error_message}, status=400)
+        messages.error(request, error_message)
+        return redirect('register')
     except requests.exceptions.RequestException as e:
         logger.error("Error during Microsoft OAuth callback: %s", e)
-        return JsonResponse({"error": "Failed to complete authentication"}, status=500)
+        messages.error(request, "Не вдалося завершити автентифікацію.")
+        return redirect('register')
 
 def handle_login_callback(request, code):
     """
@@ -219,7 +227,8 @@ def handle_login_callback(request, code):
 
     if not code or not state:
         logger.error("Authorization code or state not provided.")
-        return JsonResponse({"error": "Authorization code or state not provided"}, status=400)
+        messages.error(request, "Авторизаційний код або параметр стану не надано.")
+        return redirect("login")
 
     logger.debug("Authorization code: %s", code)
     logger.debug("State: %s", state)
@@ -243,7 +252,8 @@ def handle_login_callback(request, code):
 
         if not access_token:
             logger.error("Failed to obtain access token.")
-            raise ValidationError("Failed to obtain access token")
+            messages.error(request, "Не вдалося отримати токен доступу.")
+            return redirect("login")
 
         logger.debug("Access token obtained.")
 
@@ -256,7 +266,8 @@ def handle_login_callback(request, code):
         email = user_info.get("mail") or user_info.get("userPrincipalName")
         if not email:
             logger.error("Email not found in Microsoft account.")
-            return JsonResponse({"error": "Email not found in Microsoft account"}, status=400)
+            messages.error(request, "Електронну пошту не знайдено в обліковому записі Microsoft.")
+            return redirect("login")
 
         logger.debug("User email: %s", email)
 
@@ -277,15 +288,21 @@ def handle_login_callback(request, code):
         logger.info("User logged in: %s", email)
 
         # Redirect to the desired page after login
-        return redirect("profile")  # Change 'dashboard' to your desired default page
+        return redirect("profile")  # Change 'profile' to your desired default page
 
     except ValidationError as e:
         error_message = str(e)
         logger.error("Validation error during login: %s", error_message)
-        return JsonResponse({"error": error_message}, status=400)
+        messages.error(request, error_message)
+        return redirect("login")
     except requests.exceptions.RequestException as e:
         logger.error("Error during Microsoft OAuth login: %s", e)
-        return JsonResponse({"error": "Failed to complete authentication"}, status=500)
+        messages.error(request, "Не вдалося завершити автентифікацію.")
+        return redirect("login")
 
 def profile(request):
     return render(request, "profile.html")
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
