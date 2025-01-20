@@ -1,26 +1,29 @@
-from django.shortcuts import render
 from .models import Only_teacher, Request, Review  
 from django.db.models import Avg
+from django.views.generic import ListView, DetailView
 
-def teachers_page(request):
-    teachers = Only_teacher.objects.select_related('teacher_id').all()
-    data = []  
-    for teacher in teachers:
-        avg = teacher_rating(teacher.teacher_id_id) 
-        free_slots = slots_left(teacher.teacher_id_id)  
-        data.append({
-            'teacher': teacher,
-            'avg_rating': avg,
-            'free_places': free_slots,
-        })
-    context = {
-        'data': data, 
-    }
-    return render(request, 'teachers_page.html', context)
-
+class TeachersListView(ListView):
+    model = Only_teacher
+    template_name = 'teachers_page.html'
+    context_object_name = 'data'
+    # Using `select_related` to optimize queries by fetching the related 'teacher_id' object in the same query.
+    # This prevents additional queries when accessing teacher attributes like `teacher.teacher_id.first_name`, `teacher.teacher_id.email`, etc.
+    def get_queryset(self):
+        teachers = Only_teacher.objects.select_related('teacher_id').all()
+        data = []
+        for teacher in teachers:
+                avg_rating = teacher_rating(teacher.teacher_id.id)
+                free_slots = slots_left(teacher.teacher_id.id)
+                data.append({
+                    'teacher': teacher,
+                    'avg_rating': avg_rating,
+                    'free_slots': free_slots,
+                })
+        return data        
+                
 def teacher_rating(teacher_id):
-    rating = Review.objects.filter(teacher_id=teacher_id).values('rating')
-    if rating:
+    rating = Review.objects.filter(teacher_id=teacher_id)
+    if rating.exists():
         avg = rating.aggregate(Avg('rating'))
         return avg['rating__avg']
     return 0
@@ -32,3 +35,16 @@ def slots_left(teacher_id):
         return places - requests
     except Only_teacher.DoesNotExist:
         return 0
+
+class TeacherDetailView(DetailView):
+    model = Only_teacher
+    template_name = 'teacher_detail.html'
+    context_object_name = 'teacher'
+    # `get` is used to retrieve a single teacher by their `teacher_id`. This will return one unique object or raise an exception if no teacher is found.
+    # It is more efficient when you are sure you only need one object.
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        teacher = self.get_object()
+        context['free_slots'] = slots_left(teacher.teacher_id.id)
+        context['reviews'] = Review.objects.filter(teacher_id=teacher.teacher_id.id)
+        return context

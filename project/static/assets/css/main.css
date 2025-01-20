@@ -144,6 +144,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 30px;
   align-items: center;
   flex-direction: row;
+  user-select: text;
 }
 
 .teacher-photo {
@@ -199,5 +200,129 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+}
+
+/* for about_teacher.html */
+
+.profile-section {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.profile-hero {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 40px;
+  padding: 30px;
+  background-color: #ffffff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}
+
+.profile-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.profile-info h1 {
+  color: var(--heading-color);
+  margin-bottom: 15px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.info-item {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.info-item h4 {
+  color: var(--accent-color);
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  text-transform: uppercase;
+}
+
+.tabs-container {
+  margin-top: 40px;
+}
+
+.tabs-nav {
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid #eee;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  color: var(--nav-color);
+  cursor: pointer;
+  font-family: var(--nav-font);
+  font-weight: 500;
+  position: relative;
+}
+
+.tab-button.active {
+  color: var(--accent-color);
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--accent-color);
+}
+
+.tab-content {
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}
+
+.reviews-section {
+  margin-top: 40px;
+}
+
+.review-card {
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .profile-hero {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-photo {
+    width: 200px;
+    margin: 0 auto;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tabs-nav {
+    flex-wrap: wrap;
   }
 }

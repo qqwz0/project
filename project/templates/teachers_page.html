@@ -28,11 +28,11 @@
   <main class="main">
     {% for item in data %}
     <section class="teacher-info">
-      <div class="teacher-card">
+      <div class="teacher-card" onclick="cardClick(event, '{{ item.teacher.get_absolute_url }}')">
         <div class="photo-container">
           <div class="teacher-photo">
             {% if item.teacher.photo %}
-              <img src="{{ item.teacher.photo }}" alt="Teacher">
+              <img src="{{ item.teacher.photo.url }}" alt="Teacher">
             {% else %}
               <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
             {% endif %}
@@ -52,9 +52,9 @@
           </div>
         </div>
         <div class="teacher-details">
-          <h3>{{ item.teacher.teacher_id.first_name }} {{ item.teacher.teacher_id.last_name }}</h3>
-          <h4>{{ item.teacher.teacher_id.faculty }}</h4>
-          <p><strong>Наукові інтереси:</strong> {{ item.teacher.sci_interests }}</p>
+          <h3>{{ item.teacher.teacher_id.first_name | capfirst }} {{ item.teacher.teacher_id.last_name | capfirst }}</h3>
+          <h4>{{ item.teacher.teacher_id.department | title }}</h4>
+          <p><strong>Наукові інтереси:</strong> {{ item.teacher.sci_interests|truncatewords:20 }}</p>
           <p><strong>Пошта:</strong> {{ item.teacher.teacher_id.email }}</p>
           <p><strong>Місця:</strong> {{ item.free_slots }}</p>
         </div>

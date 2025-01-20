@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Teacher Profile</title>
+    <link href="{% static 'assets/css/main.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
+<body>
+  <header id="header" class="header">
+    <div class="container">
+      <a href="#" class="logo">
+        <h1 class="sitename">Name</h1>
+      </a>
+      <nav id="navmenu" class="navmenu">
+        <ul>
+          <li><a href="does not work">Themes</a></li>
+          <li><a href="does not work">Chat</a></li>
+          <li><a href="does not work">Profile</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>  
+  
+  <main class="profile-section">
+    <div class="profile-hero">
+        <div class="profile-image">
+            {% if teacher.photo %}
+                <img src="{{ teacher.photo.url }}" alt="Teacher" class="profile-photo">
+            {% else %}
+                <img src="{% static 'assets/img/default.jpg' %}" alt="No photo" class="profile-photo">
+            {% endif %}
+        </div>
+        <div class="profile-info">
+            <h1>{{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <p>{{ teacher.teacher_id.department | title }}</p>
+                </div>
+                <div class="info-item">
+                    <h4>Position</h4>
+                    <p>{{ teacher.position | capfirst }}</p>
+                </div>
+                <div class="info-item">
+                    <h4>Available Slots</h4>
+                    <p>{{free_slots}}</p>
+                </div>
+                <div class="info-item">
+                    <h4>Contact</h4>
+                    <p>{{ teacher.teacher_id.email }}<br>{{ teacher.phone_num }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <div class="tabs-nav">
+            <button class="tab-button active" data-tab="scientific">Scientific Interests</button>
+            <button class="tab-button" data-tab="reviews">Reviews</button>
+        </div>
+
+        <div class="tab-content" id="scientific">
+            <h3>Scientific Interests</h3>
+            <p>{{ teacher.sci_interests | capfirst}}</p>
+        </div>
+
+        <div class="tab-content" id="reviews">
+            {% if reviews %}
+                {% for review in reviews %}
+                    <div class="review-card">
+                        <div class="review-header">
+                            <div class="reviewer-info">
+                                <h4>{{ review.student_id.first_name | capfirst }} {{ review.student_id.last_name | capfirst }}</h4>
+                                <span class="review-date">{{ review.rating_date|date:"d M Y" }}</span>
+                            </div>
+                            <div class="review-rating">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="review-text">{{ review.review_text | capfirst}}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                 <p class="no-reviews">No reviews yet.</p>
+            {% endif %}
+        </div>
+    </div>
+  </main>
+
+  <script src="{% static 'assets/js/main.js' %}"></script>
+</body>
+</html>

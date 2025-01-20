@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.urls import reverse
 
 class User(models.Model):
     ROLES= [
@@ -11,7 +12,7 @@ class User(models.Model):
     email = models.EmailField()
     password = models.CharField(max_length=100)
     role = models.CharField(max_length=100, choices=ROLES)
-    faculty = models.CharField(max_length=100, blank=True, null=True, )
+    department = models.CharField(max_length=100, blank=True, null=True, )
     group = models.CharField(max_length=100, blank=True, null=True)
     
     def save(self, *args, **kwargs):
@@ -20,6 +21,8 @@ class User(models.Model):
         elif self.role == 'teacher':
             self.group = None
         super(User, self).save(*args, **kwargs)
+    def __str__(self):
+        return self.first_name + ' ' + self.last_name    
     
      
 class Only_teacher(models.Model):
@@ -30,14 +33,20 @@ class Only_teacher(models.Model):
     slots = models.IntegerField()
     sci_interests = models.TextField(blank=True)
     
+    def get_absolute_url(self):
+        return reverse("teacher_detail", kwargs={"pk": self.pk})
+    
     def __str__(self):
         return self.teacher_id.first_name + ' ' + self.teacher_id.last_name
+    
+    
 
 
 class Review(models.Model):
     student_id = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
     teacher_id = models.ForeignKey(Only_teacher, on_delete=models.CASCADE)
     rating = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    review_text = models.CharField(max_length=255)
     rating_date = models.DateField(auto_now_add=True)
     
     def __str__(self):
