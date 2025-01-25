@@ -1,10 +1,10 @@
-from .models import Only_teacher, Request, Review  
+from .models import Only_teacher, Request 
 from django.db.models import Avg
 from django.views.generic import ListView, DetailView
 
 class TeachersListView(ListView):
     model = Only_teacher
-    template_name = 'teachers_page.html'
+    template_name = 'teachers_catalog.html'
     context_object_name = 'data'
     # Using `select_related` to optimize queries by fetching the related 'teacher_id' object in the same query.
     # This prevents additional queries when accessing teacher attributes like `teacher.teacher_id.first_name`, `teacher.teacher_id.email`, etc.
@@ -12,21 +12,15 @@ class TeachersListView(ListView):
         teachers = Only_teacher.objects.select_related('teacher_id').all()
         data = []
         for teacher in teachers:
-                avg_rating = teacher_rating(teacher.teacher_id.id)
+
                 free_slots = slots_left(teacher.teacher_id.id)
                 data.append({
                     'teacher': teacher,
-                    'avg_rating': avg_rating,
                     'free_slots': free_slots,
                 })
         return data        
                 
-def teacher_rating(teacher_id):
-    rating = Review.objects.filter(teacher_id=teacher_id)
-    if rating.exists():
-        avg = rating.aggregate(Avg('rating'))
-        return avg['rating__avg']
-    return 0
+
 
 def slots_left(teacher_id):
     try:
@@ -46,5 +40,4 @@ class TeacherDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         teacher = self.get_object()
         context['free_slots'] = slots_left(teacher.teacher_id.id)
-        context['reviews'] = Review.objects.filter(teacher_id=teacher.teacher_id.id)
         return context

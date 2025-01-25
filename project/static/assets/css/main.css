@@ -36,63 +36,68 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .header {
-  --background-color: #f2f2f2;
-  color: var(--default-color);
-  height: 70px;
+  position: fixed;
+  top: 0;
+  left: 0px;
+  width: 100px;
+  height: 100vh;
   background-color: var(--background-color);
-  padding: 10px 0;
-  transition: all 0.5s;
-  z-index: 997;
+  padding: 20px 0;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   align-items: center;
-  padding: 0 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
-.container {
+.header-container {
   width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start; 
+  padding-right: 50px; 
 }
 
-.header .logo h1 {
-  font-size: 30px;
-  margin-left:auto;
-  margin: 0;
-  font-weight: 500;
-  color: var(--heading-color);
-}
 
 .navmenu {
-  display: flex;
-  margin-left: auto;
-
+  width: 100%;
+  margin: 0;
+  margin-top: 50px; 
+  margin-left: 15px;
 }
 
-.navmenu ul {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.navmenu img {
+  width: 24px; 
+  height: 24px;
+  object-fit: contain;
+  padding: 4px;
 }
 
 .navmenu a {
-  color: var(--nav-color);
-  padding: 10px 15px;
-  font-size: 16px;
-  font-weight: 500;
-  font-family: var(--nav-font);
-  transition: 0.3s;
+  align-items: center;
+  justify-content: center;
+  width: 32px; 
+  height: 32px;
 }
-.navmenu a:hover {
-  color: var(--nav-hover-color);
-  transform: translateY(-2px);
+
+.navmenu ul {
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.navmenu li {
+  width: 100%;
+  text-align: center;
+  border-bottom: none;
+}
+
+.navmenu a:hover img {
+  transform: scale(1.1);
 }
 
 .navmenu li:hover {
-  border-bottom: 2px solid var(--nav-hover-color);
+  border-bottom: none;
+  background-color: rgba(70, 83, 103, 0.1);
 }
 
 @media (min-width: 1200px) {
@@ -123,75 +128,142 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-.main {
-  padding: 40px 20px;
+.search-section {
+  margin-left: 100px;
+  padding: 20px;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.search-container {
   max-width: 1200px;
-  margin: 0 40px;
+  margin: 0 auto;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.filter-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.filter-btn img {
+  width: 30px;
+  height: 30px;
+  transition: transform 0.3s;
+}
+
+.filter-btn:hover img {
+  transform: scale(1.1);
+}
+
+.filter-panel {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 300px;
+  height: 100vh;
+  background: white;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+  transition: right 0.3s ease;
+  z-index: 1000;
+}
+
+.filter-panel.active {
+  right: 0;
+}
+
+.filter-header {
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-filters {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.filter-content {
+  padding: 20px;
+}
+
+.main {
+  padding: 20px;
+  margin-left: 80px;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
   gap: 30px;
 }
 
 .teacher-info {
+  margin-left: 120px;
+  width: 1300px;
   padding: 25px;
   background-color: #ffffff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
+  transition: all 0.3s ease;
 }
 
 .teacher-card {
   display: flex;
+  flex-direction: row; /* Горизонтальне розташування */
   gap: 30px;
-  align-items: center;
-  flex-direction: row;
-  user-select: text;
+  align-items: stretch; /* Розтягує елементи по вертикалі */
+  cursor: pointer;
+}
+
+.photo-container {
+  width: 150px;
+  flex-shrink: 0; /* Фіксований розмір для контейнера з фото */
 }
 
 .teacher-photo {
   width: 150px;
-  flex-shrink: 0;
-}
-
-.teacher-photo img {
-  width: 150px;
   height: 150px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-.photo-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
 }
 
 .teacher-details {
-  flex: 1;
+  flex: 1; /* Займає весь доступний простір праворуч */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Вирівнює інформацію по вертикалі */
 }
+
+.teacher-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px; /* Змінено на округлі кути */
+}
+
 .teacher-info:hover {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   transform: translateY(-5px);
-}
-
-.rating-container {
-  display: flex;
-  justify-content: center;
-  width: 100%;
- 
-}
-
-.stars {
-  position: relative;
-  font-size: 12px;
-  color: var(--stars-color);
-}
-
-.stars i.fas {
-  color: var(--stars-color);
-}
-
-.stars i.far {
-  color: #ccc;
 }
 
 
@@ -202,6 +274,7 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center;
   }
 }
+
 
 /* for about_teacher.html */
 
@@ -296,17 +369,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px;
 }
 
-.reviews-section {
-  margin-top: 40px;
-}
 
-.review-card {
-  padding: 20px;
-  background-color: #ffffff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
 
 @media (max-width: 768px) {
   .profile-hero {

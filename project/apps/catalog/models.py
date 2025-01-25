@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
 
 class User(models.Model):
@@ -39,20 +38,7 @@ class Only_teacher(models.Model):
     def __str__(self):
         return self.teacher_id.first_name + ' ' + self.teacher_id.last_name
     
-    
-
-
-class Review(models.Model):
-    student_id = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
-    teacher_id = models.ForeignKey(Only_teacher, on_delete=models.CASCADE)
-    rating = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(5)])
-    review_text = models.CharField(max_length=255)
-    rating_date = models.DateField(auto_now_add=True)
-    
-    def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
-
-    
+     
 class Request(models.Model):
     STATUS= [
         ('pending', 'очікується'),
