@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'users'
+    'apps.users'
 ]
 
 MIDDLEWARE = [
@@ -125,6 +125,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # Replace with your email
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Replace with your email password 'NAME': os.getenv('DB_NAME')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
@@ -136,3 +147,56 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.CustomUser'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # Keep existing loggers enabled
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',  # Set the logging level to INFO or higher
+            'class': 'logging.StreamHandler',  # Sends logs to the console
+            'formatter': 'verbose',  # Use the 'verbose' formatter
+        },
+        'file': {
+            'level': 'INFO',  # Log INFO and above to a file
+            'class': 'logging.FileHandler',
+            'filename': 'django_info.log',
+            'formatter': 'verbose',  # Use the 'verbose' formatter
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],  # Use both console and file handlers
+            'level': 'INFO',  # Minimum log level is INFO
+            'propagate': True,  # Allow propagation to ancestor loggers
+        },
+        'django.request': {
+            'handlers': ['console', 'file'],  # Log requests separately
+            'level': 'INFO',  # Minimum log level for requests
+            'propagate': False,  # Prevent propagation to other loggers
+        },
+    },
+}
+
+
+
+# Microsoft OAuth Configuration
+MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID')
+MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')
+# MICROSOFT_AUTHORITY = "https://login.microsoftonline.com/common"  # Or tenant-specific if needed
+MICROSOFT_TENANT_ID = os.getenv('MICROSOFT_TENANT_ID') 
+MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
+MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
+MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
+MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
+
