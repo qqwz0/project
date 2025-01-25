@@ -7,6 +7,19 @@ import re  # Regular expressions
 logger = logging.getLogger(__name__)
 
 class RegistrationForm(forms.Form):
+    """
+    RegistrationForm is a Django form for user registration with dynamic field requirements based on the user's role.
+    Attributes:
+        ROLE_CHOICES (list): List of tuples representing the role choices.
+        DEPARTMENT_CHOICES (list): List of tuples representing the department choices.
+        role (ChoiceField): Choice field for selecting the user's role with radio buttons.
+        group (CharField): Char field for entering the academic group, required for students.
+        department (ChoiceField): Choice field for selecting the department, required for lecturers.
+    Methods:
+        __init__(*args, **kwargs): Initializes the form and dynamically sets the 'required' attribute for fields based on the role.
+        clean_group(): Validates the 'group' field, ensuring it is required and correctly formatted for students.
+        clean_department(): Validates the 'department' field, ensuring it is required for lecturers.
+    """
     ROLE_CHOICES = [
         ('Студент', 'Студент'),
         ('Викладач', 'Викладач'),
@@ -31,14 +44,14 @@ class RegistrationForm(forms.Form):
     group = forms.CharField(
         label='Академічна група', 
         required=False,
-        widget=forms.TextInput(attrs={'placeholder': 'Академічна група'})
+        widget=forms.TextInput(attrs={'placeholder': 'Академічна група', 'class': 'form-input'})
     )
 
     department = forms.ChoiceField(
         label='Кафедра',
         choices=DEPARTMENT_CHOICES,
         required=False,
-        widget=forms.Select,
+        widget=forms.Select(attrs={'class': 'form-select'}),
     )
 
     def __init__(self, *args, **kwargs):

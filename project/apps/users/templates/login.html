@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вхід</title>
+    {% load static %}
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script>
+      function closePopup() {
+        const popup = document.querySelector('.success-popup');
+        popup.style.display = 'none';
+      }
+      </script>
+  </head>
+  <body>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%;">
+
+    <!-- Messages -->
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="success-popup {{ message.tags }}">
+            {% if message.tags == 'success' %}
+              <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
+            {% elif message.tags == 'error' %}
+              <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
+            {% endif %}
+            <div>
+              <div class="popup-content">
+                <p class="popup-title">
+                  {% if message.tags == 'success' %}
+                    Успіх!
+                  {% elif message.tags == 'error' %}
+                    Помилка!
+                  {% endif %}
+                </p>
+                <p class="popup-text">
+                  {{ message }}
+                </p>
+              </div>
+              <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+      <div class="wrapper">
+        <h2>Вхід</h2>
+        <!-- Login form -->
+        <form action="{% url 'login' %}" method="GET">
+          {% csrf_token %}
+          <!-- Submit button -->
+          <div class="input-box button">
+            <a type="submit" href="{% url 'login' %}?redirect=true" class="register-button microsoft-button">
+                <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
+              Увійти</a>
+          </div>
+          <!-- Registration link -->
+          <div class="text">
+            <h3>Ще не маєш облікового запису? <a href="{% url 'register' %}">Зареєструйся!</a></h3>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

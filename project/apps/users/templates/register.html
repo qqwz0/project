@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реєстрація</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script>
+      function updateRole(role) {
+        const roleInput = document.getElementById("id_role");
+        roleInput.value = role; // Update the hidden input value
+
+        // Update the active button styling
+        const buttons = document.querySelectorAll(".role-button");
+        buttons.forEach((button) => {
+          if (button.textContent.trim() === role) {
+            button.classList.add("active");
+          } else {
+            button.classList.remove("active");
+          }
+        });
+
+        // Update group or department fields dynamically
+        const groupContainer = document.getElementById("group-or-department-container");
+
+        if (role === "Студент") {
+          groupContainer.innerHTML = `
+            <label for="{{ form.department.id_for_label }}" class="form-h3">{{ form.group.label }}</label>
+            <div class="input-box">
+              {{ form.group }}
+            </div>
+            {% if form.group.errors %}
+              <div class="error-message">
+                {% for error in form.group.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          `;
+        } else if (role === "Викладач") {
+          groupContainer.innerHTML = `
+          <label for="{{ form.department.id_for_label }}" class="form-h3">{{ form.department.label }}</label>
+            <div class="input-box">
+              {{ form.department }}
+            </div>
+            {% if form.department.errors %}
+              <div class="error-message">
+                {% for error in form.department.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          `;
+        }
+      }
+
+      window.onload = () => {
+        const defaultRole = "{{ form.role.initial|default_if_none:'Студент' }}";
+        updateRole(defaultRole); // Set the initial role dynamically
+      };
+
+      function closePopup() {
+        const popup = document.querySelector('.success-popup');
+        popup.style.display = 'none';
+      }
+    </script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <h2>Створити обліковий запис</h2>
+      <form method="POST" action="{% url 'register' %}">
+        {% csrf_token %}
+        
+        {{ form.role.as_hidden }}
+
+        <!-- Role selection buttons -->
+        <div class="role-selection">
+          <h3 class='form-h3'>Ви студент чи викладач?</h3>
+          <div class="toggle-buttons">
+            <button type="button" class="microsoft-button role-button" onclick="updateRole('Студент')">Студент</button>
+            <button type="button" class="microsoft-button role-button" onclick="updateRole('Викладач')">Викладач</button>
+          </div>
+          {% if form.role.errors %}
+            <div class="error-message">
+              {% for error in form.role.errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Group or Department container, populated by JavaScript -->
+        <div id="group-or-department-container"></div>
+
+        <!-- Non-field errors -->
+        {% if form.non_field_errors %}
+          <div class="error-message">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Messages -->
+        <!-- Messages -->
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="success-popup {{ message.tags }}">
+            {% if message.tags == 'success' %}
+              <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
+            {% elif message.tags == 'error' %}
+              <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
+            {% endif %}
+            <div>
+              <div class="popup-content">
+                <p class="popup-title">
+                  {% if message.tags == 'success' %}
+                    Успіх!
+                  {% elif message.tags == 'error' %}
+                    Помилка!
+                  {% endif %}
+                </p>
+                <p class="popup-text">
+                  {{ message }}
+                </p>
+              </div>
+              <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+        <!-- Microsoft Register Button -->
+        <div class="input-box button">
+          <button href="{% url 'register' %}" class="register-button microsoft-button" type="submit">
+            <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
+            Зареєструватися з Microsoft
+          </button>
+        </div>
+
+        <!-- Link to login page -->
+        <div class="text">
+          <h3>Вже зареєстрований? <a href="{% url 'login' %}">Увійди!</a></h3>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
