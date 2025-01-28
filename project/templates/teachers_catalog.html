@@ -2,6 +2,7 @@
 {%load static%}
 {% block content %}
     <div class="search-section">
+      <h1>Знайди свого ідеального наукового керівника!</h1> 
       <div class="search-container">
           <input type="text" class="search-input" placeholder="Пошук викладача...">
           <button class="filter-btn" onclick="toggleFilters()">
@@ -22,7 +23,7 @@
     
     {% for item in data %}
     <section class="teacher-info">
-      <div class="teacher-card" onclick="cardClick(event, '{{ item.teacher.get_absolute_url }}')">
+      <div class="teacher-card" >
         <div class="photo-container">
           <div class="teacher-photo">
             {% if item.teacher.photo %}
@@ -34,12 +35,29 @@
           </div>
         <div class="teacher-details">
           <h3>{{ item.teacher.teacher_id.first_name | capfirst }} {{ item.teacher.teacher_id.last_name | capfirst }}</h3>
-          <h4>{{ item.teacher.teacher_id.department | title }}</h4>
-          <p><strong>Наукові інтереси:</strong> {{ item.teacher.sci_interests|truncatewords:20 }}</p>
-          <p><strong>Пошта:</strong> {{ item.teacher.teacher_id.email }}</p>
-          <p><strong>Місця:</strong> {{ item.free_slots }}</p>
+          <h4>{{ item.teacher.position | capfirst }}</h4>
+          <h4><strong>Кафедра </strong>{{ item.teacher.teacher_id.department | title }}</h4>
+          {% if item.free_slots.count == 1 %}
+          <p><strong>Місця:</strong> {{ item.free_slots.first.get_available_slots }}</p>
+          {% elif item.free_slots.count > 1 %}
+            <p><strong>Загальна кількість місць:</strong></p>
+            <ul>
+              {% for slot in item.free_slots %}
+                <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p>Жодного вільного місця</p>
+          {% endif %}
+        </div>
+        <div class="right-side">
+          <button class="popup-button" 
+                  onclick="openTeacherPopup(event, this)" >
+                  <span class="arrow-icon">›</span>
+          </button>
         </div>
       </div>
     </section>
     {% endfor %}
+    
 {% endblock  %}    

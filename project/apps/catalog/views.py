@@ -1,43 +1,29 @@
-from .models import Only_teacher, Request 
-from django.db.models import Avg
-from django.views.generic import ListView, DetailView
+from .models import OnlyTeacher, Slot 
+from django.views.generic import ListView
+import re
 
 class TeachersListView(ListView):
-    model = Only_teacher
+    model = OnlyTeacher
     template_name = 'teachers_catalog.html'
     context_object_name = 'data'
     # Using `select_related` to optimize queries by fetching the related 'teacher_id' object in the same query.
     # This prevents additional queries when accessing teacher attributes like `teacher.teacher_id.first_name`, `teacher.teacher_id.email`, etc.
     def get_queryset(self):
-        teachers = Only_teacher.objects.select_related('teacher_id').all()
+        teachers = OnlyTeacher.objects.select_related('teacher_id').all()     
+        slots = Slot.filter_by_available_slots() # Get all slots with available quotas
         data = []
+        
+        if self.request.user.is_authenticated and self.request.user.role == 'Студент':
+            user = self.request.user
+            match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
+            if match:
+                user_stream = match.group(1) + '-' + match.group(2)
+                slots = slots.filter(stream_id__stream_code__iexact=user_stream)  # Case-insensitive exact match 
         for teacher in teachers:
-
-                free_slots = slots_left(teacher.teacher_id.id)
-                data.append({
+            free_slots = slots.filter(teacher_id=teacher)
+            data.append({
                     'teacher': teacher,
                     'free_slots': free_slots,
                 })
-        return data        
+        return data    
                 
-
-
-def slots_left(teacher_id):
-    try:
-        places = Only_teacher.objects.get(teacher_id=teacher_id).slots  
-        requests = Request.objects.filter(teacher_id=teacher_id, request_status='accepted').count()
-        return places - requests
-    except Only_teacher.DoesNotExist:
-        return 0
-
-class TeacherDetailView(DetailView):
-    model = Only_teacher
-    template_name = 'teacher_detail.html'
-    context_object_name = 'teacher'
-    # `get` is used to retrieve a single teacher by their `teacher_id`. This will return one unique object or raise an exception if no teacher is found.
-    # It is more efficient when you are sure you only need one object.
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        teacher = self.get_object()
-        context['free_slots'] = slots_left(teacher.teacher_id.id)
-        return context

@@ -1,42 +1,40 @@
 from django.db import models
-from django.urls import reverse
-
-class User(models.Model):
-    ROLES= [
-        ('student', 'студент'),
-        ('teacher', 'викладач'),
-    ]
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    email = models.EmailField()
-    password = models.CharField(max_length=100)
-    role = models.CharField(max_length=100, choices=ROLES)
-    department = models.CharField(max_length=100, blank=True, null=True, )
-    group = models.CharField(max_length=100, blank=True, null=True)
-    
-    def save(self, *args, **kwargs):
-        if self.role == 'student':
-            self.faculty = None
-        elif self.role == 'teacher':
-            self.group = None
-        super(User, self).save(*args, **kwargs)
-    def __str__(self):
-        return self.first_name + ' ' + self.last_name    
-    
-     
-class Only_teacher(models.Model):
-    teacher_id = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
-    phone_num = models.CharField(max_length=100)
+from django.urls import reverse  
+from django.db.models import F
+        
+class OnlyTeacher(models.Model):
+    teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
     photo = models.ImageField(upload_to='teacher_photos/', blank=True, null=True)
     position = models.CharField(max_length=100)
-    slots = models.IntegerField()
-    sci_interests = models.TextField(blank=True)
-    
+
     def get_absolute_url(self):
         return reverse("teacher_detail", kwargs={"pk": self.pk})
     
     def __str__(self):
         return self.teacher_id.first_name + ' ' + self.teacher_id.last_name
+
+class Stream(models.Model):
+    specialty_name = models.CharField(max_length=100)
+    stream_code = models.CharField(max_length=100, unique=True)
+    
+    def __str__(self):
+        return self.stream_code
+    
+class Slot(models.Model):
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    stream_id = models.ForeignKey(Stream, on_delete=models.CASCADE)
+    quota = models.IntegerField()
+    occupied = models.IntegerField(default=0)
+    
+    def get_available_slots(self):
+        return self.quota - self.occupied
+    
+    @classmethod
+    def filter_by_available_slots(cls):
+        return cls.objects.filter(occupied__lt=F('quota'))
+    
+      
+        
     
      
 class Request(models.Model):
@@ -45,8 +43,8 @@ class Request(models.Model):
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
     ]
-    student_id = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
-    teacher_id = models.ForeignKey(Only_teacher, on_delete=models.CASCADE)
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     request_text = models.TextField()
     request_date = models.DateField(auto_now_add=True)
     request_status = models.CharField(max_length=100, choices=STATUS)

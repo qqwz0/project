@@ -38,57 +38,58 @@ h1, h2, h3, h4, h5, h6 {
 .header {
   position: fixed;
   top: 0;
-  left: 0px;
-  width: 100px;
-  height: 100vh;
-  background-color: var(--background-color);
-  padding: 20px 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: transparent;
+  padding: 10px 20px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  justify-content: flex-end;
+  z-index: 100;
 }
 
 .header-container {
-  width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start; 
-  padding-right: 50px; 
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
 }
 
-
 .navmenu {
-  width: 100%;
   margin: 0;
-  margin-top: 50px; 
-  margin-left: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.navmenu ul {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .navmenu img {
-  width: 24px; 
+  width: 24px;
   height: 24px;
   object-fit: contain;
   padding: 4px;
 }
 
 .navmenu a {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px; 
+  width: 32px;
   height: 32px;
-}
-
-.navmenu ul {
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
 }
 
 .navmenu li {
   width: 100%;
   text-align: center;
   border-bottom: none;
+  list-style-type: none;
 }
 
 .navmenu a:hover img {
@@ -129,28 +130,42 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .search-section {
-  margin-left: 100px;
+  margin-left: 165px;
   padding: 20px;
   background: white;
   position: sticky;
-  top: 0;
-  z-index: 100;
+  top: 100px;
+  z-index: 99;
+}
+
+.search-section h1 {
+  color: #000;
+  margin-bottom: 15px;
+  font-size: 34px;
+  margin-left: 25px;
+
 }
 
 .search-container {
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
-  gap: 15px;
   align-items: center;
+  gap: 10px;
+  width: 1350px;
+  height: 50px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 .search-input {
   flex: 1;
   padding: 10px 15px;
   border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 15px;
+  font-size: 20px;
+  min-width: 0; /* Prevents flex item from overflowing */
+  width: 1350px;
+  height: 30px;
+  background-color: #ececec;
 }
 
 .filter-btn {
@@ -161,8 +176,9 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  min-width: 32px;
   height: 32px;
+  margin-left: 10px;
 }
 
 .filter-btn img {
@@ -178,17 +194,17 @@ h1, h2, h3, h4, h5, h6 {
 .filter-panel {
   position: fixed;
   top: 0;
-  right: -300px;
+  left: -300px;
   width: 300px;
   height: 100vh;
   background: white;
-  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-  transition: right 0.3s ease;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  transition: left 0.3s ease;
   z-index: 1000;
 }
 
 .filter-panel.active {
-  right: 0;
+  left: 0;
 }
 
 .filter-header {
@@ -220,45 +236,72 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .teacher-info {
-  margin-left: 120px;
   width: 1300px;
   padding: 25px;
   background-color: #ffffff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
+  margin-left: 200px;
+  margin-top: 60px;
   transition: all 0.3s ease;
+  border-radius: 15px; /* Added more rounded corners */
 }
 
 .teacher-card {
   display: flex;
-  flex-direction: row; /* Горизонтальне розташування */
-  gap: 30px;
-  align-items: stretch; /* Розтягує елементи по вертикалі */
+  flex-direction: row; 
+  gap: 40px;
+  align-items: stretch; 
   cursor: pointer;
 }
 
+
 .photo-container {
   width: 150px;
-  flex-shrink: 0; /* Фіксований розмір для контейнера з фото */
+  flex-shrink: 0; 
 }
 
 .teacher-photo {
   width: 150px;
   height: 150px;
+  border-radius: 100%;
 }
 
 .teacher-details {
-  flex: 1; /* Займає весь доступний простір праворуч */
+  flex: 1; 
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Вирівнює інформацію по вертикалі */
+  justify-content: center;
+  gap: 5px; 
+}
+
+.teacher-details h3,
+.teacher-details h4,
+.teacher-details p {
+  margin: 0;
+  padding: 2px 0;
+}
+
+.teacher-details ul {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+
+.teacher-details ul {
+  margin: 5px 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.teacher-details li {
+  margin: 2px 0;
 }
 
 .teacher-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 10px; /* Змінено на округлі кути */
+  border-radius: 10px; 
 }
 
 .teacher-info:hover {
@@ -275,117 +318,30 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-
-/* for about_teacher.html */
-
-.profile-section {
-  max-width: 1200px;
-  margin: 40px auto;
-  padding: 0 20px;
+.right-side {
+  width: 5%; /* Set fixed width */
+  margin: -25px -25px -25px 0; /* Negative margins to extend to edges */
 }
 
-.profile-hero {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 40px;
-  padding: 30px;
-  background-color: #ffffff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-}
-
-.profile-photo {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.profile-info h1 {
-  color: var(--heading-color);
-  margin-bottom: 15px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.info-item {
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-}
-
-.info-item h4 {
-  color: var(--accent-color);
-  margin-bottom: 8px;
-  font-size: 0.9em;
-  text-transform: uppercase;
-}
-
-.tabs-container {
-  margin-top: 40px;
-}
-
-.tabs-nav {
-  display: flex;
-  gap: 10px;
-  border-bottom: 2px solid #eee;
-  margin-bottom: 20px;
-}
-
-.tab-button {
-  padding: 10px 20px;
+.popup-button {
+  background-color: #0378ec;
+  color: #fff;
+  font-size: 16px;
   border: none;
-  background: none;
-  color: var(--nav-color);
-  cursor: pointer;
-  font-family: var(--nav-font);
-  font-weight: 500;
-  position: relative;
-}
-
-.tab-button.active {
-  color: var(--accent-color);
-}
-
-.tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
   width: 100%;
-  height: 2px;
-  background-color: var(--accent-color);
+  height: 100%;
+  cursor: pointer;
+  border-top-right-radius: 15px;
+  border-bottom-right-radius: 15px;
+  transition: background-color 0.3s ease;
 }
 
-.tab-content {
-  padding: 20px;
-  background-color: #ffffff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+.popup-button:hover {
+  background-color: #0256af;
 }
 
-
-
-@media (max-width: 768px) {
-  .profile-hero {
-    grid-template-columns: 1fr;
-  }
-  
-  .profile-photo {
-    width: 200px;
-    margin: 0 auto;
-  }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .tabs-nav {
-    flex-wrap: wrap;
-  }
+.popup-button .arrow-icon {
+  font-size: 46px; /* Increased from 24px */
+  font-weight: 300; /* Lighter weight for softer appearance */
+  color: #fff;
 }

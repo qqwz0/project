@@ -1,7 +1,6 @@
 from django.contrib import admin
-from .models import User, Only_teacher, Request
+from .models import OnlyTeacher, Request
 
-admin.site.register(User)
-admin.site.register(Only_teacher)
+admin.site.register(OnlyTeacher)
 admin.site.register(Request)
 
