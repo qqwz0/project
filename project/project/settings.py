@@ -193,7 +193,6 @@ LOGGING = {
 }
 
 
-
 # Microsoft OAuth Configuration
 MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID')
 MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')

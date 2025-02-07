@@ -6,6 +6,8 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>Teachers</title>
   <link href="{% static 'assets/css/main.css' %}" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 
 <body>
@@ -23,7 +25,8 @@
   <main class="main">
     {% block content %}{% endblock  %}
   </main>
-  
+
+  <script src="https://unpkg.com/htmx.org@1.9.6"></script>
   <script src="{% static 'assets/js/main.js' %}"></script>
 </body>
 </html>
