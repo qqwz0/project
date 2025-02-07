@@ -5,12 +5,13 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
 from dotenv import load_dotenv
 from django.contrib.auth import login as auth_login, logout
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import update_last_login
+from django.contrib.auth.decorators import login_required
 
 from .forms import RegistrationForm
 from .models import CustomUser
@@ -267,7 +268,18 @@ def handle_registration_callback(request, code):
         return redirect('register')
 
 def handle_login_callback(request, code):
+
     """
+    This function processes the OAuth callback from Microsoft, retrieves the access token,
+    fetches user information from Microsoft Graph, and logs in the user if they exist in the database.
+    Args:
+        request (HttpRequest): The HTTP request object containing the callback data.
+        code (str): The authorization code provided by Microsoft.
+    Returns:
+        HttpResponse: A redirect response to the appropriate page based on the outcome of the login process.
+    Raises:
+        ValidationError: If there is a validation error during the login process.
+        requests.exceptions.RequestException: If there is an error during the HTTP requests to Microsoft.
     Handle Microsoft's OAuth login callback.
     """
     logger.debug("Handling callback for Microsoft login.")
@@ -348,8 +360,20 @@ def handle_login_callback(request, code):
         messages.error(request, "Не вдалося завершити автентифікацію.")
         return redirect("login")
 
-def profile(request):
-    return render(request, "profile.html")
+@login_required
+def profile(request, user_id=None):
+    if user_id:
+        user_profile = get_object_or_404(CustomUser, id=user_id)  # Get the requested user's profile
+    else:
+        user_profile = request.user  # If no ID is provided, show the current user's profile
+
+    is_own_profile = (user_profile == request.user)  # Check if it's the user's own profile
+
+    context = {
+        'user_profile': user_profile,  # Pass the correct user profile to the template
+        'is_own_profile': is_own_profile,
+    }
+    return render(request, 'profile.html', context)
 
 def logout_view(request):
     logout(request)

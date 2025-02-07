@@ -9,20 +9,22 @@
 
 body {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* display: flex; */
   background: #87BDF1;
+  position: relative;
 }
 
 .wrapper {
-  position: relative;
+  position: absolute;
   max-width: 460px;
   width: 100%;
   background: #fff;
   padding: 50px 40px;
   border-radius: 20px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .wrapper h2 {
@@ -131,6 +133,8 @@ form h3 a {
   outline: none;
   border: none;
   transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+  z-index: 1;
 }
 
 .microsoft-button:hover {
@@ -267,6 +271,10 @@ form h3 a {
 .role-button.active {
   background-color: #1570ef;
   color: white;
+}
+
+.role-button.active:hover {
+  background-color: #0d51af;
 }
 
 .form-h3 {

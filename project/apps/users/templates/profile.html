@@ -1,9 +1,69 @@
-{% if user.is_authenticated %}
-    <p>Welcome, {{ user.email }}!</p>
-    <form method="POST" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Log out</button>
-    </form>
-{% else %}
-    <p>Please log in to view your profile.</p>
-{% endif %}
+{% extends "profile-page.html" %}
+
+{%load static%}
+
+{% block title %}Профіль користувача{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="profile-info">
+            <div class="profile-pic">
+                {% if user_profile.profile_picture %}
+                    <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar">
+                {% else %}
+                    <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="default-avatar">
+                {% endif %}
+            </div>
+            <div class="profile-text">
+                <h2>{{ user_profile.get_full_name }}</h2>
+                <h3>{{ user_profile.role }}</h3>
+                {% if user_profile.role == "Викладач" %}
+                    <p>Кафедра: {{ user_profile.department }}</p>
+                {% elif user_profile.role == "Студент" %}
+                    <p>Група: {{ user_profile.academic_group }}</p>
+                {% endif %}
+                <a href="{% url 'profile_detail' 79 %}" class="profile-link">Переглянути профіль</a>
+            </div>
+        </div>
+        {% if is_own_profile %}
+            <div class="profile-buttons">
+                <button class="edit-btn">Редагувати</button>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="edit-btn logout">Вийти</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Tabs Section -->
+    <div class="tabs">
+        <div class="tab active">Інформація</div>
+        {% if is_own_profile %}
+            <div class="tab">Запити</div>
+        {% endif %}
+        <div class="tab">Активні</div>
+        <div class="tab">Архів</div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const tabs = document.querySelectorAll(".tab");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function () {
+                // Remove "active" class from all tabs
+                tabs.forEach(t => t.classList.remove("active"));
+
+                // Add "active" class to the clicked tab
+                this.classList.add("active");
+            });
+        });
+    });
+</script>
+{% endblock %}
