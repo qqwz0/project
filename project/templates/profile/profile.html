@@ -1,0 +1,112 @@
+{% extends "profile/profile-page.html" %}
+
+{%load static%}
+
+{% block title %}Профіль користувача{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="profile-info">
+            <div class="profile-pic">
+                {% if user_profile.profile_picture %}
+                    <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar">
+                {% else %}
+                    <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="default-avatar">
+                {% endif %}
+            </div>
+            <div class="profile-text">
+                <h2>{{ user_profile.get_full_name }}</h2>
+                <h3>{{ user_profile.role }}</h3>
+                {% if user_profile.role == "Викладач" %}
+                    <p>Кафедра: {{ user_profile.department }}</p>
+                {% elif user_profile.role == "Студент" %}
+                    <p>Група: {{ user_profile.academic_group }}</p>
+                {% endif %}
+                {% comment %} <a href="{% url 'profile_detail' 79 %}" class="profile-link">Переглянути профіль</a> {% endcomment %}
+            </div>
+        </div>
+        {% if is_own_profile %}
+            <div class="profile-buttons">
+                <a href="#">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <form id="logout-form" action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <a href="#" onclick="document.getElementById('logout-form').submit();">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Tabs Section -->
+    <div class="tabs">
+        <div class="tab active" onclick="loadTab('info')">Інформація</div>
+        {% comment %} {% if is_own_profile %} {% endcomment %}
+        <div class="tab" onclick="loadTab('requests')">Запити</div>
+        {% comment %} {% endif %} {% endcomment %}
+        <div class="tab" onclick="loadTab('active')">Активні</div>
+        <div class="tab" onclick="loadTab('archive')">Архів</div>
+    </div>
+
+</div>
+
+<div id="info-section" class="tab-content"> 
+    <p>Інформація про користувача...</p> 
+</div>
+
+<div id="requests-section" class="tab-content" style="display: none;">
+    {% include 'profile/requests.html' %}
+</div>
+
+<div id="active-section" class="tab-content" style="display: none;"> 
+    <p>Активні роботи...</p> 
+</div>
+
+<div id="archive-section" class="tab-content" style="display: none;"> 
+    <p>Архів курсів...</p> 
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const tabs = document.querySelectorAll(".tab");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function () {
+                // Remove "active" class from all tabs
+                tabs.forEach(t => t.classList.remove("active"));
+
+                // Add "active" class to the clicked tab
+                this.classList.add("active");
+            });
+        });
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function () {
+                // Hide all tab contents
+                tabContents.forEach(content => content.style.display = "none");
+
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove("active"));
+
+                // Show the selected tab's content
+                const tabName = this.getAttribute("onclick").match(/'([^']+)'/)[1];
+                document.getElementById(tabName + "-section").style.display = "block";
+
+                // Set active tab
+                this.classList.add("active");
+            });
+        });
+    });
+</script>
+{% endblock %}

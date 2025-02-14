@@ -16,6 +16,9 @@
 
         {% if user.is_authenticated %}
             <div class="icons">
+                <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
+                    <i class="fas fa-home"></i>
+                </a>
                 <i class="fas fa-bell"></i>
                 <i class="fas fa-envelope"></i>
                 <div class="header-pic">

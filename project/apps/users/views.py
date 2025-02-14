@@ -15,6 +15,7 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import RegistrationForm
 from .models import CustomUser
+from apps.catalog.models import Request
 
 # Load environment variables
 load_dotenv()
@@ -65,12 +66,12 @@ def microsoft_register(request):
             return redirect(authorization_url)
         else:
             logger.error("Form errors: %s", form.errors)
-            return render(request, "register.html", {"form": form, "errors": form.errors})
+            return render(request, "auth/register.html", {"form": form, "errors": form.errors})
     else:
         logger.debug("GET request received")
         form = RegistrationForm()
 
-    return render(request, "register.html", {"form": form})
+    return render(request, "auth/register.html", {"form": form})
 
 def microsoft_login(request):
     """
@@ -92,7 +93,7 @@ def microsoft_login(request):
         # If the request is to render the login page
         if not request.GET.get("redirect"):
             logger.debug("Rendering login page before redirecting to Microsoft.")
-            return render(request, 'login.html')  # Update with the correct template path
+            return render(request, 'auth/login.html')  # Update with the correct template path
         
         CSRF_STATE = get_random_string(32)
         request.session['csrf_state'] = CSRF_STATE
@@ -369,11 +370,25 @@ def profile(request, user_id=None):
 
     is_own_profile = (user_profile == request.user)  # Check if it's the user's own profile
 
+    sent_requests = None
+    received_requests = None
+
+    if user_profile.role == "Студент":
+        # Fetch requests sent by the student
+        sent_requests = Request.objects.filter(student_id=user_profile).select_related('teacher_id', 'proposed_theme_id')
+    elif user_profile.role == "Викладач":
+        # Fetch requests received by the teacher
+        received_requests = Request.objects.filter(teacher_id__teacher_id=user_profile).select_related('student_id', 'proposed_theme_id')
+
     context = {
-        'user_profile': user_profile,  # Pass the correct user profile to the template
+        'user_profile': user_profile,
         'is_own_profile': is_own_profile,
+        'sent_requests': sent_requests,
+        'received_requests': received_requests,  # Only teachers will see this
     }
-    return render(request, 'profile.html', context)
+
+    return render(request, 'profile/profile.html', context)
+
 
 def logout_view(request):
     logout(request)

@@ -16,7 +16,6 @@ body {
 }
 
 .profile-container {
-    width: 78%;
     margin: 20px auto;
     background-color: rgba(135, 189, 241, 0.52);
     padding: 20px 20px 5px 20px;
@@ -69,30 +68,28 @@ body {
     display: flex;
     align-self: flex-start;
     gap: 10px;
-    flex-direction: column;
 }
 
-.edit-btn {
-    background-color: #1570ef;
-    color: white;
-    padding: 15px 40px;
+.profile-buttons a {
     text-decoration: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    cursor: pointer;
-    outline: none;
+    color: #007bff;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.profile-buttons a:hover {
+    color: #2968ab; /* Change color on hover */
+}
+
+.profile-buttons button {
+    padding: 10px 20px;
     border: none;
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-    width: 100%;
-  }
-  
-.edit-btn:hover {
-    background-color: #005A9E;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 .logout{
@@ -146,4 +143,69 @@ body {
 .default-avatar {
     width: 240px;
     height: 240px;
+}
+
+.request-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #F8FAFC;  /* Light background */
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.request-user {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.request-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-info h3 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #334155;  /* Dark text */
+}
+
+.user-info p.role {
+    font-size: 14px;
+    color: #64748B;  /* Subtle gray */
+}
+
+.user-info p.theme {
+    font-size: 14px;
+    color: #475569;  /* Slightly darker */
+    margin-top: 4px;
+}
+
+.status {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+.status.pending {
+    background: #FACC15; /* Yellow */
+}
+
+.status.accepted {
+    background: #22C55E; /* Green */
+}
+
+.status.rejected {
+    background: #EF4444; /* Red */
+}
+
+.tab-content h2{
+    margin-bottom: 10px;
 }

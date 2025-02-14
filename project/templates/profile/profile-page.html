@@ -14,8 +14,10 @@
 
     {% include 'header.html' %}  <!-- Include header -->
 
-    <main>
-        {% block content %}{% endblock %}  <!-- Content to be filled by child templates -->
+    <main style="display: flex; justify-content: center;">
+        <div style="width: 78%;">
+            {% block content %}{% endblock %}  <!-- Content to be filled by child templates -->
+        </div>
     </main>
 
     {% block scripts %}{% endblock %}

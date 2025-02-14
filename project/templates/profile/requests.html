@@ -1,0 +1,80 @@
+{% load static %}
+
+{% if user_profile.role == "Студент" %}
+    {% if sent_requests %}
+        <h2>📩 Надіслані запити</h2>
+        {% for request in sent_requests %}
+            <div class="request-card">
+                <div class="request-user">
+                    {% if user.profile.profile_picture %}
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture }}" alt="Фото профілю" class="default-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
+                        <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
+                        {% if request.proposed_theme_id %}
+                            <p class="theme">{{ request.proposed_theme_id.theme }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Ви ще не надсилали запитів.</p>
+    {% endif %}
+
+    {% elif user_profile.role == "Викладач" %}
+    {% if received_requests %}
+        <h2>📥 Отримані запити</h2>
+        {% for request in received_requests %}
+            <div class="request-card">
+                <div class="request-user">
+                    {% if request.student_id.profile_picture %}
+                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <h3>{{ request.student_id.get_full_name }}</h3>
+                        <p class="role">Група: {{ request.student_id.academic_group }}</p>
+                        {% if request.proposed_theme_id %}
+                            <p class="theme">{{ request.proposed_theme_id.theme }}</p>
+                        {% endif %}
+                        <p class="motivation">Мотивація: {{ request.motivation_text }}</p>
+                    </div>
+                </div>
+                
+                <!-- Buttons for approval/decline -->
+                <div class="request-actions">
+                    {% comment %} <form method="post" action="{% url 'approve_request' request.id %}"> {% endcomment %}
+                        {% comment %} {% csrf_token %} {% endcomment %}
+                        <button type="submit" class="approve-btn">✅ Підтвердити</button>
+                    {% comment %} </form> {% endcomment %}
+                    {% comment %} <form method="post" action="{% url 'decline_request' request.id %}"> {% endcomment %}
+                        {% comment %} {% csrf_token %} {% endcomment %}
+                        <button type="submit" class="decline-btn">❌ Відхилити</button>
+                    {% comment %} </form> {% endcomment %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>У вас немає нових запитів.</p>
+    {% endif %}
+{% endif %}
+
+
+
+{% block scripts %}
+<script>
+    function loadTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.getElementById(tabName + '-section').style.display = 'block';
+
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+</script>
+{% endblock %}
