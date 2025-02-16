@@ -6,66 +6,11 @@
     filterPanel.classList.toggle('active');
   };
 
-  window.openTeacherPopup = function(event, button) {
-    event.stopPropagation();
-    try {
-      const popup = document.getElementById('teacherPopup');
-      if (popup) {
-        // Update popup content with data attributes
-        document.getElementById('popupPhoto').src = button.dataset.teacherPhoto;
-        document.getElementById('popupName').textContent = button.dataset.teacherName;
-        document.getElementById('popupPosition').textContent = button.dataset.teacherPosition;
-        document.getElementById('popupDepartment').textContent = button.dataset.teacherDepartment;
-
-        // Handle slots data
-        const slotsContainer = document.getElementById('popupSlots');
-        if (button.dataset.teacherSlots === 'multiple') {
-          const slotsData = JSON.parse(button.dataset.slotsData);
-          slotsContainer.innerHTML = `
-            <p><strong>Загальна кількість місць:</strong></p>
-            <ul>
-              ${slotsData.map(slot => 
-                `<li><strong>${slot.stream_id.stream_code}: </strong>${slot.available_slots}</li>`
-              ).join('')}
-            </ul>`;
-        } else {
-          const slotData = JSON.parse(button.dataset.slotsData);
-          slotsContainer.innerHTML = `<p><strong>Місця:</strong> ${slotData.available_slots}</p>`;
-        }
-
-        popup.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-      }
-    } catch (error) {
-      console.error("Error opening popup:", error);
-    }
-  };
-
-  window.closeTeacherPopup = function() {
-    try {
-      const popup = document.getElementById('teacherPopup');
-      if (popup) {
-        popup.style.display = 'none';
-        document.body.style.overflow = 'auto';
-      }
-    } catch (error) {
-      console.error("Error closing popup:", error);
-    }
-  };
-
   // Initialize when DOM loads
   document.addEventListener('DOMContentLoaded', () => {
     // Close popup on escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeTeacherPopup();
-      }
-    });
-
-    // Close popup when clicking outside
-    document.addEventListener('click', (e) => {
-      const popup = document.getElementById('teacherPopup');
-      if (popup && e.target === popup) {
         closeTeacherPopup();
       }
     });

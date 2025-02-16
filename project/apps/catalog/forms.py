@@ -43,6 +43,9 @@ class RequestForm(forms.ModelForm):
         # Mark these fields as optional, overriding global settings if necessary.
         self.fields['proposed_themes'].required = False
         self.fields['student_themes'].required = False
+        
+        if self.get_student_themes_count() >= 3:
+            self.fields['student_themes'].widget.attrs['disabled'] = 'disabled'
     
     def get_student_themes_count(self):
         """
@@ -64,8 +67,9 @@ class RequestForm(forms.ModelForm):
             raise forms.ValidationError('Ви повинні вибрати запропоновану тему або ввести власну.')
         
         # Limit the number of student themes to three.
-        if self.get_student_themes_count() > 4:
+        if self.get_student_themes_count() > 3:
             raise forms.ValidationError('Ви можете ввести не більше трьох тем.')
+        
 
         # Clean up the student themes list to remove empty strings.
         cleaned_data['student_themes'] = [theme for theme in student_themes if theme.strip()]

@@ -1,11 +1,12 @@
 from django.db import models
 from django.urls import reverse  
 from django.db.models import F
+from time import time
         
 class OnlyTeacher(models.Model):
     teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
     photo = models.ImageField(upload_to='teacher_photos/', blank=True, null=True)
-    position = models.CharField(max_length=100)
+    position = models.CharField(max_length=100, blank=True, null=True)
 
     def get_absolute_url(self):
         return reverse("detail_request_modal", kwargs={"pk": self.pk})
@@ -43,7 +44,7 @@ class Request(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     proposed_theme_id = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, blank=True, null=True)
     motivation_text = models.TextField()
-    request_date = models.DateField(auto_now_add=True)
+    request_date_time = models.DateTimeField(auto_now_add=True)
     request_status = models.CharField(max_length=100, choices=STATUS)
     
     def __str__(self):
@@ -61,6 +62,7 @@ class TeacherTheme(models.Model):
 class StudentTheme(models.Model):
     student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
     theme = models.CharField(max_length=100)
+    request_id = models.ForeignKey(Request, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.theme        

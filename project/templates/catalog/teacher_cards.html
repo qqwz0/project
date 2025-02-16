@@ -1,0 +1,56 @@
+{% load static %}
+<section class="teacher-info">
+    <div class="teacher-card" >
+      <div class="photo-container">
+        <div class="teacher-photo">
+          <!-- If a teacher photo is available, display it; otherwise use a default image. -->
+          {% if item.teacher.photo %}
+            <img src="{{ item.teacher.photo.url }}" alt="Teacher">
+          {% else %}
+            <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
+          {% endif %}
+        </div>
+      </div>
+      <div class="teacher-details">
+        <!-- Display teacher credentials such as name, position, and department. -->
+        <h2>{{ item.teacher.teacher_id.first_name | capfirst }} {{ item.teacher.teacher_id.last_name | capfirst }}</h2>
+        {% if item.teacher.position%}
+          <p>{{ item.teacher.position | capfirst }}</p>
+        {%else%}
+          <p>Викладач</p>
+        {% endif %}  
+        <h3><strong>Кафедра </strong>{{ item.teacher.teacher_id.department | title }}</h3>
+
+        <!-- Conditional logic for displaying the number of free slots. -->
+        {% if item.is_matched %}
+        <div>
+            <p class="single-slot"><strong>Місця:</strong> {{ item.free_slots.first.get_available_slots }}</p>
+        </div>
+        {% elif item.free_slots.count < 1 %}
+          <div class="slots-info no-slots">
+            <p><strong>Місць немає</strong></p>
+          </div>
+        {% else %}
+          <div class="slots-info multiple-slots">
+            <p><strong>Загальна кількість місць:</strong></p>
+            <ul>
+                {% for slot in item.free_slots %}
+                    <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
+      <div class="card-right-side">
+        <button class="modal-button" 
+                hx-get="{% url 'modal' item.teacher.pk %}"
+                hx-target="#inner_modal"
+                hx-trigger="click"
+                hx-on:htmx:responseError="document.getElementById('error-message').textContent = JSON.parse(event.detail.xhr.response).error;">
+                <span class="arrow-icon">›</span>
+        </button>
+      </div>
+    </div>
+  </section>

@@ -1,10 +1,13 @@
 {% load static %}
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 <!--
 This template displays teacher information, available slots,
 and a form allowing the user to propose or enter custom themes.
 -->
 <section class="info-request-section">
+    <a class="close-modal fas fa-times" href="#" onclick="document.getElementById('details_request_modal').close();"></a>
+       
     <div class="left-container">
         <!-- If a teacher photo exists, use it, otherwise show a default image. -->
         {% if teacher.photo %}
@@ -14,25 +17,31 @@ and a form allowing the user to propose or enter custom themes.
         {% endif %}
         <!-- Display teacher's name, position, and department. -->
         <h2>{{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}</h2>
-        <p class="position">{{ teacher.position | capfirst }}</p>
+        {% if teacher.position %}
+            <p class="position">{{ teacher.position | capfirst }}</p>
+        {% else %}
+            <p class="position">Викладач</p>
+
+        {% endif %}
         <h3>Кафедра {{ teacher.teacher_id.department | title }}</h3>
 
         <!-- Show slots in different ways, depending on how many free slots exist. -->
-        {% if free_slots.count == 1 %}
+        {% if is_matched %}
         <div>
             <p class="single-slot"><strong>Місця:</strong> {{ free_slots.first.get_available_slots }}</p>
         </div>
-        {% elif free_slots.count > 1 %}
-        <div class="slots-info multiple-slots">
+        {% elif free_slots.count < 1 %}
+          <div class="slots-info no-slots">
+            <p><strong>Місць немає</strong></p>
+          </div>
+        {% else %}
+          <div class="slots-info multiple-slots">
+            <p><strong>Загальна кількість місць:</strong></p>
             <ul>
                 {% for slot in free_slots %}
                     <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
                 {% endfor %}
             </ul>
-        </div>
-        {% else %}
-        <div class="slots-info">
-            <p class="no-slots">Жодного вільного місця</p>
         </div>
         {% endif %}
     </div>
@@ -219,12 +228,13 @@ and a form allowing the user to propose or enter custom themes.
     function updateThemeCount() {
         var hiddenThemes = document.getElementById('hidden-themes');
         var themeCount = hiddenThemes.querySelectorAll('input[name="student_themes"]').length;
-
+        var inputField = document.getElementById('id_student_themes');
+        var addButton = document.getElementById('add-theme');
+    
         if (themeCount >= 3) {
-            document.getElementById('add-theme').disabled = true;
-            document.getElementById('id_student_themes').readonly = readonly;
+            inputField.setAttribute('disabled', true);
         } else {
-            document.getElementById('add-theme').disabled = false;
+            inputField.removeAttribute('disabled');
         }
     }
 </script>

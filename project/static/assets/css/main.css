@@ -81,8 +81,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 50%;
+  height: 50%;
 }
 
 .navmenu li {
@@ -150,8 +150,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 1350px;
-  height: 50px;
+  width: 141%;
+  height: 100%;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -163,7 +163,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 15px;
   font-size: 20px;
   min-width: 0; /* Prevents flex item from overflowing */
-  width: 1350px;
+  width: 100%;
   height: 30px;
   background-color: #ececec;
 }
@@ -182,8 +182,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .filter-btn img {
-  width: 30px;
-  height: 30px;
+  width: 200%;
+  height: 200%;
   transition: transform 0.3s;
 }
 
@@ -194,8 +194,8 @@ h1, h2, h3, h4, h5, h6 {
 .filter-panel {
   position: fixed;
   top: 0;
-  left: -300px;
-  width: 300px;
+  left: -400px;
+  width: 15%;
   height: 100vh;
   background: white;
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
@@ -236,7 +236,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .teacher-info {
-  width: 1300px;
+  width: 108%;
   padding: 25px;
   background-color: #ffffff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
@@ -257,13 +257,13 @@ h1, h2, h3, h4, h5, h6 {
 
 
 .photo-container {
-  width: 150px;
+  width: 12%;
   flex-shrink: 0; 
 }
 
 .teacher-photo {
-  width: 150px;
-  height: 150px;
+  width: 100%;
+  height: 80%;
   border-radius: 100%;
 }
 
@@ -308,7 +308,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .teacher-photo img {
   width: 100%;
-  height: 100%;
+  height: 150px;
   object-fit: cover;
   border-radius: 50%; 
 }
@@ -437,7 +437,7 @@ p.single-slot {
   border: none;
   border-radius: 8px;
   padding: 0;
-  width: 900px;
+  width: 50%;
   min-height: 400px;
   background: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -509,8 +509,8 @@ p.single-slot {
 }
 
 .left-container img {
-  width: 200px;
-  height: 200px;
+  width: 50%;
+  height: 40%;
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 8px; 
@@ -545,8 +545,8 @@ p.position {
   cursor: pointer;
   display: block;
   margin: 16px auto; 
-  width: 175px;
-  height: 50px;
+  width: 50%;
+  height: 10%;
   font-size: 18px;
   font-family: var(--default-font);
   transition: background-color 0.3s ease;
@@ -562,7 +562,7 @@ p.position {
 }
 
 .form-input {
-  width: 100%;
+  width: 90%;
   padding: 10px; 
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -581,7 +581,7 @@ p.position {
   display: flex;
   align-items: center;
   position: relative;
-  width: 104%;
+  width: 100%;
 }
 
 .input-add input { 
@@ -593,8 +593,8 @@ p.position {
   border: none;
   cursor: pointer;
   padding: 0;
-  width: 24px;
-  height: 24px;
+  width: 5%;
+  height: 5%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -613,26 +613,27 @@ p.position {
   transform: scale(1.2);
 }
 
+
 .theme-list {
   list-style-type: none;
   padding: 0;
   margin-top: 0;
-  margin-bottom: 2px;
+  margin-bottom: 0.125rem;
 }
 
 .theme-item {
-  padding: 10px;
+  padding: 0.625rem;
   display: flex;
-  width: 200px;
+  width: 50%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  height: 10px;
+  height: 0.625rem;
   align-items: center;
   justify-content: space-between;
   border: 1px solid #ccc;
   border-radius: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
 }
@@ -646,7 +647,7 @@ p.position {
   border: none;
   color: #a3a3a3;
   cursor: pointer;
-  font-size: 26px;
+  font-size: 1.625rem;
   line-height: 1;
   transition: color 0.3s ease-in-out;
 }
@@ -664,11 +665,11 @@ p.position {
   display: flex;
   align-items: center;
   position: relative;
-  width: 102%;
+  width: 100%;
 }
 
 .dropdown-input  input { 
-  padding-right: 30px;
+  padding-right: 1.875rem;
 }
 
 .dropdown-toggle {
@@ -676,12 +677,12 @@ p.position {
   border: none;
   cursor: pointer;
   padding: 0;
-  width: 18px;
-  height: 18px;
+  width: 4%;
+  height: 4%;
   display: flex;
   color: #a3a3a3;
-  margin-left: -30px;
-  margin-bottom: 7px;
+  margin-left: -1.875rem;
+  margin-bottom: 0.438rem;
 }
 
 .dropdown-icon {
@@ -697,21 +698,21 @@ p.position {
 .dropdown-menu {
   display: none;
   position: absolute;
-  top: 100%;
+  margin-top: -0.938rem;
   left: 0;
   width: 100%;
   border: 1px solid #ccc;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   background-color: white;
-  max-height: 200px;
+  max-height: 12.5rem;
   overflow-y: auto;
   z-index: 1000;
 }
 
 .dropdown-item {
-  padding: 10px;
-  font-size: 16px;
+  padding: 0.625rem;
+  font-size: 1rem;
   cursor: pointer;
 }
 
@@ -720,16 +721,16 @@ p.position {
 }
 
 .form-textarea {
-  width: 100%;
-  padding: 10px;
+  width: 95%;
+  padding: 0.625rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  margin-top: 4px;
-  font-size: 16px;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 1rem;
   font-family: var(--default-font);
   height: 100px;
-  min-height: 74px;
+  min-height: 4.688rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
 }
@@ -737,7 +738,7 @@ p.position {
 .form-input::placeholder,
 .form-textarea::placeholder {
     color: #a3a3a3;
-    font: 14px var(--default-font);
+    font: 0.875rem var(--default-font);
 }
 
 .form-input:focus,
@@ -750,11 +751,11 @@ p.position {
 label[for="id_proposed_themes"],
 label[for="id_student_themes"] {
     display: block;
-    font-size: 15px;
+    font-size: 0.938rem;
     font-family: var(--default-font);
     font-weight: 500;
     color: #063f77;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
     letter-spacing: 0.25px;
     text-align: left;
     text-transform: none;
@@ -763,7 +764,7 @@ label[for="id_student_themes"] {
 .right-container p {
   color:  #a3a3a3;
   margin: 0 0;
-  font-size: 16px;
+  font-size: 1rem;
   text-align: center;
   font-family: var(--default-font);
 }
@@ -772,20 +773,43 @@ label[for="id_student_themes"] {
   color: #a3a3a3;
   margin-bottom: 0px;
   margin-top: 0px;
-  font-size: 16px;
+  font-size: 1rem;
   font-family: var(--default-font);
   text-align: right;
   margin-left: auto;
+
+}
+
+.close-modal {
+  background: none; /* New background */
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  top: 0.75rem;
+  left: 0.875rem;
+  font-size: 1.375rem;
+  width: 1.5%;
+  height: 3.5%;
+  color: #a3a3a3;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  padding: 8px;
+  border-radius: 4px;
+
+}
+
+.close-modal:hover {
+  transform: scale(1.1);
+  background-color: #f0f0f0;
 }
 
 /* messages */
 .success-popup {
   position: fixed; /* Position fixed at the top of the viewport */
-  top: 20px; /* Distance from the top of the page */
+  top: 1.25rem; /* Distance from the top of the page */
   left: 50%; /* Center horizontally */
   transform: translateX(-50%); /* Center horizontally */
   background-color: white; /* White background */
-  padding: 16px; /* More spacious padding */
+  padding: 1rem; /* More spacious padding */
   border-radius: 12px; /* Slightly more rounded corners */
   border:  3px solid #6FCF97; /* Green border by default */
   box-shadow: none; /* Softer, expensive-looking shadow */
@@ -793,7 +817,7 @@ label[for="id_student_themes"] {
   text-align: center;
   animation: fadeIn 0.5s ease-in-out; /* Smooth fade-in animation */
   display: flex;
-  max-width: 400px;
+  max-width: 25rem;
   width: 100%;
   align-items: center;
 }
@@ -809,31 +833,31 @@ label[for="id_student_themes"] {
 }
 
 .popup-title {
-  font-size: 16px; /* Larger title for emphasis */
+  font-size: 1rem; /* Larger title for emphasis */
   font-weight: 700; /* Slightly heavier font for premium feel */
   color: #333; /* Darker text color */
-  margin-bottom: 5px;
+  margin-bottom: 0.313rem;
   margin: 0; /* Small margin below the title */
 }
 
 .popup-text {
-  font-size: 14px; /* Smaller text for additional information */
+  font-size: 0.875rem; /* Smaller text for additional information */
   color: #333; /* Darker text color */
-  margin: 4px 0 0; /* Small margin below the text */
+  margin: 0.25rem 0 0; /* Small margin below the text */
 }
 
 /* Style for the close button */
 .toast-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 18px;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 1rem;
   cursor: pointer;
   color: #333; 
   border: 1px solid #ccc; 
   background: white;
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
