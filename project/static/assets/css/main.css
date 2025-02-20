@@ -493,12 +493,15 @@ p.single-slot {
 }
 
 .modal .multiple-slots ul {
-  width: 50%;
-  display: inline-block;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 10px; 
+  list-style: none;
+  padding: 0;
 }
 
 .modal .multiple-slots li {
-  width: 60%;
+  width: 48%;
   padding: 6px 10px;
   margin: 4px 0;
 }

@@ -37,11 +37,12 @@
     </div>
 
     <!-- Loop through 'data' which contains each teacher and their free slots. -->
-    {% for item in data %}
-
+    <div x-data="{data: []}" x-init='data = await (await fetch("{%url 'teachers_list'%}")).json()'>
+      <template x-for= "item in data"> 
       {%include "catalog/teacher_cards.html"%}
-    
-    {% endfor %}
+      </template>
+    </div> 
+  
 
     <!-- A dialog element wrapping the HTMX content for the teacher modal. -->
     <dialog id="details_request_modal" class="modal">

@@ -1,7 +1,6 @@
 from django.db import models
 from django.urls import reverse  
 from django.db.models import F
-from time import time
         
 class OnlyTeacher(models.Model):
     teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
@@ -9,7 +8,7 @@ class OnlyTeacher(models.Model):
     position = models.CharField(max_length=100, blank=True, null=True)
 
     def get_absolute_url(self):
-        return reverse("detail_request_modal", kwargs={"pk": self.pk})
+        return reverse("modal", kwargs={"pk": self.pk})
     
     def __str__(self):
         return self.teacher_id.first_name + ' ' + self.teacher_id.last_name

@@ -1,5 +1,71 @@
 from django import forms
-from .models import Request, TeacherTheme
+from .models import Request, TeacherTheme, OnlyTeacher, Slot
+from apps.users.models import CustomUser
+
+class FilteringForm(forms.Form):
+    """        A Django Form class that provides filtering functionality for teacher listings.
+    
+    Technical Details:
+    -----------------
+    Form Fields:
+        - departments (MultipleChoiceField): 
+            - Dynamically populated from CustomUser.department
+            - Uses CheckboxSelectMultiple widget
+            - Allows multiple selections
+            - CSS class: 'form-checkbox'
+        
+        - positions (MultipleChoiceField):
+            - Dynamically populated from OnlyTeacher.position
+            - Uses CheckboxSelectMultiple widget
+            - Allows multiple selections
+            - CSS class: 'form-checkbox'
+        
+        - slots (IntegerField):
+            - Range input slider
+            - Min/Max values from Slot.quota
+            - Step size: 1
+            - Default value: 1
+            - CSS class: 'form-range'
+    """
+    DEPARTMENT_CHOICES = [
+        (department, department) for department in CustomUser.objects.values_list('department', flat=True).distinct()
+    ]
+    POSITION_CHOICES = [
+        (position, position) for position in OnlyTeacher.objects.values_list('position', flat=True).distinct()
+    ]
+    MIN_MAX_SLOTS = [
+        (slots, slots) for slots in Slot.objects.values_list('quota', flat=True).distinct()
+    ]
+    
+    departments = forms.MultipleChoiceField(
+        label='Кафедри',
+        choices=DEPARTMENT_CHOICES,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={'class': 'form-checkbox'}
+        ),
+        required=False
+    )
+    positions = forms.MultipleChoiceField(
+        label='Посади',
+        choices=POSITION_CHOICES,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={'class': 'form-checkbox'}
+        ),
+        required=False
+    )
+    slots = forms.IntegerField(
+        label='Кількість місць',
+        widget=forms.NumberInput(attrs={
+            'type': 'range',
+            'class': 'form-range',
+            'min': MIN_MAX_SLOTS[0][0],
+            'max': MIN_MAX_SLOTS[-1][0],
+            'step': 1,
+            'value': 1
+        }),
+        required=False
+    )
+     
 
 class RequestForm(forms.ModelForm):
     """

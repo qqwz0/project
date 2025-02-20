@@ -1,53 +1,84 @@
 from .utils import HtmxLoginRequiredMixin
 from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme 
-from django.views.generic import ListView, DetailView, FormView
-from .forms import RequestForm
+from django.views.generic import ListView, DetailView, FormView, TemplateView
+from .forms import RequestForm, FilteringForm
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.http import JsonResponse
 from django.contrib import messages
+from django.shortcuts import render
 import re
 
+class TeachersCatalogView(TemplateView, FormView):
+    """
+    Displays the teachers catalog page.
+    """
+    template_name = 'catalog/teachers_catalog.html'
+    form_class = FilteringForm
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Handles GET requests to display the teachers catalog.
+        """
+        form = self.form_class()
+        context = {'form': form}
+        return render(request, self.template_name, context)
+    
 class TeachersListView(ListView):
     """
     Displays a list of teachers along with their available slots.
     """
     model = OnlyTeacher
-    template_name = 'catalog/teachers_catalog.html'
     context_object_name = 'data'
     
-    def get_queryset(self):
+    def get(self, request, *args, **kwargs):
         """
         Returns a list of dictionaries that each contain:
-        - Teacher instance
-        - Free slots for that teacher
+        - Teacher instance (converted to dictionary)
+        - Free slots for that teacher (converted to list of dictionaries)
         """
-        # Using `select_related` to optimize queries.
         teachers = OnlyTeacher.objects.select_related('teacher_id').all()
-        
-        # Get all slots with available quotas.
         slots = Slot.filter_by_available_slots()
         data = []
+        id_list = []
         is_matched = False
-        
-        # If user is a student, filter slots based on user's academic group.
-        if self.request.user.is_authenticated and self.request.user.role == 'Студент':
-            user = self.request.user
+
+        if request.user.is_authenticated and request.user.role == 'Студент':
+            user = request.user
             match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
             if match:
                 user_stream = match.group(1) + '-' + match.group(2)
                 slots = slots.filter(stream_id__stream_code__iexact=user_stream)
                 is_matched = True
-        
-        # Collect teacher and corresponding free slots in a list of dicts.
+
         for teacher in teachers:
             free_slots = slots.filter(teacher_id=teacher)
+        
             data.append({
-                'teacher': teacher,
-                'free_slots': free_slots,
+                'teacher': {
+                    'id': teacher.pk,
+                    'position': teacher.position,
+                    'photo':teacher.photo.url if teacher.photo else None,
+                    'teacher_id': {
+                        'first_name': teacher.teacher_id.first_name,
+                        'last_name': teacher.teacher_id.last_name,
+                        'department': teacher.teacher_id.department,
+                    }
+                    
+                },
+                'free_slots': [
+                    {
+                        'stream_id': {
+                            'stream_code': slot.stream_id.stream_code
+                        },
+                        'get_available_slots': slot.get_available_slots()
+                    }
+                    for slot in free_slots
+                ],
                 'is_matched': is_matched
             })
-        return data    
+
+        return JsonResponse(data, safe=False)  
 
 class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, FormView):
     """
