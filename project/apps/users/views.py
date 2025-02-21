@@ -5,6 +5,8 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db.models import F
+from django.db import transaction
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
 from dotenv import load_dotenv
@@ -15,7 +17,8 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import RegistrationForm
 from .models import CustomUser
-from apps.catalog.models import Request
+from apps.catalog.models import Request, OnlyTeacher, TeacherTheme, Slot
+
 
 # Load environment variables
 load_dotenv()
@@ -360,6 +363,25 @@ def handle_login_callback(request, code):
         logger.error("Error during Microsoft OAuth login: %s", e)
         messages.error(request, "Не вдалося завершити автентифікацію.")
         return redirect("login")
+    
+def fake_login(request):
+    # Mock user email or get it from session or query parameters
+    email = "VYKLADACH.VYKLADACH@lnu.edu.ua"  # Example email, change as needed
+    
+    try:
+        # Fetch user by email (or another unique identifier)
+        user = CustomUser.objects.get(email=email)
+        
+        # Manually log the user in
+        auth_login(request, user)
+        
+        # Redirect to the desired page after login
+        return redirect("profile")  # Or wherever you want the user to go
+
+    except CustomUser.DoesNotExist:
+        # Handle the case where the user doesn't exist in the database
+        messages.error(request, "User does not exist.")
+        return redirect("login")
 
 @login_required
 def profile(request, user_id=None):
@@ -372,24 +394,106 @@ def profile(request, user_id=None):
 
     sent_requests = None
     received_requests = None
+    themes = None
+    slots = None
 
     if user_profile.role == "Студент":
         # Fetch requests sent by the student
-        sent_requests = Request.objects.filter(student_id=user_profile).select_related('teacher_id', 'proposed_theme_id')
+        sent_requests = Request.objects.filter(student_id=user_profile).select_related('teacher_id', 'teacher_theme')
     elif user_profile.role == "Викладач":
         # Fetch requests received by the teacher
-        received_requests = Request.objects.filter(teacher_id__teacher_id=user_profile).select_related('student_id', 'proposed_theme_id')
+        received_requests = Request.objects.filter(teacher_id__teacher_id=user_profile, request_status='pending').select_related('student_id', 'teacher_theme')
+        # Fetch teacher themes
+        themes = TeacherTheme.objects.filter(teacher_id__teacher_id=user_profile)
+        # Fetch slots for this teacher
+        slots = Slot.objects.filter(teacher_id__teacher_id=user_profile)
 
     context = {
         'user_profile': user_profile,
         'is_own_profile': is_own_profile,
         'sent_requests': sent_requests,
         'received_requests': received_requests,  # Only teachers will see this
+        'themes': themes,  # Added teacher themes
+        'slots': slots,  # Added available slots
     }
 
     return render(request, 'profile/profile.html', context)
 
+from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.db.models import F
+import logging
 
+logger = logging.getLogger('app')
+
+@login_required
+def approve_request(request, request_id):
+    logger.info(f"Approving request ID: {request_id}, User: {request.user}")
+
+    try:
+        req = Request.objects.get(id=request_id)
+    except Request.DoesNotExist:
+        logger.info(f"Request ID {request_id} not found!")
+        messages.info(request, "Запит не знайдено.")
+        return redirect("profile")
+
+    # Only allow the teacher or the student to act
+    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
+        logger.info(f"Unauthorized approval attempt by user {request.user}")
+        messages.error(request, "Неможливо провести операцію.")
+        return redirect("profile")
+
+    if not req.slot:
+        logger.info(f"Request {request_id} does not have a valid slot!")
+        messages.error(request, "Запит не має дійсного слота.")
+        return redirect("profile")
+
+    available_slots = req.slot.get_available_slots()
+    logger.info(f"Available slots: {available_slots}, Quota: {req.slot.quota}, Occupied: {req.slot.occupied}")
+
+    if available_slots <= 0:
+        logger.info(f"Auto-rejecting request {request_id} due to full capacity.")
+        req.request_status = 'rejected'
+        req.rejected_reason = "Усі місця зайняті."
+        req.save()
+        messages.error(request, "Запит автоматично відхилено: усі місця зайняті.")
+        return redirect("profile")
+
+    try:
+        with transaction.atomic():
+            logger.debug(f"Attempting to approve request {request_id}.")
+            
+            req.request_status = 'accepted'
+            req.save()
+
+            logger.info(f"Request {request_id} successfully approved.")
+            messages.success(request, "Запит успішно підтверджено.")
+    except ValidationError as e:
+        logger.info(f"Validation error: {e}")
+        messages.error(request, str(e))
+    except Exception as e:
+        logger.info(f"Unexpected error approving request {request_id}: {e}")
+        messages.error(request, "Сталася помилка. Спробуйте ще раз.")
+
+    return redirect("profile")
+
+
+@login_required
+def reject_request(request, request_id):
+    req = get_object_or_404(Request, id=request_id)
+    
+    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
+        messages.error(request, "Неможливо провести операцію.")
+        return redirect("profile")
+    
+    if request.method == "POST":
+        reason = request.POST.get("reason", "")
+        req.request_status = "rejected"
+        req.rejected_reason = reason  # Ensure your model has this field
+        req.save()
+        messages.success(request, "Запит відхилено.")
+        return redirect("profile")
+    
 def logout_view(request):
     logout(request)
     logger.info("User logged out.")

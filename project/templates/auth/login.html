@@ -59,7 +59,11 @@
             <a type="submit" href="{% url 'login' %}?redirect=true" class="register-button microsoft-button">
                 <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
               Увійти</a>
+              <a type="submit" href="{% url 'fake_login' %}?redirect=true" class="register-button microsoft-button">
+                <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
+              Fake teacher login</a>
           </div>
+          
           <!-- Registration link -->
           <div class="text">
             <h3>Ще не маєш облікового запису? <a href="{% url 'register' %}">Зареєструйся!</a></h3>

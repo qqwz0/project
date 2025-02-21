@@ -744,7 +744,7 @@ p.position {
     outline: none;
 }
 
-label[for="id_proposed_themes"],
+label[for="id_teacher_themes"],
 label[for="id_student_themes"] {
     display: block;
     font-size: 15px;

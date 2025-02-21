@@ -1,0 +1,134 @@
+{% load static %}
+
+<style>
+    .slots-wrapper {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .section-title {
+        font-weight: bold;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .slots-container {
+        display: flex;
+        gap: 3rem;
+    }
+
+    .slot-group {
+        text-align: center;
+    }
+
+    .stream-title {
+        font-weight: 600;
+    }
+
+    .slot-dot {
+        color: orange;
+        font-size: 1.2rem;
+    }
+
+    .slot-empty {
+        color: orange;
+        font-size: 1.2rem;
+    }
+
+    span {
+        margin: 0 0.1rem;
+    }
+
+    .slots-display {
+        display: flex;
+        justify-content: center;
+    }
+
+    .themes-list {
+        list-style: none;
+        padding-left: 0;
+    }
+
+    .theme-item {
+        margin-bottom: 0.7rem;
+    }
+
+    .theme-item a {
+        font-weight: 600;
+        font-size: 1.2rem;
+        color: #1a1a3d;
+        text-decoration: none;
+    }
+
+    .theme-item a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+{% if user_profile.role == "Викладач" %}
+    <div class="slots-wrapper">
+        <h2 class="section-title">Кількість доступних місць</h2>
+        
+        <div class="slots-container">
+            {% for slot in slots %}
+                <div class="slot-group" 
+                    data-available="{{ slot.get_available_slots|default:0 }}" 
+                    data-occupied="{{ slot.occupied|default:0 }}">
+                    <p class="stream-title">{{ slot.stream_id }}</p>
+                    <div class="slots-display"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div>
+        <h2 class="section-title mt-4">Теми курсових робіт</h2>
+        <ul class="themes-list">
+            {% for theme in themes %}
+                <li class="theme-item mb-1">
+                    <a href="#">{{ theme.theme }}</a><br>
+                    &emsp;{{ theme.theme_description }}
+                </li>            
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("DOM fully loaded and parsed.");
+        
+            document.querySelectorAll(".slot-group").forEach(function (slotGroup, index) {
+                let availableSlots = parseInt(slotGroup.dataset.available);
+                let occupiedSlots = parseInt(slotGroup.dataset.occupied);
+                let slotDisplay = slotGroup.querySelector(".slots-display");
+        
+                console.log(`Slot Group ${index + 1}:`, { availableSlots, occupiedSlots });
+        
+                if (isNaN(availableSlots) || isNaN(occupiedSlots)) {
+                    console.warn(`Invalid slot value for slot group ${index + 1}`);
+                    return;
+                }
+        
+                let totalSlots = availableSlots + occupiedSlots;  // Total slots (available + occupied)
+        
+                // First create the occupied slots, then available slots
+                for (let i = 0; i < occupiedSlots; i++) {
+                    let slotSpan = document.createElement("span");
+                    slotSpan.className = "slot-dot";
+                    slotSpan.textContent = "⬤";  // Occupied slot (filled dot)
+                    slotDisplay.appendChild(slotSpan);
+                }
+        
+                for (let i = 0; i < availableSlots; i++) {
+                    let slotSpan = document.createElement("span");
+                    slotSpan.className = "slot-dot";
+                    slotSpan.textContent = "◯";  // Available slot (empty dot)
+                    slotDisplay.appendChild(slotSpan);
+                }
+            });
+        });
+        
+    </script>
+{% endif %}

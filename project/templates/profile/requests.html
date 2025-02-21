@@ -3,7 +3,7 @@
 {% if user_profile.role == "Студент" %}
     {% if sent_requests %}
         <h2>📩 Надіслані запити</h2>
-        {% for request in sent_requests %}
+        {% for request in sent_requests|dictsortreversed:"request_date" %}
             <div class="request-card">
                 <div class="request-user">
                     {% if user.profile.profile_picture %}
@@ -12,11 +12,24 @@
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}
                     <div class="user-info">
-                        <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
+                        <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                            {{ request.teacher_id.teacher_id.get_full_name }}
+                        </a>
                         <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                        {% if request.proposed_theme_id %}
-                            <p class="theme">{{ request.proposed_theme_id.theme }}</p>
+                        {% if request.teacher_theme %}
+                            <strong>Тема викладача:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
+                        {% if request.student_themes.all %}
+                            <strong>Тематика студента:</strong>
+                            <ul style="list-style-type: none">
+                                {% for theme in request.student_themes.all %}
+                                    <li>{{ theme.theme }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <strong>Мотивація:</strong>
+                        <p class="motivation">{{ request.motivation_text }}</p>
                     </div>
                 </div>
                 <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
@@ -26,10 +39,11 @@
         <p>Ви ще не надсилали запитів.</p>
     {% endif %}
 
+
     {% elif user_profile.role == "Викладач" %}
     {% if received_requests %}
         <h2>📥 Отримані запити</h2>
-        {% for request in received_requests %}
+        {% for request in received_requests|dictsortreversed:"request_date" %}
             <div class="request-card">
                 <div class="request-user">
                     {% if request.student_id.profile_picture %}
@@ -39,24 +53,53 @@
                     {% endif %}
                     <div class="user-info">
                         <h3>{{ request.student_id.get_full_name }}</h3>
-                        <p class="role">Група: {{ request.student_id.academic_group }}</p>
-                        {% if request.proposed_theme_id %}
-                            <p class="theme">{{ request.proposed_theme_id.theme }}</p>
+                        <p class="role">{{ request.student_id.academic_group }}</p>
+
+                        {% if request.teacher_theme %}
+                            <strong>Запропонована тема:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
-                        <p class="motivation">Мотивація: {{ request.motivation_text }}</p>
+
+                        <strong>Теми студента:</strong>
+                        {% if request.student_themes.all %}
+                            <ul style="list-style-type: none">
+                                {% for theme in request.student_themes.all %}
+                                    <li>{{ theme.theme }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        <strong>Мотивація:</strong>
+                        <p class="motivation">{{ request.motivation_text }}</p>
                     </div>
                 </div>
-                
+
                 <!-- Buttons for approval/decline -->
                 <div class="request-actions">
-                    {% comment %} <form method="post" action="{% url 'approve_request' request.id %}"> {% endcomment %}
-                        {% comment %} {% csrf_token %} {% endcomment %}
-                        <button type="submit" class="approve-btn">✅ Підтвердити</button>
-                    {% comment %} </form> {% endcomment %}
-                    {% comment %} <form method="post" action="{% url 'decline_request' request.id %}"> {% endcomment %}
-                        {% comment %} {% csrf_token %} {% endcomment %}
-                        <button type="submit" class="decline-btn">❌ Відхилити</button>
-                    {% comment %} </form> {% endcomment %}
+                    <form method="post" action="{% url 'approve_request' request.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="request-button accept">Підтвердити</button>
+                    </form>
+                    <button type="button" class="request-button reject" onclick="openRejectModal({{ request.id }})">Відхилити</button>  <!-- Just open the modal for the specific request -->
+                </div>
+
+                <!-- Rejection Reason Modal (unique per request) -->
+                <div id="rejectModal-{{ request.id }}" class="modal">
+                    <div class="modal-content">
+                        <div style='display: flex; justify-content: space-between; align-items: center;'>
+                            <h3>Відхилити запит</h3>
+                            <i class="fas fa-times close-modal" onclick="closeModal({{ request.id }})" ></i> <!-- Font Awesome cross icon -->
+                        </div>
+                        <form id="reject-form-{{ request.id }}" action="{% url 'reject_request' request.id %}" method="POST">
+                            {% csrf_token %}
+                            <label for="reason">Причина:</label>
+                            <textarea id="reason" name="reason" rows="4" required></textarea>
+                            <div class="modal-buttons">
+                                <!-- Second button inside the modal triggers form submission -->
+                                <button type="submit" class='request-button reject'>Відхилити</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         {% endfor %}
@@ -64,6 +107,7 @@
         <p>У вас немає нових запитів.</p>
     {% endif %}
 {% endif %}
+
 
 
 
@@ -76,5 +120,27 @@
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         event.target.classList.add('active');
     }
+
+        // Show the modal for the specific request
+    function openRejectModal(requestId) {
+        document.getElementById("rejectModal-" + requestId).style.display = "flex";
+    }
+
+    // Close the modal for the specific request
+    function closeModal(requestId) {
+        document.getElementById("rejectModal-" + requestId).style.display = "none";
+    }
+
+    // Optionally: Add event listeners for dynamically added reject buttons
+    document.addEventListener("DOMContentLoaded", function () {
+        const rejectButtons = document.querySelectorAll(".reject-button");
+        
+        rejectButtons.forEach(button => {
+            button.addEventListener("click", function () {
+                const requestId = this.getAttribute("data-request-id");
+                openRejectModal(requestId);
+            });
+        });
+    });
 </script>
 {% endblock %}
