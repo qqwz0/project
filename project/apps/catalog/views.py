@@ -1,12 +1,14 @@
 from .utils import HtmxLoginRequiredMixin
-from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme 
-from django.views.generic import ListView, DetailView, FormView, TemplateView
-from .forms import RequestForm, FilteringForm
+from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream
+from django.core.exceptions import ValidationError 
+from django.views.generic import ListView, DetailView, FormView
+from .forms import RequestForm
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.http import JsonResponse
 from django.contrib import messages
-from django.shortcuts import render
+from django.db.models import F
+
 import re
 
 class TeachersCatalogView(TemplateView, FormView):
@@ -159,10 +161,11 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         req.save()
 
         # Save each student theme from cleaned data.
-        student_themes = form.cleaned_data['student_themes']
-        for theme in student_themes:
+        student_themes_data = form.cleaned_data['student_themes']
+        for theme in student_themes_data:
             if theme:
-                StudentTheme.objects.create(student_id=self.request.user, theme=theme, request_id=req)
+                student_theme = StudentTheme.objects.create(student_id=self.request.user, theme=theme)
+                req.student_themes.add(student_theme)
         
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             messages.success(self.request, self.get_success_message(form.cleaned_data))
@@ -178,18 +181,31 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = 'pending'
         
+        student_stream_code = form.instance.extract_stream_from_academic_group()
+        if student_stream_code:
+            try:
+                stream = Stream.objects.get(stream_code=student_stream_code)
+                available_slot = Slot.objects.filter(
+                    teacher_id=form.instance.teacher_id,
+                    stream_id=stream,
+                    occupied__lt=F('quota')
+                ).first()
+                
+                if available_slot:
+                    form.instance.slot = available_slot
+                else:
+                    raise ValidationError(f"No available slots for teacher {form.instance.teacher_id} in stream {stream.stream_code}")
+            except Stream.DoesNotExist:
+                raise ValidationError(f"No stream found with code: {student_stream_code}")
 
-        proposed_theme = form.cleaned_data.get('proposed_themes')
-        student_themes = form.cleaned_data.get('student_themes')
-
-        if proposed_theme:
+        teacher_theme = form.cleaned_data.get('teacher_themes')
+        if teacher_theme:
             # Mark the chosen teacher theme as occupied.
-            theme = TeacherTheme.objects.get(theme=proposed_theme, teacher_id=form.instance.teacher_id)
-            form.instance.proposed_theme_id = theme
-            theme.is_ocupied = True
+            theme = TeacherTheme.objects.get(theme=teacher_theme, teacher_id=form.instance.teacher_id)
+            form.instance.teacher_theme = theme
+            theme.is_occupied = True
             theme.save()
-        elif student_themes:
-            form.instance.student_themes = student_themes
+
 
 
 

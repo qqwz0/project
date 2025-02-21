@@ -74,7 +74,7 @@ class RequestForm(forms.ModelForm):
     """
 
     # Proposed theme provided by the teacher.
-    proposed_themes = forms.CharField(
+    teacher_themes = forms.CharField(
         label="Обери запропоновану тему",
         widget=forms.TextInput(attrs={
             'class': 'form-input',
@@ -103,11 +103,11 @@ class RequestForm(forms.ModelForm):
         """
         super(RequestForm, self).__init__(*args, **kwargs)
         # Query all unoccupied themes for this teacher.
-        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_ocupied=False)
+        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False)
         self.themes_list = [(theme.id, theme.theme) for theme in themes]
 
         # Mark these fields as optional, overriding global settings if necessary.
-        self.fields['proposed_themes'].required = False
+        self.fields['teacher_themes'].required = False
         self.fields['student_themes'].required = False
         
         if self.get_student_themes_count() >= 3:
@@ -125,11 +125,11 @@ class RequestForm(forms.ModelForm):
         Ensures at least one theme is chosen, and not more than three custom themes.
         """
         cleaned_data = super().clean()
-        proposed_theme = cleaned_data.get('proposed_themes')
+        teacher_theme = cleaned_data.get('teacher_themes')
         student_themes = self.data.getlist('student_themes')
 
-        # Require the user to pick or enter a theme.
-        if not proposed_theme and not any(student_themes):
+        # Check if either teacher theme or student theme is provided
+        if not teacher_theme and not any(theme.strip() for theme in student_themes):
             raise forms.ValidationError('Ви повинні вибрати запропоновану тему або ввести власну.')
         
         # Limit the number of student themes to three.
@@ -156,7 +156,7 @@ class RequestForm(forms.ModelForm):
         Associates this form with the `Request` model and specifies common form settings.
         """
         model = Request
-        fields = ['proposed_themes', 'student_themes', 'motivation_text', 'proposed_theme_id']
+        fields = ['teacher_themes', 'student_themes', 'motivation_text', 'teacher_theme']
         label_suffix = ''
         labels = {
             'motivation_text': '',
@@ -166,7 +166,7 @@ class RequestForm(forms.ModelForm):
                 'class': 'form-textarea',
                 'placeholder': 'Опиши свою мотивацію'
             }),
-            'proposed_theme_id': forms.HiddenInput(),
+            'teacher_theme': forms.HiddenInput(),
         }
      
         

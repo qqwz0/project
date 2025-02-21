@@ -55,9 +55,9 @@ and a form allowing the user to propose or enter custom themes.
         
             <!-- A dropdown menu for proposed themes. -->
             <div class="dropdown">
-                {{ form.proposed_themes.label_tag|cut:":" }}
+                {{ form.teacher_themes.label_tag|cut:":" }}
                 <div class="dropdown-input">
-                    {{ form.proposed_themes }}
+                    {{ form.teacher_themes }}
                     <button type="button" id="dropdown-toggle" class="dropdown-toggle">
                         <img src={% static "assets/img/arrow-up.svg" %} alt="Dropdown Icon" class="dropdown-icon">
                     </button>
@@ -173,7 +173,7 @@ and a form allowing the user to propose or enter custom themes.
     // Sets the proposed_themes input when a dropdown item is clicked, then hides the menu.
     document.querySelectorAll('.dropdown-item').forEach(function(item) {
         item.addEventListener('click', function() {
-            document.querySelector('input[name="proposed_themes"]').value = this.getAttribute('data-value');
+            document.querySelector('input[name="teacher_themes"]').value = this.getAttribute('data-value');
             document.getElementById('dropdown-menu').style.display = 'none';
         });
     });
