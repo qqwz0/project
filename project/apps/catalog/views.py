@@ -1,13 +1,14 @@
 from .utils import HtmxLoginRequiredMixin
 from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream
 from django.core.exceptions import ValidationError 
-from django.views.generic import ListView, DetailView, FormView
-from .forms import RequestForm
+from django.views.generic import ListView, DetailView, FormView, TemplateView
+from .forms import RequestForm, FilteringForm
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db.models import F
+from django.shortcuts import render
 
 import re
 
@@ -42,7 +43,6 @@ class TeachersListView(ListView):
         teachers = OnlyTeacher.objects.select_related('teacher_id').all()
         slots = Slot.filter_by_available_slots()
         data = []
-        id_list = []
         is_matched = False
 
         if request.user.is_authenticated and request.user.role == 'Студент':

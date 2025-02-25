@@ -31,7 +31,9 @@
                 <p><strong>Місць немає</strong></p>
               </div>
             </template>
-            <p x-html="`<strong>Місця:</strong> ${item.free_slots[0].get_available_slots}`" class="single-slot"></p>
+            <template x-if="item.free_slots.length === 1">
+              <p x-html="`<strong>Місця:</strong> ${item.free_slots[0].get_available_slots}`" class="single-slot"></p>
+            </template>  
           </div>
         </template>
         <template x-if="!item.is_matched">

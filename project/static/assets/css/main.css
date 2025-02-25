@@ -128,14 +128,15 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--nav-hover-color);
   }
 }
-
 .search-section {
   margin-left: 165px;
+  margin-top: 80px;
   padding: 20px;
   background: white;
-  position: sticky;
-  top: 100px;
-  z-index: 99;
+  position: absolute;
+  top: 0; /* Change from 100px to 0 */
+  z-index: 100; /* Increase z-index to ensure it stays above content */
+  
 }
 
 .search-section h1 {
@@ -150,7 +151,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 141%;
+  width: 171%;
   height: 100%;
   margin: 0 auto;
   padding: 0 20px;
@@ -168,63 +169,129 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #ececec;
 }
 
-.filter-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  margin-left: 10px;
-}
-
-.filter-btn img {
-  width: 200%;
-  height: 200%;
-  transition: transform 0.3s;
-}
-
-.filter-btn:hover img {
-  transform: scale(1.1);
-}
-
 .filter-panel {
-  position: fixed;
-  top: 0;
-  left: -400px;
+  position: absolute;
+  left: 0;
+  top: 8rem;
   width: 15%;
-  height: 100vh;
+  height: 51rem;
   background: white;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
   transition: left 0.3s ease;
   z-index: 1000;
-}
-
-.filter-panel.active {
-  left: 0;
+  border-radius: 2%;
+  border: 1px solid #e0e0e0;
 }
 
 .filter-header {
-  padding: 20px;
-  border-bottom: 1px solid #ddd;
+  padding: 0 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.close-filters {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
+.filter-header h3{
+  font-family: var(--default-font);
+  color: #050505;
+  font-size: 20px;
+}
+.filter-header img {
+  width: 8%;
+  height: 8%;
 }
 
 .filter-content {
-  padding: 20px;
+  padding: 0 20px;
 }
+.devider {
+  border: none;  
+  border-bottom: 1px solid #a3a3a3;
+  margin: 1rem 0;
+  opacity: 0.25;  
+}
+.filter-content label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  font-family: var(--default-font);
+  color: #3f3e3e;
+
+}
+
+.filter-content .form-checkbox {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: left;
+  gap: 0.5rem;
+}
+
+.filter-content .form-checkbox input[type="checkbox"] {
+  order: 2;
+  margin-left: auto;
+}
+
+.range-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.filter-content input[type="range"] {
+  width: 60%;
+  height: 8px;
+  border-radius: 5px;
+  background: #e0e0e0;
+  outline: none;
+}
+
+.range-value {
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+  background: #ffffff;
+  border-radius: 4px;
+  text-align: center;
+  font-family: var(--default-font);
+  color: #3f3e3e;
+  margin-left: 1rem;
+}
+.checkbox-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.option-label{
+  font-family: var(--default-font);
+  color: #050505;
+  margin-bottom: 1.5rem;
+  font-size: 20px;
+}
+.filter-button {
+  background-color: #0378ec;
+  color: #fff;
+  border: none;
+  padding: 12px 24px; 
+  border-radius: 8px;
+  cursor: pointer;
+  display: block;
+  margin: 26px auto; 
+  width: 100%;
+  height: 10%;
+  font-size: 18px;
+  font-family: var(--default-font);
+  transition: background-color 0.3s ease;
+  }
+
+  .filter-button:hover {
+    background-color: #0256af;
+  }
 
 .main {
   padding: 20px;
@@ -232,7 +299,8 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 1200px;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 5px;
+  margin-top: 200px;
 }
 
 .teacher-info {
@@ -240,17 +308,17 @@ h1, h2, h3, h4, h5, h6 {
   padding: 25px;
   background-color: #ffffff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
-  margin-left: 200px;
-  margin-top: 60px;
+  margin-bottom: 10px; /* Reduced from default to 10px */
+  margin-left: 205px;
+  margin-top: 35px; 
   transition: all 0.3s ease;
-  border-radius: 15px; /* Added more rounded corners */
+  border-radius: 15px;
 }
 
 .teacher-card {
   display: flex;
   flex-direction: row; 
-  gap: 40px;
+  gap: 20px;
   align-items: stretch; 
   cursor: pointer;
 }
@@ -536,6 +604,7 @@ p.position {
   margin-bottom: 4px;
   font-size: 20px;
   font-family: var(--default-font);
+  text-align: center;
 
 }
 

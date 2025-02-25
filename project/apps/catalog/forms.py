@@ -28,29 +28,29 @@ class FilteringForm(forms.Form):
             - CSS class: 'form-range'
     """
     DEPARTMENT_CHOICES = [
-        (department, department) for department in CustomUser.objects.values_list('department', flat=True).distinct()
+        (department, (department[:25] + '...' if len(department) > 25 else department))
+        for department in filter(None, CustomUser.objects.values_list('department', flat=True).distinct())
     ]
     POSITION_CHOICES = [
-        (position, position) for position in OnlyTeacher.objects.values_list('position', flat=True).distinct()
-    ]
-    MIN_MAX_SLOTS = [
-        (slots, slots) for slots in Slot.objects.values_list('quota', flat=True).distinct()
+        (position, position) for position in filter(None, OnlyTeacher.objects.values_list('position', flat=True).distinct())
     ]
     
+    slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
+    min_slots = min(slot_values) if slot_values else 1
+    max_slots = max(slot_values) if slot_values else 10
+    
+    label_suffix = ''
+    
     departments = forms.MultipleChoiceField(
-        label='Кафедри',
+        label='Кафедра',
         choices=DEPARTMENT_CHOICES,
-        widget=forms.CheckboxSelectMultiple(
-            attrs={'class': 'form-checkbox'}
-        ),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
     positions = forms.MultipleChoiceField(
-        label='Посади',
+        label='Науковий ступінь',
         choices=POSITION_CHOICES,
-        widget=forms.CheckboxSelectMultiple(
-            attrs={'class': 'form-checkbox'}
-        ),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
     slots = forms.IntegerField(
@@ -58,14 +58,19 @@ class FilteringForm(forms.Form):
         widget=forms.NumberInput(attrs={
             'type': 'range',
             'class': 'form-range',
-            'min': MIN_MAX_SLOTS[0][0],
-            'max': MIN_MAX_SLOTS[-1][0],
+            'min': min_slots,
+            'max': max_slots,
             'step': 1,
-            'value': 1
+            'value': min_slots
         }),
         required=False
     )
-     
+    show_occupied = forms.BooleanField(
+        label='',
+        widget=forms.CheckboxInput(attrs={'class': 'form-boolean'}),
+        required=False
+    )
+    
 
 class RequestForm(forms.ModelForm):
     """

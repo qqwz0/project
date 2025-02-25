@@ -1,8 +1,8 @@
 
 {% extends "catalog/base.html" %}
 {% load static %}
-
-<!-- 
+{%load widget_tweaks%} 
+  <!-- 
   This template displays a list of teachers and highlights their available slots.
   It provides a modal dialog to submit requests. 
   When a user triggers the HX request (via button click), the modal is swapped in with HTMX. 
@@ -18,31 +18,69 @@
           <!-- Search input for filtering teachers (frontend only, no backend code). -->
           <input type="text" class="search-input" placeholder="Пошук викладача...">
           <!-- Button for opening the filter panel (if more advanced filtering is needed). -->
-          <button class="filter-btn" onclick="toggleFilters()">
-              <img src="{% static 'assets/img/filters.ico' %}" alt="Filters">
-          </button>
       </div>
     </div>
 
-    <!-- Filter panel that slides out/in upon filter button click. -->
-    <div class="filter-panel" id="filterPanel">
-      <div class="filter-header">
-          <h3>Фільтри</h3>
-          <!-- Close button that collapses the filter panel. -->
-          <button class="close-filters" onclick="toggleFilters()">×</button>
-      </div>
-      <div class="filter-content">
-          <!-- Future placeholders for actual filters. -->
-      </div>
-    </div>
+
+  
 
     <!-- Loop through 'data' which contains each teacher and their free slots. -->
-    <div x-data="{data: []}" x-init='data = await (await fetch("{%url 'teachers_list'%}")).json()'>
-      <template x-for= "item in data"> 
-      {%include "catalog/teacher_cards.html"%}
-      </template>
-    </div> 
-  
+    <div x-data="{ 
+      data: [], 
+      departments: [], 
+      positions: [], 
+      slots: null,
+      show_occupied: false, 
+      filteredData: [],  
+      async initData() {
+        this.data = await (await fetch('{% url 'teachers_list' %}')).json();  
+        this.filteredData = this.data; 
+      },
+      applyFilters() {
+        this.filteredData = this.data.filter(i =>
+          (this.departments.length === 0 || this.departments.includes(i.teacher.teacher_id.department)) &&
+          (this.positions.length === 0 || this.positions.includes(i.teacher.position)) &&
+          (this.slots === null || i.free_slots.some(slot => slot.get_available_slots >= this.slots)) &&
+          (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
+        );
+      }
+    }" 
+    x-init="initData()"> 
+
+    <div class="filter-panel" >
+      <div class="filter-header">
+          <h3>Фільтри</h3>
+          <img src="{% static 'assets\img\filters.svg' %}" </img>
+      </div>
+      <div class="filter-content">
+        <hr class='devider'></hr>
+        <h3 class='option-label'>{{form.departments.label}}</h3>
+        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+        <hr class='devider'></hr>
+        <h3 class='option-label'>{{form.slots.label}}</h3>
+        <div class="range-container">
+          {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" x-bind:disabled="show_occupied" %}
+          <span class="range-value" x-text="slots || '0'"></span>
+        </div>
+        <hr class='devider'></hr>
+        <hr class='devider'></hr>
+        <hr class='devider'></hr>
+        <h3 class='option-label'>{{form.positions.label}}</h3>
+        {% render_field form.positions class="form-checkbox" autocomplete="off" @change="positions = changePositions($el, positions)" %}
+        <hr class='devider'></hr>
+        <div class="checkbox-wrapper">
+          <span class="checkbox-text">Викладачі без вільних місць</span>
+          {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
+        </div>
+        <button class="filter-button" @click="applyFilters()">Фільтрувати</button>  
+      </div> 
+    </div>
+    <template x-for="item in filteredData">
+        {% include "catalog/teacher_cards.html" %}
+    </template>
+    </div>
+
+
 
     <!-- A dialog element wrapping the HTMX content for the teacher modal. -->
     <dialog id="details_request_modal" class="modal">
@@ -84,6 +122,31 @@
     {% endif %}
 
     <script>
+      function changeDepartments(el, departments) {
+        let department = el.value;
+        if (departments.includes(department)) {
+            return departments.filter(i => i !== department);
+        } else {
+            return [...departments, department];
+        }
+    }
+      function changePositions(el, positions) {
+        let position = el.value;
+        if (positions.includes(position)) {
+            return positions.filter(i => i !== position);
+        } else {
+            return [...positions, position];
+        }
+      }
+      function handleShowOccupied(el) {
+        const alpineData = Alpine.$data(el.closest('[x-data]'));
+        alpineData.show_occupied = el.checked;
+        if (el.checked) {
+            alpineData.slots = null;
+            const rangeInput = document.querySelector('input[type="range"]');
+            rangeInput.value = rangeInput.min; // Reset to minimum value
+        }
+    }
       // Event listener triggered after the HTMX swap finishes inserting new content.
       document.addEventListener('htmx:afterSwap', function(event) {
           console.log("HTMX swap завершено", event.detail.target);
@@ -106,14 +169,5 @@
         popup.style.display = 'none';
       }
 
-      // Toggles the filter panel's visibility (front-end only).
-      function toggleFilters() {
-        const panel = document.getElementById('filterPanel');
-        if (panel.style.display === 'block') {
-          panel.style.display = 'none';
-        } else {
-          panel.style.display = 'block';
-        }
-      }
-    </script>
+  </script>
 {% endblock  %}
