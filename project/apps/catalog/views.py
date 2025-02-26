@@ -2,7 +2,7 @@ from .utils import HtmxLoginRequiredMixin
 from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream
 from django.core.exceptions import ValidationError 
 from django.views.generic import ListView, DetailView, FormView, TemplateView
-from .forms import RequestForm, FilteringForm
+from .forms import RequestForm, FilteringSearchingForm
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.http import JsonResponse
@@ -14,31 +14,93 @@ import re
 
 class TeachersCatalogView(TemplateView, FormView):
     """
-    Displays the teachers catalog page.
+    Displays the teachers catalog page with filtering and searching capabilities.
+    
+    This view combines TemplateView and FormView to render a catalog of teachers
+    that can be filtered and searched by various criteria.
+    
+    Attributes:
+        template_name (str): Path to the template that renders the catalog.
+        form_class: Form class for filtering and searching teachers.
+    
+    Methods:
+        get: Handles GET requests to display the teachers catalog with the filter form.
     """
     template_name = 'catalog/teachers_catalog.html'
-    form_class = FilteringForm
+    form_class = FilteringSearchingForm
     
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teachers catalog.
+        
+        Args:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            HttpResponse: Rendered template with the filter form.
         """
         form = self.form_class()
         context = {'form': form}
         return render(request, self.template_name, context)
     
-class TeachersListView(ListView):
+class TeachersListView(ListView):    
     """
-    Displays a list of teachers along with their available slots.
+    API view that provides a list of teachers with their available slots.
+    
+    This view extends Django's ListView to return JSON data containing
+    teacher information and availability slots. It handles filtering based on
+    the authenticated student's academic group.
+    
+    Attributes:
+        model (Model): The OnlyTeacher model class.
+        context_object_name (str): Name for the context variable containing the data.
+    
+    Methods:
+        get: Returns JSON data with teacher information and available slots.
     """
     model = OnlyTeacher
     context_object_name = 'data'
     
     def get(self, request, *args, **kwargs):
         """
-        Returns a list of dictionaries that each contain:
-        - Teacher instance (converted to dictionary)
-        - Free slots for that teacher (converted to list of dictionaries)
+        Returns a JSON response with teacher data and their available slots.
+        
+        For authenticated students, slots are filtered by the student's academic group.
+        Each teacher entry includes personal information and availability data.
+        
+        Args:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            JsonResponse: JSON data containing teachers and their available slots.
+                Format:
+                [
+                    {
+                        'teacher': {
+                            'id': int,
+                            'position': str,
+                            'photo': str (url),
+                            'teacher_id': {
+                                'first_name': str,
+                                'last_name': str,
+                                'department': str,
+                            }
+                        },
+                        'free_slots': [
+                            {
+                                'stream_id': {
+                                    'stream_code': str
+                                },
+                                'get_available_slots': int
+                            }
+                        ],
+                        'is_matched': bool
+                    }
+                ]
         """
         teachers = OnlyTeacher.objects.select_related('teacher_id').all()
         slots = Slot.filter_by_available_slots()
@@ -204,13 +266,4 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
             theme = TeacherTheme.objects.get(theme=teacher_theme, teacher_id=form.instance.teacher_id)
             form.instance.teacher_theme = theme
             theme.is_occupied = True
-            theme.save()
-
-
-
-
-            
-        
-
-    
-    
+            theme.save()  

@@ -2,8 +2,8 @@ from django import forms
 from .models import Request, TeacherTheme, OnlyTeacher, Slot
 from apps.users.models import CustomUser
 
-class FilteringForm(forms.Form):
-    """        A Django Form class that provides filtering functionality for teacher listings.
+class FilteringSearchingForm(forms.Form):
+    """A Django Form class that provides filtering and searching functionality for teacher listings.
     
     Technical Details:
     -----------------
@@ -26,6 +26,15 @@ class FilteringForm(forms.Form):
             - Step size: 1
             - Default value: 1
             - CSS class: 'form-range'
+            
+        - show_occupied (BooleanField):
+            - Checkbox to toggle display of fully occupied teacher slots
+            - CSS class: 'form-boolean'
+            
+        - searching (CharField):
+            - Text input for searching teachers by name
+            - Placeholder: 'Пошук викладача...'
+            - CSS class: 'form-searching'
     """
     DEPARTMENT_CHOICES = [
         (department, (department[:25] + '...' if len(department) > 25 else department))
@@ -68,6 +77,11 @@ class FilteringForm(forms.Form):
     show_occupied = forms.BooleanField(
         label='',
         widget=forms.CheckboxInput(attrs={'class': 'form-boolean'}),
+        required=False
+    )
+    searching = forms.CharField(
+        label='',
+        widget=forms.TextInput(attrs={'class': 'form-searching', 'placeholder': 'Пошук викладача...'}),
         required=False
     )
     

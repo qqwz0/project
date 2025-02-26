@@ -1,4 +1,3 @@
-
 {% extends "catalog/base.html" %}
 {% load static %}
 {%load widget_tweaks%} 
@@ -11,18 +10,6 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
 {% block content %}
-    <div class="search-section">
-      <!-- A heading providing context for the search feature. -->
-      <h1>Знайди свого ідеального наукового керівника!</h1> 
-      <div class="search-container">
-          <!-- Search input for filtering teachers (frontend only, no backend code). -->
-          <input type="text" class="search-input" placeholder="Пошук викладача...">
-          <!-- Button for opening the filter panel (if more advanced filtering is needed). -->
-      </div>
-    </div>
-
-
-  
 
     <!-- Loop through 'data' which contains each teacher and their free slots. -->
     <div x-data="{ 
@@ -30,7 +17,9 @@
       departments: [], 
       positions: [], 
       slots: null,
-      show_occupied: false, 
+      show_occupied: false,
+      full_names: [],
+      searchQuery: '', 
       filteredData: [],  
       async initData() {
         this.data = await (await fetch('{% url 'teachers_list' %}')).json();  
@@ -43,14 +32,35 @@
           (this.slots === null || i.free_slots.some(slot => slot.get_available_slots >= this.slots)) &&
           (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
         );
+      },
+      applySearch() {
+        if (!this.searchQuery.trim()) {
+          this.filteredData = this.data; // якщо запит порожній, показати всіх
+          return;
+        }
+        
+        this.filteredData = this.data.filter(i => {
+          const fullName = (i.teacher.teacher_id.first_name + ' ' + i.teacher.teacher_id.last_name).toLowerCase();
+          return fullName.includes(this.searchQuery.toLowerCase().trim());
+        });
       }
     }" 
     x-init="initData()"> 
-
+    <div class="search-section">
+      <!-- A heading providing context for the search feature. -->
+      <h1>Знайди свого ідеального наукового керівника!</h1> 
+      <div class="search-container">
+          <!-- Search input for filtering teachers (frontend only, no backend code). -->
+          {% render_field form.searching class="form-searching" autocomplete="off" x-model="searchQuery" @keydown.enter="applySearch()" %}
+          <button class="search-button" @click="applySearch()">
+            <img src="{% static 'assets\img\search.svg' %}" alt="Search">
+          </button>
+      </div>
+    </div>
     <div class="filter-panel" >
       <div class="filter-header">
           <h3>Фільтри</h3>
-          <img src="{% static 'assets\img\filters.svg' %}" </img>
+          <img src="{% static 'assets\img\filters.svg' %}" alt="Filters">
       </div>
       <div class="filter-content">
         <hr class='devider'></hr>
@@ -75,6 +85,11 @@
         <button class="filter-button" @click="applyFilters()">Фільтрувати</button>  
       </div> 
     </div>
+    <template x-if="filteredData.length === 0">
+      <div class="no-results">
+        <h2>Нічого не знайдено!</h2>
+      </div>
+    </template>  
     <template x-for="item in filteredData">
         {% include "catalog/teacher_cards.html" %}
     </template>
@@ -122,6 +137,13 @@
     {% endif %}
 
     <script>
+      /**
+       * Updates the departments filter selection based on checkbox changes.
+       * 
+       * @param {HTMLElement} el - The checkbox element that was changed
+       * @param {Array} departments - Current array of selected departments
+       * @returns {Array} Updated array of selected departments
+       */
       function changeDepartments(el, departments) {
         let department = el.value;
         if (departments.includes(department)) {
@@ -129,7 +151,15 @@
         } else {
             return [...departments, department];
         }
-    }
+       }
+      
+      /**
+       * Updates the positions filter selection based on checkbox changes.
+       * 
+       * @param {HTMLElement} el - The checkbox element that was changed
+       * @param {Array} positions - Current array of selected positions
+       * @returns {Array} Updated array of selected positions
+       */
       function changePositions(el, positions) {
         let position = el.value;
         if (positions.includes(position)) {
@@ -138,6 +168,13 @@
             return [...positions, position];
         }
       }
+      
+      /**
+       * Handles changes to the 'show occupied' checkbox, updating Alpine.js data
+       * and resetting the slots filter if checked.
+       * 
+       * @param {HTMLElement} el - The checkbox element that was changed
+       */
       function handleShowOccupied(el) {
         const alpineData = Alpine.$data(el.closest('[x-data]'));
         alpineData.show_occupied = el.checked;
@@ -147,6 +184,7 @@
             rangeInput.value = rangeInput.min; // Reset to minimum value
         }
     }
+      
       // Event listener triggered after the HTMX swap finishes inserting new content.
       document.addEventListener('htmx:afterSwap', function(event) {
           console.log("HTMX swap завершено", event.detail.target);
@@ -163,11 +201,12 @@
           }
       });
 
-      // Closes the popup message box when the 'Close' icon is clicked.
+      /**
+       * Closes the popup message box when the 'Close' icon is clicked.
+       */
       function closePopup() {
         const popup = document.querySelector('.success-popup');
         popup.style.display = 'none';
       }
-
   </script>
-{% endblock  %}
+{% endblock %}
