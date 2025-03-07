@@ -4,6 +4,12 @@
 
 {% block title %}Профіль користувача{% endblock %}
 
+{% block head %}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="profile-container">
     <div class="profile-header">
@@ -17,20 +23,26 @@
             </div>
             <div class="profile-text">
                 <h2>{{ user_profile.get_full_name }}</h2>
-                <h3>{{ user_profile.role }}</h3>
                 {% if user_profile.role == "Викладач" %}
+                    <h3>{{ teacher_profile.academic_level }}</h3>
                     <p>Кафедра: {{ user_profile.department }}</p>
                 {% elif user_profile.role == "Студент" %}
+                    <h3>{{ user_profile.role }}</h3>
                     <p>Група: {{ user_profile.academic_group }}</p>
                 {% endif %}
-                {% comment %} <a href="{% url 'profile_detail' 79 %}" class="profile-link">Переглянути профіль</a> {% endcomment %}
             </div>
         </div>
         {% if is_own_profile %}
             <div class="profile-buttons">
-                <a href="#">
-                    <i class="fas fa-edit"></i>
-                </a>
+                {% if user_profile.role == 'Викладач' %}
+                    <a href="{% url 'teacher_profile_edit' %}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                {% elif user_profile.role == 'Студент' %}
+                    <a href="{% url 'student_profile_edit' %}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                {% endif %}
                 <form id="logout-form" action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
                     <a href="#" onclick="document.getElementById('logout-form').submit();">

@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
         
 class OnlyTeacher(models.Model):
-    teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
+    teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'}, related_name='catalog_teacher_profile')
     photo = models.ImageField(upload_to='teacher_photos/', blank=True, null=True)
     position = models.CharField(max_length=100)
 
@@ -73,7 +73,7 @@ class Request(models.Model):
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False)
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False, related_name='catalog_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, blank=True, null=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, blank=True, null=True)
@@ -146,14 +146,14 @@ class Request(models.Model):
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     theme = models.CharField(max_length=100)
-    theme_description = models.TextField()
+    theme_description = models.TextField(blank=True)
     is_occupied = models.BooleanField(default=False)
     
     def __str__(self):
         return self.theme
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='catalog_student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):
