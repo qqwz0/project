@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from easy_thumbnails.conf import Settings as thumbnail_settings
 
 load_dotenv()  # This loads the .env file into the environment
 
@@ -42,7 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apps.catalog',
-    'apps.users'
+    'apps.users',
+    'image_cropping',
+    'easy_thumbnails',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -202,4 +206,12 @@ MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
 MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
 MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
 MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
+
+# Image cropping settings
+THUMBNAIL_PROCESSORS = (
+    'image_cropping.thumbnail_processors.crop_corners',
+) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+IMAGE_CROPPING_BACKEND = 'image_cropping.backends.easy_thumbs.EasyThumbnailsBackend'
+IMAGE_CROPPING_BACKEND_PARAMS = {}
 

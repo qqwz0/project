@@ -1,0 +1,159 @@
+{% extends "profile/profile-page.html" %}
+{% load static %}
+
+{% block content %}
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/teacher_edit.css' %}">
+</head>
+<div class="edit-profile-container">
+    <div class="profile-header">
+        <div class="profile-image">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
+            {% else %}
+                <img src="{% static 'images/default-avatar.jpg' %}" alt="Default Profile Picture">
+            {% endif %}
+        </div>
+        <div class="profile-title">
+            <h1>{{ user.get_full_name }}</h1>
+            <p class="email">{{ user.email }}</p>
+        </div>
+    </div>
+
+    <h2 class="edit-title">Редагувати профіль</h2>
+
+    <div class="form-content">
+        <form method="post" class="edit-form">
+            {% csrf_token %}
+            
+            <div class="form-sections">
+                <div class="personal-info">
+                    <h3>Особиста інформація</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="{{ form.first_name.id_for_label }}">Ім'я</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.patronymic.id_for_label }}">По-батькові</label>
+                            {{ form.patronymic }}
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="{{ form.last_name.id_for_label }}">Прізвище</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="{{ form.department.id_for_label }}">Кафедра</label>
+                        {{ form.department }}
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="{{ form.academic_level.id_for_label }}">Науковий рівень</label>
+                        {{ form.academic_level }}
+                    </div>
+                </div>
+
+                <div class="contacts">
+                    <h3>Контакти</h3>
+                    <div class="form-group">
+                        <label for="{{ form.additional_email.id_for_label }}">Додаткова лектронна скринька</label>
+                        {{ form.additional_email }}
+                    </div>
+
+                    <div class="form-group phone-group">
+                        <label for="{{ form.phone_number.id_for_label }}">Робочий номер телефону</label>
+                        <div class="phone-input">
+                            <span class="country-code">+380</span>
+                            {{ form.phone_number }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quota-section">
+                    <h3>Місця</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Квота</label>
+                            <input type="number" value="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Оберіть потік</label>
+                            <select>
+                                <option>ФЕС-2</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="themes-section">
+                    <h3>Теми робіт</h3>
+                    <div id="themes-container">
+                        {% for theme in existing_themes %}
+                        <div class="theme-item">
+                            <input type="text" value="{{ theme.theme }}" readonly>
+                            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="new-theme" placeholder="Введіть значення">
+                        <button type="button" class="add-theme" onclick="addTheme()">+</button>
+                    </div>
+                    <input type="hidden" name="themes" id="themes-data">
+                </div>
+            </div>
+
+            <button type="submit" class="save-button">Зберегти</button>
+        </form>
+    </div>
+</div>
+
+<script>
+let themes = [];
+
+{% for theme in existing_themes %}
+    themes.push("{{ theme.theme }}");
+{% endfor %}
+
+function addTheme() {
+    const input = document.getElementById('new-theme');
+    const theme = input.value.trim();
+    
+    if (theme) {
+        themes.push(theme);
+        
+        const container = document.getElementById('themes-container');
+        const themeDiv = document.createElement('div');
+        themeDiv.className = 'theme-item';
+        themeDiv.innerHTML = `
+            <input type="text" value="${theme}" readonly>
+            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
+        `;
+        
+        container.appendChild(themeDiv);
+        input.value = '';
+        updateThemesData();
+    }
+}
+
+function removeTheme(button) {
+    const themeDiv = button.parentElement;
+    const themeText = themeDiv.querySelector('input').value;
+    themes = themes.filter(t => t !== themeText);
+    themeDiv.remove();
+    updateThemesData();
+}
+
+function updateThemesData() {
+    document.getElementById('themes-data').value = JSON.stringify(themes);
+}
+
+document.addEventListener('DOMContentLoaded', updateThemesData);
+</script>
+{% endblock %}

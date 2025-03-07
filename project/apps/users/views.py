@@ -1,5 +1,7 @@
+import json
 import logging
 from urllib.parse import urlencode, parse_qs
+from functools import wraps
 
 import requests
 from django.conf import settings
@@ -15,9 +17,15 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.decorators import login_required
 
-from .forms import RegistrationForm
-from .models import CustomUser
-from apps.catalog.models import Request, OnlyTeacher, TeacherTheme, Slot
+from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm
+from .models import CustomUser, OnlyTeacher, OnlyStudent
+from apps.catalog.models import (
+    OnlyTeacher as CatalogTeacher,
+    Request,
+    TeacherTheme,
+    Slot,
+    Stream
+)
 
 
 # Load environment variables
@@ -30,6 +38,16 @@ logger = logging.getLogger(__name__)
 MICROSOFT_AUTH_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/authorize"
 MICROSOFT_TOKEN_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/token"
 MICROSOFT_GRAPH_ME_ENDPOINT = f"{settings.MICROSOFT_GRAPH_ENDPOINT}/me"
+
+def own_profile_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        profile_id = kwargs.get('profile_id') or request.user.id
+        if request.user.id != profile_id:
+            messages.error(request, "Ви можете редагувати тільки власний профіль")
+            return redirect('profile')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 def microsoft_register(request):
     """
@@ -365,56 +383,97 @@ def handle_login_callback(request, code):
         return redirect("login")
     
 def fake_login(request):
-    # Mock user email or get it from session or query parameters
-    email = "VYKLADACH.VYKLADACH@lnu.edu.ua"  # Example email, change as needed
-    
+    email = "VYKLADACH.VYKLADACH@lnu.edu.ua"
     try:
-        # Fetch user by email (or another unique identifier)
         user = CustomUser.objects.get(email=email)
-        
-        # Manually log the user in
-        auth_login(request, user)
-        
-        # Redirect to the desired page after login
-        return redirect("profile")  # Or wherever you want the user to go
-
     except CustomUser.DoesNotExist:
-        # Handle the case where the user doesn't exist in the database
-        messages.error(request, "User does not exist.")
-        return redirect("login")
+        user = CustomUser.objects.create(
+            email=email,
+            first_name="Викладач",
+            last_name="Тестовий",
+            patronymic="Петрович",
+            role="Викладач",
+            department="Системного проектування",
+            is_active=True,
+            password=make_password("fake_password")
+        )
+        
+        catalog_teacher = CatalogTeacher.objects.create(
+            teacher_id=user,
+            position="Доцент"
+        )
+        
+        OnlyTeacher.objects.create(
+            teacher_id=user,
+            position="Доцент",
+            academic_level="Кандидат наук",
+            additional_email="teacher.test@lnu.edu.ua",
+            phone_number="+380991234567"
+        )
+
+        stream = Stream.objects.create(
+            specialty_name="Тестова спеціальність",
+            stream_code="ФЕС-2"
+        )
+        
+        Slot.objects.create(
+            teacher_id=catalog_teacher,
+            stream_id=stream,
+            quota=5,
+            occupied=0
+        )
+        
+    auth_login(request, user)
+    return redirect("profile")
+        
+    auth_login(request, user)
+    
+    return redirect("profile")
 
 @login_required
 def profile(request, user_id=None):
     if user_id:
-        user_profile = get_object_or_404(CustomUser, id=user_id)  # Get the requested user's profile
+        user_profile = get_object_or_404(CustomUser, id=user_id)
     else:
-        user_profile = request.user  # If no ID is provided, show the current user's profile
+        user_profile = request.user
 
-    is_own_profile = (user_profile == request.user)  # Check if it's the user's own profile
+    is_own_profile = (user_profile == request.user)
 
     sent_requests = None
     received_requests = None
     themes = None
     slots = None
+    teacher_profile = None
 
     if user_profile.role == "Студент":
-        # Fetch requests sent by the student
         sent_requests = Request.objects.filter(student_id=user_profile).select_related('teacher_id', 'teacher_theme')
     elif user_profile.role == "Викладач":
-        # Fetch requests received by the teacher
-        received_requests = Request.objects.filter(teacher_id__teacher_id=user_profile, request_status='pending').select_related('student_id', 'teacher_theme')
-        # Fetch teacher themes
-        themes = TeacherTheme.objects.filter(teacher_id__teacher_id=user_profile)
-        # Fetch slots for this teacher
-        slots = Slot.objects.filter(teacher_id__teacher_id=user_profile)
+        try:
+            catalog_teacher = CatalogTeacher.objects.get(teacher_id=user_profile)
+            teacher_profile = OnlyTeacher.objects.get(teacher_id=user_profile)
+            
+            received_requests = Request.objects.filter(
+                teacher_id=catalog_teacher,
+                request_status='pending'
+            ).select_related('student_id', 'teacher_theme')
+            
+            themes = TeacherTheme.objects.filter(teacher_id=catalog_teacher)
+            slots = Slot.objects.filter(teacher_id=catalog_teacher)
+            
+        except CatalogTeacher.DoesNotExist:
+            catalog_teacher = CatalogTeacher.objects.create(
+                teacher_id=user_profile,
+                position="Доцент"
+            )
 
     context = {
         'user_profile': user_profile,
+        'teacher_profile': teacher_profile,
         'is_own_profile': is_own_profile,
         'sent_requests': sent_requests,
-        'received_requests': received_requests,  # Only teachers will see this
-        'themes': themes,  # Added teacher themes
-        'slots': slots,  # Added available slots
+        'received_requests': received_requests,
+        'themes': themes,
+        'slots': slots,
     }
 
     return render(request, 'profile/profile.html', context)
@@ -498,3 +557,95 @@ def logout_view(request):
     logout(request)
     logger.info("User logged out.")
     return redirect('login')
+
+@login_required
+@own_profile_required
+def teacher_profile_edit(request):
+    if request.user.role != 'Викладач':
+        messages.error(request, "Доступ заборонено")
+        return redirect('profile')
+        
+    teacher_profile, created = OnlyTeacher.objects.get_or_create(
+        teacher_id=request.user,
+        defaults={
+            'position': 'Не вказано',
+            'academic_level': 'Аспірант'
+        }
+    )
+    
+    catalog_teacher = CatalogTeacher.objects.get(teacher_id=request.user)
+    
+    if request.method == 'POST':
+        form = TeacherProfileForm(request.POST, instance=teacher_profile, user=request.user)
+        if form.is_valid():
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.patronymic = form.cleaned_data['patronymic']
+            request.user.department = form.cleaned_data['department']
+            request.user.save()
+            
+            form.save()
+            
+            themes_data = form.cleaned_data.get('themes', '[]')
+            if themes_data:
+                themes = json.loads(themes_data)
+                TeacherTheme.objects.filter(teacher_id=catalog_teacher).delete()
+                for theme_text in themes:
+                    TeacherTheme.objects.create(
+                        teacher_id=catalog_teacher,
+                        theme=theme_text,
+                        theme_description="",
+                        is_occupied=False
+                    )
+            
+            messages.success(request, "Профіль успішно оновлено")
+            return redirect('profile')
+    else:
+        form = TeacherProfileForm(instance=teacher_profile, user=request.user)
+    
+    existing_themes = TeacherTheme.objects.filter(teacher_id=catalog_teacher)
+    
+    return render(request, 'profile/teacher_edit.html', {
+        'form': form,
+        'existing_themes': existing_themes
+    })
+
+def teacher_requests(request):
+    return render(request, 'profile/requests.html', {
+        'message': 'У вас немає нових запитів.'
+    })
+
+@login_required
+@own_profile_required
+def student_profile_edit(request):
+    if request.user.role != 'Студент':
+        messages.error(request, "Доступ заборонено")
+        return redirect('profile')
+        
+    student_profile, created = OnlyStudent.objects.get_or_create(
+        student_id=request.user,
+        defaults={
+            'speciality': 'Не вказано',
+            'course': 1 
+        }
+    )
+    
+    if request.method == 'POST':
+        form = StudentProfileForm(request.POST, instance=student_profile, user=request.user)
+        if form.is_valid():
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.patronymic = form.cleaned_data['patronymic']
+            request.user.academic_group = form.cleaned_data['academic_group']
+            request.user.save()
+            
+            form.save()
+            
+            messages.success(request, "Профіль успішно оновлено")
+            return redirect('profile')
+    else:
+        form = StudentProfileForm(instance=student_profile, user=request.user)
+    
+    return render(request, 'profile/student_edit.html', {
+        'form': form
+    })
