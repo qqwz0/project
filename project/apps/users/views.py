@@ -21,6 +21,7 @@ from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm
 from .models import CustomUser, OnlyTeacher, OnlyStudent
 from apps.catalog.models import (
     OnlyTeacher as CatalogTeacher,
+    OnlyStudent,
     Request,
     TeacherTheme,
     Slot,
@@ -450,7 +451,7 @@ def profile(request, user_id=None):
     elif user_profile.role == "Викладач":
         try:
             catalog_teacher = CatalogTeacher.objects.get(teacher_id=user_profile)
-            teacher_profile = OnlyTeacher.objects.get(teacher_id=user_profile)
+            teacher_profile = CatalogTeacher.objects.get(teacher_id=user_profile)
             
             received_requests = Request.objects.filter(
                 teacher_id=catalog_teacher,
@@ -565,15 +566,13 @@ def teacher_profile_edit(request):
         messages.error(request, "Доступ заборонено")
         return redirect('profile')
         
-    teacher_profile, created = OnlyTeacher.objects.get_or_create(
+    teacher_profile, created = CatalogTeacher.objects.get_or_create(
         teacher_id=request.user,
         defaults={
             'position': 'Не вказано',
             'academic_level': 'Аспірант'
         }
     )
-    
-    catalog_teacher = CatalogTeacher.objects.get(teacher_id=request.user)
     
     if request.method == 'POST':
         form = TeacherProfileForm(request.POST, instance=teacher_profile, user=request.user)
@@ -589,10 +588,10 @@ def teacher_profile_edit(request):
             themes_data = form.cleaned_data.get('themes', '[]')
             if themes_data:
                 themes = json.loads(themes_data)
-                TeacherTheme.objects.filter(teacher_id=catalog_teacher).delete()
+                TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
                 for theme_text in themes:
                     TeacherTheme.objects.create(
-                        teacher_id=catalog_teacher,
+                        teacher_id=teacher_profile,
                         theme=theme_text,
                         theme_description="",
                         is_occupied=False
@@ -603,7 +602,7 @@ def teacher_profile_edit(request):
     else:
         form = TeacherProfileForm(instance=teacher_profile, user=request.user)
     
-    existing_themes = TeacherTheme.objects.filter(teacher_id=catalog_teacher)
+    existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
     
     return render(request, 'profile/teacher_edit.html', {
         'form': form,

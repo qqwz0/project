@@ -24,17 +24,16 @@ class CustomUser(AbstractUser):
         ('Оптоелектроніки та інформаційних технологій', 'Оптоелектроніки та інформаційних технологій'),
     ]
 
+    username = None
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
-    academic_group = models.CharField(max_length=6, blank=False, null=True)  # For students
+    academic_group = models.CharField(max_length=6, null=True)
     department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     patronymic = models.CharField("По-батькові", max_length=150, blank=True, null=True)
 
-    username = None
-
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['role']  # Specify any additional fields required when creating a superuser
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.email
