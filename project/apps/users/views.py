@@ -18,14 +18,17 @@ from django.contrib.auth.models import update_last_login
 from django.contrib.auth.decorators import login_required
 
 from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm
-from .models import CustomUser, OnlyTeacher, OnlyStudent
+from .models import CustomUser
+from apps.catalog.models import (
+    OnlyTeacher,
+    OnlyStudent,
+    Stream,
+    Slot,
+    Request,
+    TeacherTheme
+)
 from apps.catalog.models import (
     OnlyTeacher as CatalogTeacher,
-    OnlyStudent,
-    Request,
-    TeacherTheme,
-    Slot,
-    Stream
 )
 
 
@@ -399,15 +402,9 @@ def fake_login(request):
             password=make_password("fake_password")
         )
         
-        catalog_teacher = CatalogTeacher.objects.create(
+        teacher_profile = OnlyTeacher.objects.create(
             teacher_id=user,
-            position="Доцент"
-        )
-        
-        OnlyTeacher.objects.create(
-            teacher_id=user,
-            position="Доцент",
-            academic_level="Кандидат наук",
+            academic_level="Доцент",
             additional_email="teacher.test@lnu.edu.ua",
             phone_number="+380991234567"
         )
@@ -418,7 +415,7 @@ def fake_login(request):
         )
         
         Slot.objects.create(
-            teacher_id=catalog_teacher,
+            teacher_id=teacher_profile,
             stream_id=stream,
             quota=5,
             occupied=0
@@ -426,62 +423,51 @@ def fake_login(request):
         
     auth_login(request, user)
     return redirect("profile")
-        
-    auth_login(request, user)
-    
-    return redirect("profile")
 
 @login_required
 def profile(request, user_id=None):
     if user_id:
         user_profile = get_object_or_404(CustomUser, id=user_id)
+        is_own_profile = request.user.id == user_id
     else:
         user_profile = request.user
-
-    is_own_profile = (user_profile == request.user)
-
-    sent_requests = None
-    received_requests = None
-    themes = None
-    slots = None
-    teacher_profile = None
-
-    if user_profile.role == "Студент":
-        sent_requests = Request.objects.filter(student_id=user_profile).select_related('teacher_id', 'teacher_theme')
-    elif user_profile.role == "Викладач":
-        try:
-            catalog_teacher = CatalogTeacher.objects.get(teacher_id=user_profile)
-            teacher_profile = CatalogTeacher.objects.get(teacher_id=user_profile)
-            
-            received_requests = Request.objects.filter(
-                teacher_id=catalog_teacher,
-                request_status='pending'
-            ).select_related('student_id', 'teacher_theme')
-            
-            themes = TeacherTheme.objects.filter(teacher_id=catalog_teacher)
-            slots = Slot.objects.filter(teacher_id=catalog_teacher)
-            
-        except CatalogTeacher.DoesNotExist:
-            catalog_teacher = CatalogTeacher.objects.create(
-                teacher_id=user_profile,
-                position="Доцент"
-            )
+        is_own_profile = True
 
     context = {
         'user_profile': user_profile,
         'teacher_profile': teacher_profile,
         'is_own_profile': is_own_profile,
-        'sent_requests': sent_requests,
-        'received_requests': received_requests,
-        'themes': themes,
-        'slots': slots,
     }
+
+    if user_profile.role == 'Викладач':
+        teacher_profile = OnlyTeacher.objects.get(teacher_id=user_profile)
+        themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
+        slots = Slot.objects.filter(teacher_id=teacher_profile)
+        
+        if is_own_profile:
+            received_requests = Request.objects.filter(
+                teacher_id=teacher_profile,
+                request_status='pending'
+            )
+            context['received_requests'] = received_requests
+
+        context.update({
+            'teacher_profile': teacher_profile,
+            'themes': themes,
+            'slots': slots,
+        })
+
+    elif user_profile.role == 'Студент':
+        student_profile = OnlyStudent.objects.get(student_id=user_profile)
+        
+        if is_own_profile:
+            sent_requests = Request.objects.filter(student_id=user_profile)
+            context['sent_requests'] = sent_requests
+
+        context['student_profile'] = student_profile
 
     return render(request, 'profile/profile.html', context)
 
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from django.db.models import F
 import logging
 
 logger = logging.getLogger('app')
