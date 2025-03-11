@@ -2,7 +2,8 @@ import logging
 from django import forms
 from django.core.exceptions import ValidationError
 import re  # Regular expressions
-from .models import OnlyTeacher, CustomUser, TeacherTheme, OnlyStudent
+from .models import CustomUser
+from apps.catalog.models import OnlyTeacher, OnlyStudent, TeacherTheme
 
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
