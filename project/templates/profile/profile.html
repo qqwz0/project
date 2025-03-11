@@ -1,162 +1,327 @@
 {% extends "profile/profile-page.html" %}
 
-{%load static%}
+{% load static %}
 
 {% block title %}Профіль користувача{% endblock %}
 
 {% block head %}
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/profile.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="profile-container">
-    <div class="profile-header">
-        <div class="profile-info">
-            <div class="profile-pic">
-                {% if user_profile.profile_picture %}
-                    <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar">
-                {% else %}
-                    <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="default-avatar">
-                {% endif %}
-            </div>
-            <div class="profile-text">
-                <h2>{{ user_profile.get_full_name }}</h2>
-                {% if user_profile.role == "Викладач" %}
-                    <h3>{{ teacher_profile.academic_level }}</h3>
-                    <p>Кафедра: {{ user_profile.department }}</p>
-                {% elif user_profile.role == "Студент" %}
-                    <h3>{{ user_profile.role }}</h3>
-                    <p>Група: {{ user_profile.academic_group }}</p>
-                {% endif %}
-            </div>
-        </div>
-        {% if is_own_profile %}
-            <div class="profile-buttons">
-                {% if user_profile.role == 'Викладач' %}
-                    <a href="{% url 'teacher_profile_edit' %}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                {% elif user_profile.role == 'Студент' %}
-                    <a href="{% url 'student_profile_edit' %}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                {% endif %}
-                <form id="logout-form" action="{% url 'logout' %}" method="post">
-                    {% csrf_token %}
-                    <a href="#" onclick="document.getElementById('logout-form').submit();">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </a>
-                </form>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Tabs Section -->
-    <div class="tabs">
-        <div class="tab active" onclick="loadTab('info')">Інформація</div>
-        {% if is_own_profile %}
-            <div class="tab" onclick="loadTab('requests')">Запити</div>
-        {% endif %}
-        <div class="tab" onclick="loadTab('active')">Активні</div>
-        <div class="tab" onclick="loadTab('archive')">Архів</div>
-    </div>
-
-</div>
-
-<div id="info-section" class="tab-content"> 
-    {% include 'profile/info.html' with themes=themes slots=slots %}
-</div>
-
-<div id="requests-section" class="tab-content" style="display: none;">
-    {% include 'profile/requests.html' %}
-</div>
-
-<div id="active-section" class="tab-content" style="display: none;"> 
-    <p>Активні роботи...</p> 
-</div>
-
-<div id="archive-section" class="tab-content" style="display: none;"> 
-    <p>Архів курсів...</p> 
-</div>
-
-{% if messages %}
-<div class="messages">
-    {% for message in messages %}
-    <div class="success-popup {{ message.tags }}">
-        {% if message.tags == 'success' %}
-        <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
-        {% elif message.tags == 'error' %}
-        <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
-        {% endif %}
-        <div>
-            <div class="popup-content">
-                <p class="popup-title">
-                    {% if message.tags == 'success' %}
-                    Успіх!
-                    {% elif message.tags == 'error' %}
-                    Помилка!
+    <div class="profile-container">
+        <div class="profile-header">
+            <div class="profile-info">
+                <div class="profile-pic">
+                    {% if is_own_profile %}
+                        <form id="profile-pic-form" action="{% url 'update_profile_picture' %}" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
+                            <label for="profile-pic-input" id="avatar-label">
+                                <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                            </label>
+                            {{ form.cropping }}
+                        </form>
+                    {% else %}
+                        <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                     {% endif %}
-                </p>
-                <p class="popup-text">
-                    {{ message }}
-                </p>
+                    {{ form.media }}
+                </div>
+                <div class="profile-text">
+                    <h2>{{ user_profile.get_full_name }}</h2>
+                    {% if user_profile.role == "Викладач" %}
+                        <h3>{{ teacher_profile.academic_level }}</h3>
+                        <p>Кафедра: {{ user_profile.department }}</p>
+                    {% elif user_profile.role == "Студент" %}
+                        <h3>{{ user_profile.role }}</h3>
+                        <p>Група: {{ user_profile.academic_group }}</p>
+                    {% endif %}
+                </div>
             </div>
-            <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+            {% if is_own_profile %}
+                <div class="profile-buttons">
+                    {% if user_profile.role == 'Викладач' %}
+                        <a href="{% url 'teacher_profile_edit' %}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    {% elif user_profile.role == 'Студент' %}
+                        <a href="{% url 'student_profile_edit' %}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    {% endif %}
+                    <form id="logout-form" action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <a href="#" onclick="document.getElementById('logout-form').submit();">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="tabs">
+            <div class="tab active" onclick="loadTab('info')">Інформація</div>
+            {% if is_own_profile %}
+                <div class="tab" onclick="loadTab('requests')">Запити</div>
+            {% endif %}
+            <div class="tab" onclick="loadTab('active')">Активні</div>
+            <div class="tab" onclick="loadTab('archive')">Архів</div>
         </div>
     </div>
-    {% endfor %}
-</div>
-{% endif %}
+
+    <div id="info-section" class="tab-content">
+        {% include 'profile/info.html' with themes=themes slots=slots %}
+    </div>
+
+    <div id="requests-section" class="tab-content" style="display: none;">
+        {% include 'profile/requests.html' %}
+    </div>
+
+    <div id="active-section" class="tab-content" style="display: none;">
+        <p>Активні роботи...</p>
+    </div>
+
+    <div id="archive-section" class="tab-content" style="display: none;">
+        <p>Архів курсів...</p>
+    </div>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="success-popup {{ message.tags }}">
+                    {% if message.tags == 'success' %}
+                        <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
+                    {% elif message.tags == 'error' %}
+                        <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
+                    {% endif %}
+                    <div>
+                        <div class="popup-content">
+                            <p class="popup-title">
+                                {% if message.tags == 'success' %}
+                                    Успіх!
+                                {% elif message.tags == 'error' %}
+                                    Помилка!
+                                {% endif %}
+                            </p>
+                            <p class="popup-text">
+                                {{ message }}
+                            </p>
+                        </div>
+                        <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div id="cropModal" class="modal">
+        <div class="modal-content" style="position: relative;">
+            <span class="close">&times;</span>
+            <h2 class='modal-h2'>Обріж своє фото!</h2>
+            <img src="" id="cropbox" alt="Profile Picture">
+            <form id="crop-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="x">
+                <input type="hidden" name="y">
+                <input type="hidden" name="width">
+                <input type="hidden" name="height">
+                <button type="submit" class='button'>Обрізати та зберегти</button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        /* Keep the entire modal full-screen, centered, with a dark overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal content: max 90% of viewport width/height, scroll if needed */
+        #cropModal .modal-content {
+            width: 90vw;
+            max-height: 90vh;
+            overflow: auto;  /* <--- Important: allow scrolling if image is too tall */
+            position: relative;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Close button styles (unchanged from your example) */
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Scale the image so it fits within the modal content */
+        #cropbox {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        /* Ensure Cropper container also stays within bounds */
+        .cropper-container {
+            max-width: 100%;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        /* "Обрізати" button style (unchanged from your example) */
+        .button {
+            text-align: center;
+            background-color: #1570ef;
+            color: white;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            height: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            outline: none;
+            border: none;
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+            flex: 1;
+        }
+
+        .button:hover {
+            background-color: #005A9E;
+        }
+    </style>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const tabs = document.querySelectorAll(".tab");
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        // Global variable to store the selected file
 
-        tabs.forEach(tab => {
-            tab.addEventListener("click", function () {
-                // Remove "active" class from all tabs
-                tabs.forEach(t => t.classList.remove("active"));
-
-                // Add "active" class to the clicked tab
-                this.classList.add("active");
+        // Tabs code remains unchanged
+        document.addEventListener("DOMContentLoaded", function () {
+            const tabs = document.querySelectorAll(".tab");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function () {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                });
             });
         });
-    });
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const tabs = document.querySelectorAll(".tab");
-        const tabContents = document.querySelectorAll(".tab-content");
+        // Global variables to store the selected file and scale factors
+        let selectedFile = null;
+        let cropper = null;
+        const cropbox = document.getElementById("cropbox");
 
-        tabs.forEach(tab => {
-            tab.addEventListener("click", function () {
-                // Hide all tab contents
-                tabContents.forEach(content => content.style.display = "none");
+        document.getElementById("profile-pic-input").addEventListener("change", function (event) {
+            event.preventDefault();
+            let file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    cropbox.src = e.target.result;
+                    openModal();
 
-                // Remove active class from all tabs
-                tabs.forEach(t => t.classList.remove("active"));
+                    if (cropper) {
+                        cropper.destroy(); // Destroy previous instance if exists
+                    }
 
-                // Show the selected tab's content
-                const tabName = this.getAttribute("onclick").match(/'([^']+)'/)[1];
-                document.getElementById(tabName + "-section").style.display = "block";
-
-                // Set active tab
-                this.classList.add("active");
-            });
+                    cropper = new Cropper(cropbox, {
+                        aspectRatio: 1, // Keep square crop
+                        viewMode: 2, // Restrict cropping to within the image
+                        autoCropArea: 0.8,
+                        movable: true,
+                        zoomable: true,
+                        scalable: true,
+                        responsive: false,
+                        minContainerWidth: 300, // Set minimum container width
+                        minContainerHeight: 300, // Set minimum container height
+                        crop(event) {
+                            document.querySelector('input[name="x"]').value = event.detail.x;
+                            document.querySelector('input[name="y"]').value = event.detail.y;
+                            document.querySelector('input[name="width"]').value = event.detail.width;
+                            document.querySelector('input[name="height"]').value = event.detail.height;
+                        }
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
         });
-    });
 
-    function closePopup() {
-        const popup = document.querySelector('.success-popup');
-        popup.style.display = 'none';
-      }
+        function openModal() {
+            document.getElementById("cropModal").style.display = "flex";
+        }
 
-       // Close the modal for the specific request
-    function closeModal(requestId) {
-        document.getElementById("rejectModal-" + requestId).style.display = "none";
-    }
-</script>
+        function closeModal() {
+            document.getElementById("cropModal").style.display = "none";
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        document.querySelector(".close").addEventListener("click", closeModal);
+
+        document.getElementById("crop-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            if (!cropper) {
+                console.error("Cropper is not initialized.");
+                return;
+            }
+
+            let formData = new FormData(this);
+
+            if (selectedFile) {
+                formData.append("profile_picture", selectedFile);
+            } else {
+                console.error("No file selected.");
+                return;
+            }
+
+            let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'crop_profile_picture' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response data:", data);
+                if (data.success) {
+                    document.getElementById("profile-pic").src = data.new_profile_picture_url + '?t=' + new Date().getTime();
+                    closeModal();
+                    setTimeout(() => {
+                        window.location.href = "{% url 'profile' %}";
+                    }, 1000);
+                } else {
+                    alert("Error cropping image: " + (data.error || "Unknown error"));
+                }
+            })
+            .catch(error => console.error("Fetch error:", error));
+        });
+    </script>
 {% endblock %}

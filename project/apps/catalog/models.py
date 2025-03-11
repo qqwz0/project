@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.db.models import F
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
+from apps.users.models import CustomUser
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class Request(models.Model):
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False, related_name='catalog_student_requests')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False, related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, blank=True, null=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, blank=True, null=True)
@@ -157,19 +158,18 @@ class Request(models.Model):
 
     def __str__(self):
         return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name
-    
 
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     theme = models.CharField(max_length=100)
-    theme_description = models.TextField(blank=True)
+    theme_description = models.TextField()
     is_occupied = models.BooleanField(default=False)
     
     def __str__(self):
         return self.theme
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='catalog_student_themes')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):

@@ -21,15 +21,13 @@
                 </a>
                 <i class="fas fa-bell"></i>
                 <i class="fas fa-envelope"></i>
-                <div class="header-pic">
-                    <a href="{% url 'profile' %}">
-                        {% if user.profile.profile_picture %}
-                            <img src="{{ user.profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar">
-                        {% else %}
-                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="default-avatar">
-                        {% endif %}
-                    </a>
-                </div>
+                {% if user.is_authenticated %}
+                    <div class="header-pic">
+                        <a href="{% url 'profile' %}">
+                            <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar">
+                        </a>
+                    </div>
+                {% endif %}
             </div>
         {% else %}
             <div class="auth-buttons">

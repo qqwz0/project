@@ -261,138 +261,14 @@ class StudentProfileForm(forms.ModelForm):
             self.fields['academic_group'].initial = user.academic_group
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
 
-class TeacherThemeForm(forms.ModelForm):
-    theme = forms.CharField(
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Введіть значення',
-            'class': 'form-input'
-        })
-    )
-    theme_description = forms.CharField(
-        widget=forms.Textarea(attrs={
-            'rows': 3,
-            'placeholder': 'Опис теми',
-            'class': 'form-input'
-        }),
-        required=False
-    )
 
+class ProfilePictureUploadForm(forms.ModelForm):
     class Meta:
-        model = TeacherTheme
-        fields = ['theme', 'theme_description']
+        model = CustomUser
+        fields = ['profile_picture']
 
-class TeacherProfileForm(forms.ModelForm):
-    first_name = forms.CharField(
-        label="Ім'я",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    last_name = forms.CharField(
-        label="Прізвище",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    patronymic = forms.CharField(
-        label="По-батькові",
-        max_length=150,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    department = forms.ChoiceField(
-        label="Кафедра",
-        choices=RegistrationForm.DEPARTMENT_CHOICES,
-        widget=forms.Select(attrs={
-            'class': 'form-select'
-        })
-    )
-    themes = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    academic_level = forms.ChoiceField(
-        choices=OnlyTeacher.ACADEMIC_LEVELS,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    class Meta:
-        model = OnlyTeacher
-        fields = ['academic_level', 'additional_email', 'phone_number', 'themes']
-        widgets = {
-            'academic_level': forms.Select(attrs={'class': 'form-select'}),
-            'additional_email': forms.EmailInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'пп.ivan.franko@lnu.edu.ua'
-            }),
-            'phone_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': '68 450 65 46'
-            })
-        }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        if user:
-            self.fields['first_name'].initial = user.first_name
-            self.fields['last_name'].initial = user.last_name
-            self.fields['department'].initial = user.department
-            self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
-
-class StudentProfileForm(forms.ModelForm):
-    COURSE_CHOICES = [
-        (1, '1 курс'),
-        (2, '2 курс'),
-        (3, '3 курс'),
-        (4, '4 курс'),
-    ]
-
-    course = forms.ChoiceField(
-        label="Курс",
-        choices=COURSE_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    first_name = forms.CharField(
-        label="Ім'я",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    last_name = forms.CharField(
-        label="Прізвище",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    patronymic = forms.CharField(
-        label="По-батькові",
-        max_length=150,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    academic_group = forms.CharField(
-        label="Академічна група",
-        max_length=50,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    
-    class Meta:
-        model = OnlyStudent
-        fields = ['additional_email', 'phone_number', 'course']
-        widgets = {
-            'additional_email': forms.EmailInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'example@lnu.edu.ua'
-            }),
-            'phone_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': '68 450 65 46'
-            })
-        }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        if user:
-            self.fields['first_name'].initial = user.first_name
-            self.fields['last_name'].initial = user.last_name
-            self.fields['academic_group'].initial = user.academic_group
-            self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
+class CropProfilePictureForm(forms.Form):
+    x = forms.FloatField(widget=forms.HiddenInput())
+    y = forms.FloatField(widget=forms.HiddenInput())
+    width = forms.FloatField(widget=forms.HiddenInput())
+    height = forms.FloatField(widget=forms.HiddenInput())

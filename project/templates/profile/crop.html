@@ -1,0 +1,40 @@
+{% extends "profile/profile-page.html" %}
+{% block content %}
+  <h2>Crop Your Profile Picture</h2>
+  <img src="{{ profile_picture.url }}" id="cropbox" alt="Profile Picture">
+
+  
+  <form method="post">
+      {% csrf_token %}
+      <!-- Render hidden fields for cropping coordinates -->
+      {{ crop_form.as_p }}
+      <button type="submit">Crop and Save</button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+<!-- Load jQuery first -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<!-- Load Jcrop (alternative version) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/css/jquery.Jcrop.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jcrop/0.9.15/js/jquery.Jcrop.min.js"></script>
+
+<script type="text/javascript">
+    $(window).on("load", function() {
+        console.log("Image loaded, initializing Jcrop...");
+        $('#cropbox').Jcrop({
+            aspectRatio: 1, // Keep square crop
+            setSelect: [50, 50, 200, 200], // Default crop selection
+            onSelect: updateCoords
+        });
+    });
+
+    function updateCoords(c) {
+        $('input[name="x"]').val(c.x);
+        $('input[name="y"]').val(c.y);
+        $('input[name="width"]').val(c.w);
+        $('input[name="height"]').val(c.h);
+    }
+</script>
+{% endblock %}

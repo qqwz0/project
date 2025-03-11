@@ -7,7 +7,7 @@
             <div class="request-card">
                 <div class="request-user">
                     {% if user.profile.profile_picture %}
-                        <img src="{{ request.teacher_id.teacher_id.profile_picture }}" alt="Фото профілю" class="default-avatar">
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="default-avatar">
                     {% else %}
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}

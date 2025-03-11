@@ -1,23 +1,26 @@
 import json
 import logging
-from urllib.parse import urlencode, parse_qs
 from functools import wraps
+from io import BytesIO
+from urllib.parse import urlencode, parse_qs
 
 import requests
+from PIL import Image
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login as auth_login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ValidationError
-from django.db.models import F
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
+from django.http import JsonResponse
 from dotenv import load_dotenv
-from django.contrib.auth import login as auth_login, logout
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import update_last_login
-from django.contrib.auth.decorators import login_required
 
-from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm
+from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
 from .models import CustomUser
 from apps.catalog.models import (
     OnlyTeacher,
@@ -31,6 +34,7 @@ from apps.catalog.models import (
     OnlyTeacher as CatalogTeacher,
 )
 
+from apps.catalog.models import OnlyTeacher as CatalogTeacher, Request, TeacherTheme, Slot, Stream
 
 # Load environment variables
 load_dotenv()
@@ -435,7 +439,6 @@ def profile(request, user_id=None):
 
     context = {
         'user_profile': user_profile,
-        'teacher_profile': teacher_profile,
         'is_own_profile': is_own_profile,
     }
 
@@ -458,13 +461,13 @@ def profile(request, user_id=None):
         })
 
     elif user_profile.role == 'Студент':
-        student_profile = OnlyStudent.objects.get(student_id=user_profile)
-        
-        if is_own_profile:
-            sent_requests = Request.objects.filter(student_id=user_profile)
-            context['sent_requests'] = sent_requests
+        student_profile = OnlyStudent.objects.filter(student_id=user_profile).first()  # Use filter() to avoid errors
+        if student_profile:
+            if is_own_profile:
+                sent_requests = Request.objects.filter(student_id=user_profile)
+                context['sent_requests'] = sent_requests
+            context['student_profile'] = student_profile
 
-        context['student_profile'] = student_profile
 
     return render(request, 'profile/profile.html', context)
 
@@ -523,7 +526,6 @@ def approve_request(request, request_id):
 
     return redirect("profile")
 
-
 @login_required
 def reject_request(request, request_id):
     req = get_object_or_404(Request, id=request_id)
@@ -539,7 +541,93 @@ def reject_request(request, request_id):
         req.save()
         messages.success(request, "Запит відхилено.")
         return redirect("profile")
+
+@login_required
+def update_profile_picture(request):
+    if request.method == 'POST':
+        form = ProfilePictureUploadForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            logger.debug("Profile picture form is valid.")
+            try:
+                form.save()
+                return redirect('crop_profile_picture')  # Redirect to crop profile picture view
+            except Exception as e:
+                logger.error(f"Error saving profile picture for user {request.user.id}: {str(e)}")
+                messages.error(request, "Error saving profile picture.")
+                return redirect('profile')
+        else:
+            logger.warning(f"Profile picture form is invalid: {form.errors}")
+            messages.error(request, "Form is invalid.")
+            return redirect('profile')
+    else:
+        form = ProfilePictureUploadForm(instance=request.user)
     
+    context = {
+        'form': form,
+        'user_profile': request.user,
+        'is_own_profile': True,
+    }
+    return render(request, 'profile/profile.html', context)
+
+@login_required
+def crop_profile_picture(request):
+    if request.method == 'POST':
+        crop_form = CropProfilePictureForm(request.POST)
+        if crop_form.is_valid():
+            x = crop_form.cleaned_data['x']
+            y = crop_form.cleaned_data['y']
+            width = crop_form.cleaned_data['width']
+            height = crop_form.cleaned_data['height']
+            try:
+                # Use the uploaded file if available; otherwise, use the user's current profile picture
+                if 'profile_picture' in request.FILES:
+                    image_file = request.FILES['profile_picture']
+                    image = Image.open(image_file).convert('RGB')
+                else:
+                    image_path = request.user.profile_picture.path
+                    if not os.path.exists(image_path):
+                        logger.error(f"Profile picture file does not exist for user {request.user.id} at path: {image_path}")
+                        return JsonResponse({'success': False, 'error': 'Profile picture file does not exist.'})
+                    image = Image.open(image_path).convert('RGB')
+                
+                # Log image dimensions and cropping coordinates
+                img_width, img_height = image.size
+                logger.debug(f"User {request.user.id} image size: {img_width}x{img_height}; crop coordinates: ({x}, {y}, {x+width}, {y+height})")
+
+                # Validate that cropping coordinates are within the image bounds
+                if x < 0 or y < 0 or (x + width) > img_width or (y + height) > img_height:
+                    logger.error(f"Cropping coordinates out of bounds for user {request.user.id}.")
+                    return JsonResponse({'success': False, 'error': 'Cropping coordinates out of bounds.'})
+                    
+                # Crop and resize the image
+                cropped_image = image.crop((x, y, x + width, y + height))
+                cropped_image = cropped_image.resize((240, 240), Image.LANCZOS)
+
+                # Save the cropped image to an in-memory file
+                img_io = BytesIO()
+                cropped_image.save(img_io, format='JPEG', quality=90)
+                img_content = ContentFile(img_io.getvalue())
+
+                # Save to the user model:
+                # Instead of passing save=True in the field's save() method,
+                # update the field and then save the model explicitly.
+                user = request.user
+                user.profile_picture.save(f"profile_{user.id}.jpg", img_content, save=False)
+                user.save()
+                
+                logger.debug(f"Cropped image saved successfully for user {user.id}.")
+                return JsonResponse({
+                    'success': True, 
+                    'new_profile_picture_url': user.profile_picture.url,
+                })
+            except Exception as e:
+                logger.exception(f"Error cropping or saving image for user {request.user.id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': 'Error processing the image.'})
+        else:
+            logger.warning(f"Crop form is invalid for user {request.user.id}: {crop_form.errors}")
+            return JsonResponse({'success': False, 'error': 'Crop form is invalid.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
 def logout_view(request):
     logout(request)
     logger.info("User logged out.")
