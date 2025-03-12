@@ -10,7 +10,7 @@
 </head>
 
 <div class="edit-profile-container">
-    <div class="profile-header">
+    <div class="edit-profile-header">
         <div class="profile-image">
             {% if user.profile_picture %}
                 <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
@@ -19,11 +19,11 @@
             {% endif %}
         </div>
         <div class="profile-title">
-            <h1>{{ user.get_full_name }}</h1>
+            <h1>{{ user.get_full_name_with_patronymic }}</h1>
             <p class="email">{{ user.email }}</p>
         </div>
     </div>
-
+ 
     <h2 class="edit-title">Редагувати профіль</h2>
 
     <div class="form-content">

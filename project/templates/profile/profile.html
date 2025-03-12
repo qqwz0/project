@@ -29,7 +29,7 @@
                     {{ form.media }}
                 </div>
                 <div class="profile-text">
-                    <h2>{{ user_profile.get_full_name }}</h2>
+                    <h2>{{ user_profile.get_full_name_with_patronymic }}</h2>
                     {% if user_profile.role == "Викладач" %}
                         <h3>{{ teacher_profile.academic_level }}</h3>
                         <p>Кафедра: {{ user_profile.department }}</p>
@@ -109,7 +109,7 @@
                                 {{ message }}
                             </p>
                         </div>
-                        <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+                        <i class="toast-close fas fa-times close" onclick="closePopup()"></i>
                     </div>
                 </div>
             {% endfor %}
@@ -279,6 +279,14 @@
                 cropper = null;
             }
         }
+
+        function closePopup() {
+            // Find the closest parent element with the class "success-popup"
+            const popup = event.target.closest('.success-popup');
+            if (popup) {
+              popup.remove(); // Remove the popup from the DOM
+            }
+          }
 
         document.querySelector(".close").addEventListener("click", closeModal);
 

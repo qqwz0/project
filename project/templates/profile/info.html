@@ -28,14 +28,22 @@
     }
 
     .slot-dot {
-        color: orange;
-        font-size: 1.2rem;
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;  /* Makes it a circle */
+        margin: 2px;         /* Space between dots */
     }
-
-    .slot-empty {
-        color: orange;
-        font-size: 1.2rem;
+    
+    .slot-dot.occupied {
+        background-color: orange;  /* Filled dot for occupied */
     }
+    
+    .slot-dot.available {
+        background-color: transparent;
+        border: 2px solid orange;  /* Outlined dot for available */
+    }
+    
 
     span {
         margin: 0 0.1rem;
@@ -111,20 +119,15 @@
                     return;
                 }
         
-                let totalSlots = availableSlots + occupiedSlots;  // Total slots (available + occupied)
-        
-                // First create the occupied slots, then available slots
                 for (let i = 0; i < occupiedSlots; i++) {
                     let slotSpan = document.createElement("span");
-                    slotSpan.className = "slot-dot";
-                    slotSpan.textContent = "⬤";  // Occupied slot (filled dot)
+                    slotSpan.className = "slot-dot occupied";
                     slotDisplay.appendChild(slotSpan);
                 }
         
                 for (let i = 0; i < availableSlots; i++) {
                     let slotSpan = document.createElement("span");
-                    slotSpan.className = "slot-dot";
-                    slotSpan.textContent = "◯";  // Available slot (empty dot)
+                    slotSpan.className = "slot-dot available";
                     slotDisplay.appendChild(slotSpan);
                 }
             });
