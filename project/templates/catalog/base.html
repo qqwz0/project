@@ -10,17 +10,25 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 
-<body>
-  <header id="header" class="header">
-    <div class="header-container">
-      <nav id="navmenu" class="navmenu">
-        <ul>
-          <li><a href="does not work"><img src="{% static 'assets/img/chat.svg' %}" alt="Chats"></a></li>
-          <li><a href="does not work"><img src="{% static 'assets/img/notification.svg' %}" alt="Notifications"></a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+<body hx-ext="ws" ws-connect="/ws/notifications/">
+    <header  class="header">
+      <div class="header-container">
+        <nav  class="navmenu">
+          <ul>
+            <li>
+              <a href="#" id="dropdownMenuButton1" role="button" >
+                <img src="{% static 'assets/img/notification.svg' %}" alt="Notifications">
+              </a>
+              <ul class="notification-dropdown" id="notification-dropdown" >
+                <li class="dropdown-divider"></li>
+               
+              </ul> 
+            </li>
+            <li><a href="does not work"><img src="{% static 'assets/img/chat.svg' %}" alt="Chats"></a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
 
   <main class="main">
     {% block content %}{% endblock  %}
@@ -29,5 +37,17 @@
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="{% static 'assets/js/main.js' %}"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleBtn = document.getElementById('dropdownMenuButton1');
+      const dropdown = document.getElementById('notification-dropdown');
+      
+      toggleBtn.addEventListener('click', event => {
+        event.preventDefault();
+        dropdown.classList.toggle('show');
+      });
+    });
+    </script>
 </body>
 </html>

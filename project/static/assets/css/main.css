@@ -88,8 +88,9 @@ h1, h2, h3, h4, h5, h6 {
 .navmenu li {
   width: 100%;
   text-align: center;
-  border-bottom: none;
+  border-bottom: none;  
   list-style-type: none;
+  position: relative;
 }
 
 .navmenu a:hover img {
@@ -99,6 +100,25 @@ h1, h2, h3, h4, h5, h6 {
 .navmenu li:hover {
   border-bottom: none;
   background-color: rgba(70, 83, 103, 0.1);
+}
+
+.notification-dropdown {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 200px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0;
+  margin-top: 8px;
+  list-style: none;
+}
+
+
+
+.dropdown-divider {
+  border-bottom: 1px solid #ddd;
+  margin: 4px 0;
 }
 
 @media (min-width: 1200px) {

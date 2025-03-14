@@ -29,12 +29,15 @@ SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Allow all hosts during development
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,7 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'widget_tweaks',
     'apps.catalog',
-    'apps.users'
+    'apps.users',
+    'apps.notifications'
 ]
 
 MIDDLEWARE = [
@@ -202,5 +206,12 @@ MICROSOFT_TENANT_ID = os.getenv('MICROSOFT_TENANT_ID')
 MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
 MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
 MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
-MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
+MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI')
 
+ASGI_APPLICATION = 'project.asgi.application' 
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
