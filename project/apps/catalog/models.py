@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from apps.users.models import CustomUser
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
         
@@ -25,13 +26,9 @@ class OnlyTeacher(models.Model):
         choices=ACADEMIC_LEVELS,
         default='Асистент'
     )
-    photo = models.ImageField(upload_to='teacher_photos/', blank=True, null=True)
     additional_email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
 
-    def get_absolute_url(self):
-        return reverse("detail_request_modal", kwargs={"pk": self.pk})
-    
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
 
@@ -85,21 +82,40 @@ class Slot(models.Model):
         super().save(*args, **kwargs)
 
 class Request(models.Model):
-    STATUS= [
+    STATUS = [
         ('pending', 'очікується'),
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
+        ('completed', 'завершений'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False, related_name='users_student_requests')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, 
+                                 limit_choices_to={'role': 'student'}, 
+                                 related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
-    slot = models.ForeignKey(Slot, on_delete=models.CASCADE, blank=True, null=True)
-    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, blank=True, null=True)
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
+    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
+                                    null=True, blank=True)
     student_themes = models.ManyToManyField('StudentTheme', blank=True)
     motivation_text = models.TextField()
     request_date = models.DateTimeField(auto_now_add=True)
-    request_status = models.CharField(max_length=100, choices=STATUS, default='pending')
+    request_status = models.CharField(max_length=100, choices=STATUS, 
+                                    default='pending')
+    grade = models.IntegerField(null=True, blank=True)
     rejected_reason = models.TextField(blank=True, null=True)
+    completion_date = models.DateTimeField(null=True, blank=True)
+    academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
     
+    @property
+    def is_active(self):
+        """Перевіряє чи запит є активним (за останні 6 місяців)"""
+        six_months_ago = timezone.now() - timezone.timedelta(days=180)
+        return self.request_date >= six_months_ago
+
+    @property
+    def is_archived(self):
+        """Перевіряє чи робота в архіві (завершена)"""
+        return self.request_status == 'completed' and self.grade is not None
+
     def extract_stream_from_academic_group(self):
         """
         Extracts the stream code from the student's academic group.
@@ -146,6 +162,14 @@ class Request(models.Model):
                 elif old_request.request_status == 'accepted' and self.request_status != 'accepted':
                     self.slot.update_occupied_slots(-1)
 
+        if not self.academic_year:
+            current_year = timezone.now().year
+            month = timezone.now().month
+            if month >= 9:  # Якщо після вересня
+                self.academic_year = f"{current_year}/{str(current_year + 1)[-2:]}"
+            else:
+                self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
+
         super().save(*args, **kwargs)
     
     def get_themes_display(self):
@@ -183,7 +207,6 @@ class OnlyStudent(models.Model):
                                     related_name='catalog_student_profile')
     speciality = models.CharField(max_length=100)
     course = models.IntegerField()
-    academic_group = models.CharField(max_length=50)
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 

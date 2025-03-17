@@ -164,23 +164,15 @@ class TeacherProfileForm(forms.ModelForm):
     )
     department = forms.ChoiceField(
         label="Кафедра",
-        choices=RegistrationForm.DEPARTMENT_CHOICES,
+        choices=CustomUser.DEPARTMENT_CHOICES,
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
     )
-    themes = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    academic_level = forms.ChoiceField(
-        choices=OnlyTeacher.ACADEMIC_LEVELS,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
     
     class Meta:
         model = OnlyTeacher
-        fields = ['academic_level', 'additional_email', 'phone_number', 'themes']
+        fields = ['academic_level', 'additional_email', 'phone_number']
         widgets = {
             'academic_level': forms.Select(attrs={'class': 'form-select'}),
             'additional_email': forms.EmailInput(attrs={
@@ -203,64 +195,22 @@ class TeacherProfileForm(forms.ModelForm):
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
 
 class StudentProfileForm(forms.ModelForm):
-    COURSE_CHOICES = [
-        (1, '1 курс'),
-        (2, '2 курс'),
-        (3, '3 курс'),
-        (4, '4 курс'),
-    ]
+    first_name = forms.CharField(label="Ім'я")
+    last_name = forms.CharField(label="Прізвище")
+    patronymic = forms.CharField(label="По-батькові", required=False)
+    academic_group = forms.CharField(label="Академічна група")  # Це поле тепер тільки для CustomUser
 
-    course = forms.ChoiceField(
-        label="Курс",
-        choices=COURSE_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    first_name = forms.CharField(
-        label="Ім'я",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    last_name = forms.CharField(
-        label="Прізвище",
-        max_length=150,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    patronymic = forms.CharField(
-        label="По-батькові",
-        max_length=150,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    academic_group = forms.CharField(
-        label="Академічна група",
-        max_length=50,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
-    
     class Meta:
         model = OnlyStudent
-        fields = ['additional_email', 'phone_number', 'course']
-        widgets = {
-            'additional_email': forms.EmailInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'example@lnu.edu.ua'
-            }),
-            'phone_number': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': '68 450 65 46'
-            })
-        }
+        fields = ['speciality', 'course', 'additional_email', 'phone_number']
 
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         if user:
             self.fields['first_name'].initial = user.first_name
             self.fields['last_name'].initial = user.last_name
+            self.fields['patronymic'].initial = user.patronymic
             self.fields['academic_group'].initial = user.academic_group
-            self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
-
 
 class ProfilePictureUploadForm(forms.ModelForm):
     class Meta:
