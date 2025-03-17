@@ -157,9 +157,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
+# filepath: d:\Code\LNU\dir\project\project\settings.py
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,  # Keep existing loggers enabled
+    'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
             'format': '[{levelname}] {asctime} {name} {message}',
@@ -172,29 +173,38 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',  # Set the logging level to INFO or higher
-            'class': 'logging.StreamHandler',  # Sends logs to the console
-            'formatter': 'verbose',  # Use the 'verbose' formatter
+            'level': 'DEBUG',  # Змінив на DEBUG щоб бачити все
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
         'file': {
-            'level': 'INFO',  # Log INFO and above to a file
+            'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': 'django_info.log',
-            'formatter': 'verbose',  # Use the 'verbose' formatter
+            'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],  # Use both console and file handlers
-            'level': 'INFO',  # Minimum log level is INFO
-            'propagate': True,  # Allow propagation to ancestor loggers
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
         },
         'django.request': {
-            'handlers': ['console', 'file'],  # Log requests separately
-            'level': 'INFO',  # Minimum log level for requests
-            'propagate': False,  # Prevent propagation to other loggers
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
         },
+        # 'apps.notifications': {
+        #     'handlers': ['console'],
+        #     'level': 'DEBUG',  # Важливо для ваших сигналів
+        #     'propagate': True,
+        # },
     },
+    # 'root': {
+    #     'handlers': ['console'],
+    #     'level': 'INFO',
+    # },
 }
 
 
@@ -215,3 +225,5 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+
+

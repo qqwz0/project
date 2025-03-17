@@ -84,6 +84,7 @@ class TeachersListView(ListView):
                             'id': int,
                             'position': str,
                             'photo': str (url),
+                            'get_absolute_url': str,
                             'teacher_id': {
                                 'first_name': str,
                                 'last_name': str,
@@ -123,6 +124,7 @@ class TeachersListView(ListView):
                     'id': teacher.pk,
                     'position': teacher.position,
                     'photo':teacher.photo.url if teacher.photo else None,
+                    'url': teacher.get_absolute_url(),
                     'teacher_id': {
                         'first_name': teacher.teacher_id.first_name,
                         'last_name': teacher.teacher_id.last_name,

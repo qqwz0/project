@@ -60,7 +60,7 @@
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
        <button class="modal-button"
-        :hx-get="'{% url 'modal' 0 %}'.replace('/0/', '/' + item.teacher.id + '/')"
+        :hx-get="item.teacher.url"
         hx-target="#inner_modal"
         hx-trigger="click"
         x-init="htmx.process($el)">

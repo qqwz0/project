@@ -15,17 +15,20 @@
       <div class="header-container">
         <nav  class="navmenu">
           <ul>
-            <li>
-              <a href="#" id="dropdownMenuButton1" role="button" >
+            <div>
+              <a href="#" id="dropdownMenuButton" role="button" >
                 <img src="{% static 'assets/img/notification.svg' %}" alt="Notifications">
               </a>
-              <ul class="notification-dropdown" id="notification-dropdown" >
-                <li class="dropdown-divider"></li>
-               
+              <ul class="notification-dropdown" id="notification-list">
+                <div class="no-notifications" id="no-notifications-message">
+                  <p>У вас не має нових сповіщень!<p>
+                </div>
               </ul> 
-            </li>
-            <li><a href="does not work"><img src="{% static 'assets/img/chat.svg' %}" alt="Chats"></a></li>
-          </ul>
+            </div>
+            <div>
+              <a href="does not work"><img src="{% static 'assets/img/chat.svg' %}" alt="Chats"></a>
+            </div>
+            </ul>
         </nav>
       </div>
     </header>
@@ -40,14 +43,24 @@
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const toggleBtn = document.getElementById('dropdownMenuButton1');
-      const dropdown = document.getElementById('notification-dropdown');
+      const toggleBtn = document.getElementById('dropdownMenuButton');
+      const dropdown = document.getElementById('notification-list');
       
       toggleBtn.addEventListener('click', event => {
         event.preventDefault();
         dropdown.classList.toggle('show');
       });
     });
-    </script>
+    document.body.addEventListener('htmx:wsAfterMessage', function(event) {
+      // Check if a notification was received
+      if (event.detail.message && event.detail.message.includes('nt-message')) {
+          // Remove the "no notifications" message when we get the first notification
+          const noNotificationsMsg = document.getElementById('no-notifications-message');
+          if (noNotificationsMsg) {
+              noNotificationsMsg.remove();
+          }
+      }
+  });
+  </script>
 </body>
 </html>

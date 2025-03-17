@@ -6,31 +6,43 @@ logger = logging.getLogger(__name__)
 
 class NotificationsConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        
-        self.group_name = "notifications"
-        
-        
-        logger.info(f"User connecting to WebSocket")
-        
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name  
-        )
-        
-        await self.accept()
-        logger.info(f"User connected successfully")
+        self.user = self.scope['user']
+        if self.user.is_authenticated:
+            # Create a unique group name for this user
+            self.group_name = f'user_{self.user.id}'
+            logger.info(f"User {self.user.id} connecting to group {self.group_name}")
+            
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+            await self.accept() 
+            logger.info(f"User connected successfully")
+        else:
+            logger.warning(f"Unauthenticated connection attempt rejected")
+            await self.close()
         
     async def disconnect(self, close_code):
         logger.info(f"User disconnecting with code {close_code}")
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
          
     async def send_notification(self, event):
-        html = get_template('/notifications/notification.html').render(
-            context={'message':event['message']}
-        )
+        # Choose template based on notification type if provided
+        template_name = 'notifications/notification.html'
+        context = {
+            'message': event['message']
+        }
+        
+        # Add additional context if available
+        if 'status' in event:
+            context['status'] = event['status']
+        
+        # Render appropriate template
+        html = get_template(template_name).render(context)
         await self.send(text_data=html)
 
 
