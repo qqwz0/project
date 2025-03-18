@@ -21,12 +21,12 @@ window.changeDepartments = function(el, departments) {
  * @param {Array} positions - Current array of selected positions
  * @returns {Array} Updated array of selected positions
  */
-window.changePositions = function(el, positions) {
-    let position = el.value;
-    if (positions.includes(position)) {
-        return positions.filter(i => i !== position);
+window.changeAcademicLevels = function(el, academic_levels) {
+    let academic_level = el.value;
+    if (academic_levels.includes(academic_level)) {
+        return academic_levels.filter(i => i !== academic_level);
     } else {
-        return [...positions, position];
+        return [...academic_levels, academic_level];
     }
 };
   
@@ -58,7 +58,7 @@ window.applyFilters = function() {
     document.querySelector('.form-searching').value = '';
     alpineData.filteredData = alpineData.data.filter(i =>
         (alpineData.departments.length === 0 || alpineData.departments.includes(i.teacher.teacher_id.department)) &&
-        (alpineData.positions.length === 0 || alpineData.positions.includes(i.teacher.position)) &&
+        (alpineData.academic_levels.length === 0 || alpineData.academic_levels.includes(i.teacher.academic_level)) &&
         (alpineData.slots === null || i.free_slots.some(slot => slot.get_available_slots >= alpineData.slots)) &&
         (alpineData.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
     );

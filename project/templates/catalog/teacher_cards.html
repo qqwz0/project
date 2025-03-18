@@ -15,10 +15,10 @@
       <div class="teacher-details">
         <!-- Display teacher credentials such as name, position, and department. -->
         <h2 x-text="`${item.teacher.teacher_id.last_name} ${item.teacher.teacher_id.first_name}`"></h2>
-        <template x-if="item.teacher.position">
-          <p x-text="`${item.teacher.position}`"></p>
+        <template x-if="item.teacher.academic_level">
+          <p x-text="`${item.teacher.academic_level}`"></p>
         </template>
-        <template x-if="item.teacher.position === null">
+        <template x-if="item.teacher.academic_level === null">
           <p>Викладач</p>
         </template>  
         <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`"></h3>
@@ -60,7 +60,7 @@
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
        <button class="modal-button"
-        :hx-get="'{% url 'modal' 0 %}'.replace('/0/', '/' + item.teacher.id + '/')"
+        :hx-get='item.teacher.url'
         hx-target="#inner_modal"
         hx-trigger="click"
         x-init="htmx.process($el)">

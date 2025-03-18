@@ -2,6 +2,7 @@ from django import forms
 from .models import Request, TeacherTheme, OnlyTeacher, Slot
 from apps.users.models import CustomUser
 
+
 class FilteringSearchingForm(forms.Form):
     """A Django Form class that provides filtering and searching functionality for teacher listings.
     
@@ -40,8 +41,8 @@ class FilteringSearchingForm(forms.Form):
         (department, (department[:25] + '...' if len(department) > 25 else department))
         for department in filter(None, CustomUser.objects.values_list('department', flat=True).distinct())
     ]
-    POSITION_CHOICES = [
-        (position, position) for position in filter(None, OnlyTeacher.objects.values_list('position', flat=True).distinct())
+    ACADEMIC_LEVELS = [
+        (level, level) for level in filter(None, OnlyTeacher.objects.values_list('academic_level', flat=True).distinct())
     ]
     
     slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
@@ -56,9 +57,9 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    positions = forms.MultipleChoiceField(
+    academic_levels = forms.MultipleChoiceField(
         label='Науковий ступінь',
-        choices=POSITION_CHOICES,
+        choices=ACADEMIC_LEVELS,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )

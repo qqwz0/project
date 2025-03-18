@@ -3,18 +3,32 @@ from django.urls import reverse
 from django.db.models import F
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
+import logging
+from django.utils import timezone
 
+logger = logging.getLogger(__name__)
         
 class OnlyTeacher(models.Model):
-    teacher_id = models.OneToOneField('users.CustomUser', on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'teacher'})
-    photo = models.ImageField(upload_to='teacher_photos/', blank=True, null=True)
-    position = models.CharField(max_length=100)
-
+    ACADEMIC_LEVELS = [
+        ('Асистент', 'Асистент'),
+        ('Доцент', 'Доцент'),
+        ('Професор', 'Професор'),
+    ]
+    teacher_id = models.OneToOneField('users.CustomUser', 
+                                      on_delete=models.CASCADE, 
+                                      primary_key=True, 
+                                      limit_choices_to={'role': 'teacher'},
+                                      related_name='catalog_teacher_profile')
+    academic_level = models.CharField(max_length=50, choices=ACADEMIC_LEVELS, default='Асистент')
+    additional_email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
     
     def __str__(self):
-        return self.teacher_id.first_name + ' ' + self.teacher_id.last_name
+        return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
+    
 
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)
@@ -29,20 +43,6 @@ class Slot(models.Model):
     quota = models.IntegerField(validators=[MinValueValidator(0)])
     occupied = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     
-    def clean(self):
-        """
-        Custom validation to ensure occupied slots never exceed the quota.
-        """
-        if self.occupied > self.quota:
-            raise ValidationError("The number of occupied slots cannot exceed the quota.")
-
-    def save(self, args, **kwargs):
-        """
-        Override save method to include the validation.
-        """
-        self.clean()  # Call the custom clean method before saving
-        super().save(args, **kwargs)
-    
     def get_available_slots(self):
         return self.quota - self.occupied
     
@@ -50,25 +50,71 @@ class Slot(models.Model):
     def filter_by_available_slots(cls):
         return cls.objects.filter(occupied__lt=F('quota'))
     
-    def update_occupied_slots(self, change):
-        self.occupied += max(0, self.occupied + change)
+    def update_occupied_slots(self, increment):
+        """
+        Increment or decrement occupied slots but ensure it never exceeds quota.
+        """
+        logger.info(f"Before update: occupied = {self.occupied}, increment = {increment}")
+
+        if increment > 0 and self.occupied + increment > self.quota:
+            raise ValidationError("The number of occupied slots cannot exceed the quota.")
+
+        self.occupied += increment
         self.save()
+
+        logger.info(f"After update: occupied = {self.occupied}")
+    def clean(self):
+        """
+        Custom validation to ensure occupied slots never exceed the quota.
+        """
+        if self.occupied > self.quota:
+            raise ValidationError("The number of occupied slots cannot exceed the quota.")
+
+    def save(self, *args, **kwargs):
+        """
+        Override save method to include the validation.
+        """
+        self.clean()  # Call the custom clean method before saving
+        super().save(*args, **kwargs)   
        
 class Request(models.Model):
     STATUS= [
         ('pending', 'очікується'),
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
+        ('completed', 'завершений'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, unique=False)
+    student_id = models.ForeignKey('users.CustomUser', 
+                                   on_delete=models.CASCADE, 
+                                   limit_choices_to={'role': 'student'}, 
+                                   unique=False,
+                                   related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE)
-    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, blank=True, null=True)
+    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
+                                    null=True, blank=True)
+    
     student_themes = models.ManyToManyField('StudentTheme', blank=True)
     motivation_text = models.TextField()
     request_date = models.DateTimeField(auto_now_add=True)
-    request_status = models.CharField(max_length=100, choices=STATUS, default='pending')
+    request_status = models.CharField(max_length=100, choices=STATUS, 
+                                    default='pending')
+    
+    grade = models.IntegerField(blank=True, null=True)
     rejected_reason = models.TextField(blank=True, null=True)
+    completion_date = models.DateTimeField(null=True, blank=True)
+    academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
+    
+    @property
+    def is_active(self):
+        """Перевіряє чи запит є активним (за останні 6 місяців)"""
+        six_months_ago = timezone.now() - timezone.timedelta(days=180)
+        return self.request_date >= six_months_ago
+
+    @property
+    def is_archived(self):
+        """Перевіряє чи робота в архіві (завершена)"""
+        return self.request_status == 'completed' and self.grade is not None
     
     def extract_stream_from_academic_group(self):
         """
@@ -78,7 +124,7 @@ class Request(models.Model):
         if self.student_id.academic_group:
             return self.student_id.academic_group[:-1]  # Remove the last digit
         return None
-
+    
     def save(self, *args, **kwargs):
         """
         Assigns the correct Slot before saving.
@@ -116,6 +162,14 @@ class Request(models.Model):
                 elif old_request.request_status == 'accepted' and self.request_status != 'accepted':
                     self.slot.update_occupied_slots(-1)
 
+        if not self.academic_year:
+            current_year = timezone.now().year
+            month = timezone.now().month
+            if month >= 9:  # Якщо після вересня
+                self.academic_year = f"{current_year}/{str(current_year + 1)[-2:]}"
+            else:
+                self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
+
         super().save(*args, **kwargs)
     
     def get_themes_display(self):
@@ -127,7 +181,7 @@ class Request(models.Model):
         return teacher_theme_name, student_themes_list
 
     def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name
+        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
     
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
@@ -143,4 +197,18 @@ class StudentTheme(models.Model):
     theme = models.CharField(max_length=100)
     
     def __str__(self):
-        return self.theme   
+        return self.theme
+
+class OnlyStudent(models.Model):
+    student_id = models.OneToOneField('users.CustomUser', 
+                                    on_delete=models.CASCADE, 
+                                    primary_key=True,
+                                    limit_choices_to={'role': 'student'},
+                                    related_name='catalog_student_profile')
+    speciality = models.CharField(max_length=100)
+    course = models.IntegerField()
+    additional_email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+
+    def __str__(self):
+        return f"Student: {self.student_id.get_full_name()}"        

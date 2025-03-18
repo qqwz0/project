@@ -121,8 +121,9 @@ class TeachersListView(ListView):
             data.append({
                 'teacher': {
                     'id': teacher.pk,
-                    'position': teacher.position,
-                    'photo':teacher.photo.url if teacher.photo else None,
+                    'position': teacher.academic_level,
+                    'photo': None,
+                    'url': teacher.get_absolute_url(),
                     'teacher_id': {
                         'first_name': teacher.teacher_id.first_name,
                         'last_name': teacher.teacher_id.last_name,
@@ -204,6 +205,7 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         
         context['free_slots'] = slots
         context['is_matched'] = is_matched
+        context['photo'] = None
         return context
     
     def form_invalid(self, form):
