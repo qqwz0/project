@@ -10,15 +10,15 @@ and a form allowing the user to propose or enter custom themes.
        
     <div class="left-container">
         <!-- If a teacher photo exists, use it, otherwise show a default image. -->
-        {% if teacher.photo %}
-            <img src="{{ teacher.photo.url }}" alt="Teacher">
+        {% if photo %}
+            <img src="{{ photo.url }}" alt="Teacher">
         {% else %}
             <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
         {% endif %}
         <!-- Display teacher's name, position, and department. -->
         <h2>{{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}</h2>
         {% if teacher.position %}
-            <p class="position">{{ teacher.position | capfirst }}</p>
+            <p class="position">{{ teacher.academic_level | capfirst }}</p>
         {% else %}
             <p class="position">Викладач</p>
 

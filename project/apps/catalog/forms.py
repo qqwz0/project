@@ -2,89 +2,86 @@ from django import forms
 from .models import Request, TeacherTheme, OnlyTeacher, Slot
 from apps.users.models import CustomUser
 
+
+DEFAULT_DEPARTMENT_CHOICES = [
+    ('Кафедра математики', 'Кафедра математики'),
+    ('Кафедра інформатики', 'Кафедра інформатики'),
+    ('Кафедра фізики', 'Кафедра фізики')
+]
+
+DEFAULT_ACADEMIC_LEVELS = [
+    ('Асистент', 'Асистент'),
+    ('Доцент', 'Доцент'),
+    ('Професор', 'Професор')
+]
+
 class FilteringSearchingForm(forms.Form):
-    """A Django Form class that provides filtering and searching functionality for teacher listings.
+    """A Django Form class that provides filtering and searching functionality for teacher listings."""
     
-    Technical Details:
-    -----------------
-    Form Fields:
-        - departments (MultipleChoiceField): 
-            - Dynamically populated from CustomUser.department
-            - Uses CheckboxSelectMultiple widget
-            - Allows multiple selections
-            - CSS class: 'form-checkbox'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         
-        - positions (MultipleChoiceField):
-            - Dynamically populated from OnlyTeacher.position
-            - Uses CheckboxSelectMultiple widget
-            - Allows multiple selections
-            - CSS class: 'form-checkbox'
-        
-        - slots (IntegerField):
-            - Range input slider
-            - Min/Max values from Slot.quota
-            - Step size: 1
-            - Default value: 1
-            - CSS class: 'form-range'
+        # Try to get dynamic values only when the form is actually initialized
+        try:
+            # Get department choices if the field exists
+            if hasattr(CustomUser, 'department'):
+                departments = CustomUser.objects.values_list('department', flat=True).distinct()
+                department_choices = [
+                    (department, (department[:25] + '...' if len(department) > 25 else department))
+                    for department in filter(None, departments)
+                ]
+                if department_choices:
+                    self.fields['departments'].choices = department_choices
             
-        - show_occupied (BooleanField):
-            - Checkbox to toggle display of fully occupied teacher slots
-            - CSS class: 'form-boolean'
+            # Get academic levels
+            if hasattr(OnlyTeacher, 'academic_level'):
+                academic_levels = OnlyTeacher.objects.values_list('academic_level', flat=True).distinct()
+                academic_level_choices = [(level, level) for level in filter(None, academic_levels)]
+                if academic_level_choices:
+                    self.fields['academic_levels'].choices = academic_level_choices
             
-        - searching (CharField):
-            - Text input for searching teachers by name
-            - Placeholder: 'Пошук викладача...'
-            - CSS class: 'form-searching'
-    """
-    DEPARTMENT_CHOICES = [
-        (department, (department[:25] + '...' if len(department) > 25 else department))
-        for department in filter(None, CustomUser.objects.values_list('department', flat=True).distinct())
-    ]
-    POSITION_CHOICES = [
-        (position, position) for position in filter(None, OnlyTeacher.objects.values_list('position', flat=True).distinct())
-    ]
-    
-    slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
-    min_slots = min(slot_values) if slot_values else 1
-    max_slots = max(slot_values) if slot_values else 10
+            # Get slot values
+            slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
+            if slot_values:
+                min_slots = min(slot_values)
+                max_slots = max(slot_values)
+                self.fields['slots'].widget.attrs.update({
+                    'min': min_slots,
+                    'max': max_slots,
+                    'value': min_slots
+                })
+        except Exception as e:
+            # Use default values if database access fails
+            pass
     
     label_suffix = ''
     
     departments = forms.MultipleChoiceField(
         label='Кафедра',
-        choices=DEPARTMENT_CHOICES,
+        choices=DEFAULT_DEPARTMENT_CHOICES,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    positions = forms.MultipleChoiceField(
+    
+    academic_levels = forms.MultipleChoiceField(
         label='Науковий ступінь',
-        choices=POSITION_CHOICES,
+        choices=DEFAULT_ACADEMIC_LEVELS,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
+    
     slots = forms.IntegerField(
         label='Кількість місць',
         widget=forms.NumberInput(attrs={
             'type': 'range',
             'class': 'form-range',
-            'min': min_slots,
-            'max': max_slots,
+            'min': 1,
+            'max': 10,
             'step': 1,
-            'value': min_slots
+            'value': 1
         }),
         required=False
     )
-    show_occupied = forms.BooleanField(
-        label='',
-        widget=forms.CheckboxInput(attrs={'class': 'form-boolean'}),
-        required=False
-    )
-    searching = forms.CharField(
-        label='',
-        widget=forms.TextInput(attrs={'class': 'form-searching', 'placeholder': 'Пошук викладача...'}),
-        required=False
-    )
-    
 
 class RequestForm(forms.ModelForm):
     """
@@ -186,6 +183,5 @@ class RequestForm(forms.ModelForm):
                 'placeholder': 'Опиши свою мотивацію'
             }),
             'teacher_theme': forms.HiddenInput(),
-        }
-     
+        }    
         

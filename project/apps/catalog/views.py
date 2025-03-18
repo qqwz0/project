@@ -84,7 +84,6 @@ class TeachersListView(ListView):
                             'id': int,
                             'position': str,
                             'photo': str (url),
-                            'get_absolute_url': str,
                             'teacher_id': {
                                 'first_name': str,
                                 'last_name': str,
@@ -122,8 +121,8 @@ class TeachersListView(ListView):
             data.append({
                 'teacher': {
                     'id': teacher.pk,
-                    'position': teacher.position,
-                    'photo':teacher.photo.url if teacher.photo else None,
+                    'position': teacher.academic_level,
+                    'photo': None,
                     'url': teacher.get_absolute_url(),
                     'teacher_id': {
                         'first_name': teacher.teacher_id.first_name,
@@ -206,6 +205,7 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         
         context['free_slots'] = slots
         context['is_matched'] = is_matched
+        context['photo'] = None
         return context
     
     def form_invalid(self, form):
@@ -268,4 +268,4 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
             theme = TeacherTheme.objects.get(theme=teacher_theme, teacher_id=form.instance.teacher_id)
             form.instance.teacher_theme = theme
             theme.is_occupied = True
-            theme.save()  
+            theme.save()   
