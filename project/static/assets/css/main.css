@@ -692,9 +692,56 @@ p.single-slot {
 }
 
 .modal-button .arrow-icon {
-  font-size: 2.875rem; /* 46px */
+  font-size: 2.875rem; 
   font-weight: 300;
   color: #fff;
+}
+.tooltip-custom {
+  position: relative;
+  display: inline-block;
+  cursor: not-allowed;
+}
+
+.tooltip-custom .tooltiptext {
+  visibility: hidden;
+  width: 220px;
+  background-color: #dc3545; 
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 10px;
+  position: absolute;
+  bottom: 105%; 
+  left: 20%;
+  transform: translateX(-50%);
+  transition: opacity 0.2s ease;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  line-height: 1.4;
+}
+
+.tooltip-custom .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #dc3545 transparent transparent transparent;
+}
+
+.tooltip-custom:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.tooltip-custom.tooltip-right .tooltiptext {
+  left: 102%;
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .modal {

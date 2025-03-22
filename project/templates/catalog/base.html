@@ -9,20 +9,10 @@
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <link rel="stylesheet" href="{% static 'css/header.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tooltips.css' %}">
 </head>
 
 <body>
-  {% comment %} <header id="header" class="header">
-    <div class="header-container">
-      <nav id="navmenu" class="navmenu">
-        <ul>
-          <li><a href="does not work"><img src="{% static 'assets/img/chat.svg' %}" alt="Chats"></a></li>
-          <li><a href="does not work"><img src="{% static 'assets/img/notification.svg' %}" alt="Notifications"></a></li>
-        </ul>
-      </nav>
-    </div>
-  </header> {% endcomment %}
-
   {% include 'header.html' %}
 
   <main class="main">
@@ -30,7 +20,7 @@
   </main>
 
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="{% static 'assets/js/main.js' %}"></script>
 </body>
 </html>

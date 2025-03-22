@@ -16,10 +16,15 @@
         {% endif %}
         
         <!-- Display teacher's name -->
-        <h2>{{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}</h2>
-        
+        <h2>
+            {%if teacher.teacher_id.patronymic%}
+                 {{ teacher.teacher_id.first_name | capfirst }} {{teacher.teacher_id.patronymic| capfirst}} {{ teacher.teacher_id.last_name | capfirst }}
+            {% else %}
+                {{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}
+            {% endif %}
+        </h2>
         <!-- Display teacher's position or a default value -->
-        {% if teacher.position %}
+        {% if teacher.academic_level%}
             <p class="position">{{ teacher.academic_level | capfirst }}</p>
         {% else %}
             <p class="position">Викладач</p>

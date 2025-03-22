@@ -14,11 +14,29 @@ document.addEventListener('htmx:afterSwap', function(event) {
  * Before swapping in new content with HTMX, if there's no response, reload the page.
  * This prevents issues when the HTMX request fails to return content.
  */
-document.addEventListener("htmx:beforeSwap", function(event) {
-    if (event.detail.target.classList.contains("teacher-modal") && !event.detail.xhr.response) {
-        location.reload();
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    initTooltips();
 });
+
+// Ініціалізація тултіпів після кожного оновлення HTMX
+document.addEventListener('htmx:afterSwap', function(event) {
+    console.log("HTMX swap завершено", event.detail.target);
+    
+    // Якщо оновили вміст - перевірити та ініціалізувати тултіп
+    initTooltips();
+});
+
+// Функція для ініціалізації тултіпів
+function initTooltips() {
+    if (typeof bootstrap !== 'undefined') {
+        let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    } else if (typeof $ !== 'undefined') {
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    }
+}
 
 /**
  * Closes the popup message box when the 'Close' icon is clicked.

@@ -1,5 +1,5 @@
 from .utils import HtmxLoginRequiredMixin
-from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream
+from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request
 from django.core.exceptions import ValidationError 
 from django.views.generic import ListView, DetailView, FormView, TemplateView
 from .forms import RequestForm, FilteringSearchingForm
@@ -117,17 +117,26 @@ class TeachersListView(ListView):
 
         for teacher in teachers:
             free_slots = slots.filter(teacher_id=teacher)
-        
+            already_requested = True if Request.objects.filter(student_id=request.user, teacher_id=teacher.pk).exists() else False
+    
+            if teacher.teacher_id.patronymic:
+                patronymic = teacher.teacher_id.patronymic
+                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name} {patronymic}"
+            else:
+                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}" 
+                   
             data.append({
                 'teacher': {
                     'id': teacher.pk,
-                    'position': teacher.academic_level,
+                    'academic_level': teacher.academic_level,
                     'photo': None,
                     'url': teacher.get_absolute_url(),
+                    'already_requested': already_requested,
                     'teacher_id': {
                         'first_name': teacher.teacher_id.first_name,
                         'last_name': teacher.teacher_id.last_name,
                         'department': teacher.teacher_id.department,
+                        'full_name': full_name
                     }
                     
                 },
