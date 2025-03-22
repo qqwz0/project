@@ -8,6 +8,14 @@ import logging
 
 logger = logging.getLogger(__name__)
         
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+import os
+import logging
+
+
+logger = logging.getLogger(__name__)
+        
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('Студент', 'Студент'),

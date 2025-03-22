@@ -78,7 +78,7 @@ class Slot(models.Model):
         super().save(*args, **kwargs)   
        
 class Request(models.Model):
-    STATUS= [
+    STATUS = [
         ('pending', 'очікується'),
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
@@ -193,7 +193,7 @@ class TeacherTheme(models.Model):
         return self.theme
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):

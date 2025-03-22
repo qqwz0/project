@@ -1,11 +1,5 @@
 (function() {
   "use strict";
-
-  window.toggleFilters = function() {
-    const filterPanel = document.getElementById('filterPanel');
-    filterPanel.classList.toggle('active');
-  };
-
   // Initialize when DOM loads
   document.addEventListener('DOMContentLoaded', () => {
     // Close popup on escape key
@@ -15,44 +9,19 @@
       }
     });
 
-    // Filter panel click outside
-    document.addEventListener('click', (e) => {
-      const filterPanel = document.getElementById('filterPanel');
-      const filterBtn = document.querySelector('.filter-btn');
+    // Simplified scroll handler
+    function handleScroll() {
+      const header = document.getElementById('header');
+      if (!header) return;
       
-      if (filterPanel && filterBtn && 
-          !filterPanel.contains(e.target) && 
-          !filterBtn.contains(e.target) && 
-          filterPanel.classList.contains('active')) {
-        toggleFilters();
+      if (window.scrollY > 20) {
+        header.classList.add('scrolled-header');
+      } else {
+        header.classList.remove('scrolled-header');
       }
-    });
-
-    // Handle escape key for filter panel
-    document.addEventListener('keydown', (e) => {
-      const filterPanel = document.getElementById('filterPanel');
-      if (e.key === 'Escape' && filterPanel && filterPanel.classList.contains('active')) {
-        toggleFilters();
-      }
-    });
-
-    function toggleScrolled() {
-      const selectBody = document.querySelector('body');
-      const selectHeader = document.querySelector('#header');
-      if (!selectHeader) return; // Prevent error if #header is missing
-    
-      if (
-        !selectHeader.classList.contains('scroll-up-sticky') &&
-        !selectHeader.classList.contains('sticky-top') &&
-        !selectHeader.classList.contains('fixed-top')
-      ) {
-        return;
-      }
-      window.scrollY > 100
-        ? selectBody.classList.add('scrolled')
-        : selectBody.classList.remove('scrolled');
     }
-    document.addEventListener('scroll', toggleScrolled);
-    window.addEventListener('load', toggleScrolled);
+    
+    document.addEventListener('scroll', handleScroll);
+    window.addEventListener('load', handleScroll);
   });
 })();

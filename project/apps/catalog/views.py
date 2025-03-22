@@ -121,7 +121,7 @@ class TeachersListView(ListView):
             data.append({
                 'teacher': {
                     'id': teacher.pk,
-                    'position': teacher.academic_level,
+                    'academic_level': teacher.academic_level,
                     'photo': None,
                     'url': teacher.get_absolute_url(),
                     'teacher_id': {
@@ -230,6 +230,7 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
             if theme:
                 student_theme = StudentTheme.objects.create(student_id=self.request.user, theme=theme)
                 req.student_themes.add(student_theme)
+
         
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             messages.success(self.request, self.get_success_message(form.cleaned_data))
@@ -246,6 +247,25 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         form.instance.request_status = 'pending'
         
         student_stream_code = form.instance.extract_stream_from_academic_group()
+        if student_stream_code:
+            try:
+                stream = Stream.objects.get(stream_code=student_stream_code)
+                available_slot = Slot.objects.filter(
+                    teacher_id=form.instance.teacher_id,
+                    stream_id=stream,
+                    occupied__lt=F('quota')
+                ).first()
+                
+                if available_slot:
+                    form.instance.slot = available_slot
+                else:
+                    raise ValidationError(f"No available slots for teacher {form.instance.teacher_id} in stream {stream.stream_code}")
+            except Stream.DoesNotExist:
+                raise ValidationError(f"No stream found with code: {student_stream_code}")
+
+        teacher_theme = form.cleaned_data.get('teacher_themes')
+        if teacher_theme:
+            student_stream_code = form.instance.extract_stream_from_academic_group()
         if student_stream_code:
             try:
                 stream = Stream.objects.get(stream_code=student_stream_code)

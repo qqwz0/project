@@ -8,7 +8,6 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope['user']
         if self.user.is_authenticated:
-            # Create a unique group name for this user
             self.group_name = f'user_{self.user.id}'
             logger.info(f"User {self.user.id} connecting to group {self.group_name}")
             

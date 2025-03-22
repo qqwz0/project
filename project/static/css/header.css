@@ -1,0 +1,149 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 12px 25px;
+    max-height: 90px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: webkit-fill-available;
+}
+
+.logo img {
+    height: 45px;
+}
+
+.icons {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.icons i {
+    font-size: 22px;
+    color: #666;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.icons i:hover {
+    color: #007bff;
+}
+
+.icons i.active {
+    color: #007bff;
+}
+
+.header-pic {
+    display: flex;
+    align-items: center;
+}
+
+.header-pic img {
+    height: 42px;
+    width: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border 0.3s ease;
+}
+
+.header-pic img:hover {
+    border: 2px solid #007bff;
+}
+
+.auth-buttons {
+    display: flex;
+    justify-content: space-between;
+    width: 20%;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-button {
+    text-align: center;
+    background-color: #1570ef;
+    color: white;
+    padding: 14px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    flex: 1; /* Makes both buttons take up equal width */
+  }
+  
+  .header-button:hover {
+    background-color: #005A9E;
+  }
+
+  .auth-buttons span {
+    margin: 0 10px; /* Space around the "або" text */
+    font-size: 16px;
+    color: #555; /* Change to desired text color */
+}
+/* !!!! Don't sure if this is the right place to put this code, but it's the only place I can think of */
+.notification-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  margin-top: 1rem;
+  padding-left: 10px;
+  right: 0; 
+  background: #fff;
+  z-index: 101;
+  box-shadow: 0 0 0 1px #0378ec;
+  border-radius: 8px;
+  width: 300px;
+  max-height: 20rem;
+  min-height: 4.2rem; 
+  opacity: 0; 
+  transform: translateY(-10px); 
+  transition: transform 0.3s ease;
+  padding: 0.5rem;
+  overflow-y: auto;
+}
+     
+.notification-dropdown.show {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+  
+.no-notifications {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #666;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  padding: 10px;
+  margin-top: 0.6rem;
+  white-space: nowrap; 
+  overflow: hidden; 
+}
+
+.no-notifications i {
+  font-size: 1.1rem;
+  color: #a3a3a3;
+  flex-shrink: 0; 
+}
+
+.no-notifications span {
+  display: inline-block;
+  margin: 0;
+}
+
+#notification-list {
+  padding: 0; /* Remove any default ul padding */
+  list-style-type: none;
+}

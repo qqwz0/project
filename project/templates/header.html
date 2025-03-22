@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Header</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    {% load static %}
+</head>
+<body hx-ext="ws" ws-connect="/ws/notifications/">
+
+    <div class="header" >
+        <div class="logo">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5a/QR_Code_example.png" alt="Logo">
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="icons">
+                <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
+                    <i class="fas fa-home"></i>
+                </a> 
+                <a href="#" id="dropdownMenuButton" role="button" style="position: relative;     
+                                                                         cursor: default;
+                                                                         color: #000;">
+                    <i class="fa-solid fa-circle" id="notification-indicator" style="color: #1570ef; display: none; position: absolute; font-size: 0.5em; z-index: 2; top: 15%; left: 80%; transform: translate(-50%, -50%);"></i>
+                    <i class="fas fa-bell" style="position: relative; z-index: 1;"></i>
+                    <ul class="notification-dropdown" id="notification-list">
+                        <div class="no-notifications" id="no-notifications-message">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span>У вас не має нових сповіщень!</span>
+                        </div>
+                    </ul> 
+                </a>
+                <i class="fas fa-envelope"></i>
+                {% if user.is_authenticated %}
+                    <div class="header-pic">
+                        <a href="{% url 'profile' %}">
+                            <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar">
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="auth-buttons">
+                <a href="{% url 'login' %}" class="header-button">Вхід</a>
+                <span>або</span>
+                <a href="{% url 'register' %}" class="header-button">Реєстрація</a>
+            </div>
+        {% endif %}
+    </div>
+
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.getElementById('dropdownMenuButton');
+        const dropdown = document.getElementById('notification-list');
+        const notificationDot = document.getElementById('notification-indicator');
+        
+        if (toggleBtn && dropdown) {
+            toggleBtn.addEventListener('click', event => {
+                event.preventDefault();
+                dropdown.classList.toggle('show');
+                
+                // Hide the notification dot when opened
+                if (dropdown.classList.contains('show')) {
+                    notificationDot.style.display = 'none';
+                }
+            });
+        }
+    });
+    
+    document.body.addEventListener('htmx:wsAfterMessage', function(event) {
+        // Show notification indicator for any message
+        const notificationDot = document.getElementById('notification-indicator');
+        if (notificationDot) {
+            notificationDot.style.display = 'block';
+        }
+        
+        // Remove "no notifications" message if it exists
+        const noNotificationsMsg = document.getElementById('no-notifications-message');
+        if (noNotificationsMsg) {
+            noNotificationsMsg.remove();
+        }
+        
+        // Add the new notification to the container
+        if (event.detail.message) {
+            const container = document.getElementById('notifications-container');
+            if (container) {
+                container.insertAdjacentHTML('afterbegin', event.detail.message);
+            }
+        }
+    });
+</script>
+</html>

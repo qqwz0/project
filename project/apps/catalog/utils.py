@@ -32,8 +32,6 @@ class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
             return self.handle_no_permission()
         if request.user.role == 'Викладач':
             return self.handle_no_permission()
-        if already_requested:
-            return self.handle_no_permission()
         # If checks pass, proceed with the normal dispatch flow
         return super().dispatch(request, *args, **kwargs)
    

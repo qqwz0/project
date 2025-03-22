@@ -18,7 +18,7 @@ def send_notification_on_request(sender, instance, created, **kwargs):
             teacher_user_id = instance.teacher_id.pk
             
             student_name = f"{instance.student_id.first_name} {instance.student_id.last_name}"
-            message = f"Новий запит від студента {student_name}"
+            message = f"Ви отримали запит від студента {student_name}! 📩"
             
             # Create the notification event
             event = {
@@ -47,23 +47,25 @@ def send_notification_on_request_status_changed(sender, instance,**kwargs):
         return 
     
     # Only send notification if status actually changed
-    if old_instance.requset_status != instance.request_status:
+    if old_instance.request_status != instance.request_status:
         try:
             channel_layer = get_channel_layer()
             
             # Get the student's user ID (must be numeric)
-            student_user_id = instance.student_id.user.id
+            student_user_id = instance.student_id.pk
             
             # Create appropriate message based on status
-            status_text = "прийнято" if instance.request_status == "accepted" else "відхилено"
-            teacher_name = f"{instance.teacher_id.last_name} {instance.teacher_id.first_name}"
-            message = f"Ваш запит до викладача {teacher_name} було {status_text}"
+            status_text = "прийняв" if instance.request_status == "accepted" else "відхилив"
+            teacher_name = f"{instance.teacher_id} "
+            emoji = "✅" if status_text == "прийняв" else "❌"
+            message = f"{teacher_name} {status_text} ваш запит! {emoji}"
             
             # Create the notification event
             event = {
                 "type": "send_notification",
                 "message": message,
-                'status': status_text
+                'status': status_text,
+                'rejection_reason': instance.rejected_reason if status_text == "відхилив" else None
             }
             
             # Log the group we're sending to

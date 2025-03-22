@@ -1,19 +1,40 @@
+import json
 import logging
+from functools import wraps
+from io import BytesIO
 from urllib.parse import urlencode, parse_qs
-
+import os
 import requests
+from PIL import Image
 from django.conf import settings
 from django.contrib import messages
-from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, render
-from django.utils.crypto import get_random_string
-from dotenv import load_dotenv
 from django.contrib.auth import login as auth_login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import update_last_login
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.db import transaction
+from django.shortcuts import redirect, render, get_object_or_404
+from django.utils.crypto import get_random_string
+from django.http import JsonResponse
+from dotenv import load_dotenv
 
-from .forms import RegistrationForm
+from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
 from .models import CustomUser
+from apps.catalog.models import (
+    OnlyTeacher,
+    OnlyStudent,
+    Stream,
+    Slot,
+    Request,
+    TeacherTheme
+)
+from apps.catalog.models import (
+    OnlyTeacher as CatalogTeacher,
+)
+
+from apps.catalog.models import OnlyTeacher as CatalogTeacher, Request, TeacherTheme, Slot, Stream
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +46,16 @@ logger = logging.getLogger(__name__)
 MICROSOFT_AUTH_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/authorize"
 MICROSOFT_TOKEN_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/token"
 MICROSOFT_GRAPH_ME_ENDPOINT = f"{settings.MICROSOFT_GRAPH_ENDPOINT}/me"
+
+def own_profile_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        profile_id = kwargs.get('profile_id') or request.user.id
+        if request.user.id != profile_id:
+            messages.error(request, "Ви можете редагувати тільки власний профіль")
+            return redirect('profile')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 def microsoft_register(request):
     """
@@ -64,12 +95,12 @@ def microsoft_register(request):
             return redirect(authorization_url)
         else:
             logger.error("Form errors: %s", form.errors)
-            return render(request, "register.html", {"form": form, "errors": form.errors})
+            return render(request, "auth/register.html", {"form": form, "errors": form.errors})
     else:
         logger.debug("GET request received")
         form = RegistrationForm()
 
-    return render(request, "register.html", {"form": form})
+    return render(request, "auth/register.html", {"form": form})
 
 def microsoft_login(request):
     """
@@ -91,7 +122,7 @@ def microsoft_login(request):
         # If the request is to render the login page
         if not request.GET.get("redirect"):
             logger.debug("Rendering login page before redirecting to Microsoft.")
-            return render(request, 'login.html')  # Update with the correct template path
+            return render(request, 'auth/login.html')  # Update with the correct template path
         
         CSRF_STATE = get_random_string(32)
         request.session['csrf_state'] = CSRF_STATE
@@ -267,7 +298,18 @@ def handle_registration_callback(request, code):
         return redirect('register')
 
 def handle_login_callback(request, code):
+
     """
+    This function processes the OAuth callback from Microsoft, retrieves the access token,
+    fetches user information from Microsoft Graph, and logs in the user if they exist in the database.
+    Args:
+        request (HttpRequest): The HTTP request object containing the callback data.
+        code (str): The authorization code provided by Microsoft.
+    Returns:
+        HttpResponse: A redirect response to the appropriate page based on the outcome of the login process.
+    Raises:
+        ValidationError: If there is a validation error during the login process.
+        requests.exceptions.RequestException: If there is an error during the HTTP requests to Microsoft.
     Handle Microsoft's OAuth login callback.
     """
     logger.debug("Handling callback for Microsoft login.")
@@ -347,11 +389,331 @@ def handle_login_callback(request, code):
         logger.error("Error during Microsoft OAuth login: %s", e)
         messages.error(request, "Не вдалося завершити автентифікацію.")
         return redirect("login")
+    
+def fake_login(request):
+    email = "VYKLADACH.VYKLADACH@lnu.edu.ua"
+    try:
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        user = CustomUser.objects.create(
+            email=email,
+            first_name="Викладач",
+            last_name="Тестовий",
+            patronymic="Петрович",
+            role="Викладач",
+            department="Системного проектування",
+            is_active=True,
+            password=make_password("fake_password")
+        )
+        
+        teacher_profile = OnlyTeacher.objects.create(
+            teacher_id=user,
+            academic_level="Доцент",
+            additional_email="teacher.test@lnu.edu.ua",
+            phone_number="+380991234567"
+        )
+        
+        Slot.objects.create(
+            teacher_id=teacher_profile,
+            stream_id=1,
+            quota=5,
+            occupied=0
+        )
+        
+    auth_login(request, user)
+    return redirect("profile")
 
-def profile(request):
-    return render(request, "profile.html")
+@login_required
+def profile(request, user_id=None):
+    if user_id:
+        user_profile = get_object_or_404(CustomUser, id=user_id)
+        is_own_profile = request.user.id == user_id
+    else:
+        user_profile = request.user
+        is_own_profile = True
+
+    context = {
+        'user_profile': user_profile,
+        'is_own_profile': is_own_profile,
+    }
+
+    if user_profile.role == 'Викладач':
+        teacher_profile = OnlyTeacher.objects.get(teacher_id=user_profile)
+        themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
+        slots = Slot.objects.filter(teacher_id=teacher_profile)
+        
+        if is_own_profile:
+            received_requests = Request.objects.filter(
+                teacher_id=teacher_profile,
+                request_status='pending'
+            )
+            context['received_requests'] = received_requests
+
+        context.update({
+            'teacher_profile': teacher_profile,
+            'themes': themes,
+            'slots': slots,
+        })
+
+    elif user_profile.role == 'Студент':
+        student_profile = OnlyStudent.objects.filter(student_id=user_profile).first()  # Use filter() to avoid errors
+        if student_profile:
+            if is_own_profile:
+                sent_requests = Request.objects.filter(student_id=user_profile)
+                context['sent_requests'] = sent_requests
+            context['student_profile'] = student_profile
+
+
+    return render(request, 'profile/profile.html', context)
+
+import logging
+
+logger = logging.getLogger('app')
+
+@login_required
+def approve_request(request, request_id):
+    logger.info(f"Approving request ID: {request_id}, User: {request.user}")
+
+    try:
+        req = Request.objects.get(id=request_id)
+    except Request.DoesNotExist:
+        logger.info(f"Request ID {request_id} not found!")
+        messages.info(request, "Запит не знайдено.")
+        return redirect("profile")
+
+    # Only allow the teacher or the student to act
+    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
+        logger.info(f"Unauthorized approval attempt by user {request.user}")
+        messages.error(request, "Неможливо провести операцію.")
+        return redirect("profile")
+
+    if not req.slot:
+        logger.info(f"Request {request_id} does not have a valid slot!")
+        messages.error(request, "Запит не має дійсного слота.")
+        return redirect("profile")
+
+    available_slots = req.slot.get_available_slots()
+    logger.info(f"Available slots: {available_slots}, Quota: {req.slot.quota}, Occupied: {req.slot.occupied}")
+
+    if available_slots <= 0:
+        logger.info(f"Auto-rejecting request {request_id} due to full capacity.")
+        req.request_status = 'rejected'
+        req.rejected_reason = "Усі місця зайняті."
+        req.save()
+        messages.error(request, "Запит автоматично відхилено: усі місця зайняті.")
+        return redirect("profile")
+
+    try:
+        with transaction.atomic():
+            logger.debug(f"Attempting to approve request {request_id}.")
+            
+            req.request_status = 'accepted'
+            req.save()
+
+            logger.info(f"Request {request_id} successfully approved.")
+            messages.success(request, "Запит успішно підтверджено.")
+    except ValidationError as e:
+        logger.info(f"Validation error: {e}")
+        messages.error(request, str(e))
+    except Exception as e:
+        logger.info(f"Unexpected error approving request {request_id}: {e}")
+        messages.error(request, "Сталася помилка. Спробуйте ще раз.")
+
+    return redirect("profile")
+
+@login_required
+def reject_request(request, request_id):
+    req = get_object_or_404(Request, id=request_id)
+    
+    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
+        messages.error(request, "Неможливо провести операцію.")
+        return redirect("profile")
+    
+    if request.method == "POST":
+        reason = request.POST.get("reason", "")
+        req.request_status = "rejected"
+        req.rejected_reason = reason  # Ensure your model has this field
+        req.save()
+        messages.success(request, "Запит відхилено.")
+        return redirect("profile")
+
+@login_required
+def update_profile_picture(request):
+    if request.method == 'POST':
+        form = ProfilePictureUploadForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            logger.debug("Profile picture form is valid.")
+            try:
+                form.save()
+                return redirect('crop_profile_picture')  # Redirect to crop profile picture view
+            except Exception as e:
+                logger.error(f"Error saving profile picture for user {request.user.id}: {str(e)}")
+                messages.error(request, "Error saving profile picture.")
+                return redirect('profile')
+        else:
+            logger.warning(f"Profile picture form is invalid: {form.errors}")
+            messages.error(request, "Form is invalid.")
+            return redirect('profile')
+    else:
+        form = ProfilePictureUploadForm(instance=request.user)
+    
+    context = {
+        'form': form,
+        'user_profile': request.user,
+        'is_own_profile': True,
+    }
+    return render(request, 'profile/profile.html', context)
+
+@login_required
+def crop_profile_picture(request):
+    if request.method == 'POST':
+        crop_form = CropProfilePictureForm(request.POST)
+        if crop_form.is_valid():
+            x = crop_form.cleaned_data['x']
+            y = crop_form.cleaned_data['y']
+            width = crop_form.cleaned_data['width']
+            height = crop_form.cleaned_data['height']
+            try:
+                # Use the uploaded file if available; otherwise, use the user's current profile picture
+                if 'profile_picture' in request.FILES:
+                    image_file = request.FILES['profile_picture']
+                    image = Image.open(image_file).convert('RGB')
+                else:
+                    image_path = request.user.profile_picture.path
+                    if not os.path.exists(image_path):
+                        logger.error(f"Profile picture file does not exist for user {request.user.id} at path: {image_path}")
+                        return JsonResponse({'success': False, 'error': 'Profile picture file does not exist.'})
+                    image = Image.open(image_path).convert('RGB')
+                
+                # Log image dimensions and cropping coordinates
+                img_width, img_height = image.size
+                logger.debug(f"User {request.user.id} image size: {img_width}x{img_height}; crop coordinates: ({x}, {y}, {x+width}, {y+height})")
+
+                # Validate that cropping coordinates are within the image bounds
+                if x < 0 or y < 0 or (x + width) > img_width or (y + height) > img_height:
+                    logger.error(f"Cropping coordinates out of bounds for user {request.user.id}.")
+                    return JsonResponse({'success': False, 'error': 'Cropping coordinates out of bounds.'})
+                    
+                # Crop and resize the image
+                cropped_image = image.crop((x, y, x + width, y + height))
+                cropped_image = cropped_image.resize((240, 240), Image.LANCZOS)
+
+                # Save the cropped image to an in-memory file
+                img_io = BytesIO()
+                cropped_image.save(img_io, format='JPEG', quality=90)
+                img_content = ContentFile(img_io.getvalue())
+
+                # Save to the user model:
+                # Instead of passing save=True in the field's save() method,
+                # update the field and then save the model explicitly.
+                user = request.user
+                user.profile_picture.save(f"profile_{user.id}.jpg", img_content, save=False)
+                user.save()
+                
+                logger.debug(f"Cropped image saved successfully for user {user.id}.")
+                return JsonResponse({
+                    'success': True, 
+                    'new_profile_picture_url': user.profile_picture.url,
+                })
+            except Exception as e:
+                logger.exception(f"Error cropping or saving image for user {request.user.id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': 'Error processing the image.'})
+        else:
+            logger.warning(f"Crop form is invalid for user {request.user.id}: {crop_form.errors}")
+            return JsonResponse({'success': False, 'error': 'Crop form is invalid.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
 def logout_view(request):
     logout(request)
     logger.info("User logged out.")
     return redirect('login')
+
+@login_required
+@own_profile_required
+def teacher_profile_edit(request):
+    if request.user.role != 'Викладач':
+        messages.error(request, "Доступ заборонено")
+        return redirect('profile')
+        
+    teacher_profile, created = CatalogTeacher.objects.get_or_create(
+        teacher_id=request.user,
+        defaults={
+            'position': 'Не вказано',
+            'academic_level': 'Аспірант'
+        }
+    )
+    
+    if request.method == 'POST':
+        form = TeacherProfileForm(request.POST, instance=teacher_profile, user=request.user)
+        if form.is_valid():
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.patronymic = form.cleaned_data['patronymic']
+            request.user.department = form.cleaned_data['department']
+            request.user.save()
+            
+            form.save()
+            
+            themes_data = form.cleaned_data.get('themes', '[]')
+            if themes_data:
+                themes = json.loads(themes_data)
+                TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
+                for theme_text in themes:
+                    TeacherTheme.objects.create(
+                        teacher_id=teacher_profile,
+                        theme=theme_text,
+                        theme_description="",
+                        is_occupied=False
+                    )
+            
+            messages.success(request, "Профіль успішно оновлено")
+            return redirect('profile')
+    else:
+        form = TeacherProfileForm(instance=teacher_profile, user=request.user)
+    
+    existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
+    
+    return render(request, 'profile/teacher_edit.html', {
+        'form': form,
+        'existing_themes': existing_themes
+    })
+
+def teacher_requests(request):
+    return render(request, 'profile/requests.html', {
+        'message': 'У вас немає нових запитів.'
+    })
+
+@login_required
+@own_profile_required
+def student_profile_edit(request):
+    if request.user.role != 'Студент':
+        messages.error(request, "Доступ заборонено")
+        return redirect('profile')
+        
+    student_profile, created = OnlyStudent.objects.get_or_create(
+        student_id=request.user,
+        defaults={
+            'speciality': 'Не вказано',
+            'course': 1 
+        }
+    )
+    
+    if request.method == 'POST':
+        form = StudentProfileForm(request.POST, instance=student_profile, user=request.user)
+        if form.is_valid():
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.patronymic = form.cleaned_data['patronymic']
+            request.user.academic_group = form.cleaned_data['academic_group']
+            request.user.save()
+            
+            form.save()
+            
+            messages.success(request, "Профіль успішно оновлено")
+            return redirect('profile')
+    else:
+        form = StudentProfileForm(instance=student_profile, user=request.user)
+    
+    return render(request, 'profile/student_edit.html', {
+        'form': form
+    })

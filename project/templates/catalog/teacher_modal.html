@@ -112,15 +112,27 @@ and a form allowing the user to propose or enter custom themes.
 </section>
 
 <script>
-    // Intercepts the form submit button click event for AJAX submission.
     document.getElementById('submit-btn').addEventListener('click', function(event) {
         event.preventDefault();  // Stop traditional form submission
         var form = document.getElementById('request-form');
+        
+        // Get the main student_themes input field
+        var inputField = document.querySelector('input[name="student_themes"]:not([type="hidden"])');
+        var pendingTheme = '';
+        
+        if (inputField && inputField.value.trim()) {
+            // Save the value in case we need it for validation errors
+            pendingTheme = inputField.value.trim();
+            
+            // Temporarily clear the input field so it doesn't get submitted
+            inputField.value = '';
+        }
+        
         var formData = new FormData(form);
         var errorContainer = document.getElementById('form-errors');
-        errorContainer.innerHTML = '';  // Clear previous errors
+        errorContainer.innerHTML = '';
     
-        // Post form data with fetch and handle JSON response.
+        // Post form data with fetch and handle JSON response
         fetch("{% url 'modal' teacher.pk %}", {
             method: 'POST',
             body: formData,
@@ -131,29 +143,42 @@ and a form allowing the user to propose or enter custom themes.
         })
         .then(response => response.json())
         .then(data => {
+            // If there were errors and we had a pending theme, restore it
+            if (!data.success && pendingTheme) {
+                inputField.value = pendingTheme;
+            }
+            
             if (data.success) {
-                // Close modal, then reload the page on successful request.
+                // Close modal, then reload the page on successful request
                 document.getElementById('details_request_modal').close();
                 location.reload();
             } else {
-                // Create elements to display each field error.
+                // Create elements to display each field error
                 const errorElements = [];
                 for (var field in data.errors) {
-                    var fieldElement = document.querySelector(`[name="${field}"]`);
+                    var fieldElement = document.querySelector(`[name="${field}"]:not([type="hidden"])`);
                     var errorDiv = document.createElement('div');
                     errorDiv.className = 'error-message';
                     errorDiv.innerHTML = data.errors[field].join('<br>');
     
-                    // If the field exists in the form, put error below it; otherwise show at top.
+                    // If the field exists in the form, put error below it; otherwise show at top
                     if (fieldElement) {
-                        fieldElement.insertAdjacentElement('afterend', errorDiv);
+                        // Look for an existing error message to replace first
+                        var existingError = fieldElement.parentNode.querySelector('.error-message');
+                        if (existingError) {
+                            existingError.innerHTML = errorDiv.innerHTML;
+                            errorElements.push(existingError);
+                        } else {
+                            fieldElement.insertAdjacentElement('afterend', errorDiv);
+                            errorElements.push(errorDiv);
+                        }
                     } else {
                         errorContainer.appendChild(errorDiv);
+                        errorElements.push(errorDiv);
                     }
-                    errorElements.push(errorDiv);
                 }
     
-                // Remove error messages after 5 seconds.
+                // Remove error messages after 5 seconds
                 setTimeout(() => {
                     errorElements.forEach(element => {
                         element.remove();
@@ -161,7 +186,13 @@ and a form allowing the user to propose or enter custom themes.
                 }, 5000);
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            // Restore the input value on any error
+            if (pendingTheme) {
+                inputField.value = pendingTheme;
+            }
+        });
     });
 
     // Toggles the dropdown menu for proposed themes.

@@ -2,6 +2,12 @@ import logging
 from django import forms
 from django.core.exceptions import ValidationError
 import re  # Regular expressions
+from apps.catalog.models import (
+    OnlyTeacher, 
+    OnlyStudent,
+    TeacherTheme
+)
+from .models import CustomUser
 
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
@@ -97,9 +103,9 @@ class RegistrationForm(forms.Form):
             self.cleaned_data['group'] = group  # Save the updated value back into cleaned_data
             
             # Regular expression to match the correct format
-            pattern = r'^ФЕ[ЇСМЛП]-[1-4][1-9]$'
+            pattern = r'^ФЕ[ЇСМЛ](?:-[1-4][1-9])?$|^ФЕП-[1-4][1-9](?:ВПК)?$'
             if not re.match(pattern, group):
-                raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕМ-33 тощо.")
+                raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
         
         # Debugging log after successful group validation
         logger.debug(f"Group cleaned successfully: {group}")
@@ -118,3 +124,101 @@ class RegistrationForm(forms.Form):
                 raise ValidationError("Це поле обов'язкове.")
         
         return department
+
+class TeacherThemeForm(forms.ModelForm):
+    theme = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введіть значення',
+            'class': 'form-input'
+        })
+    )
+    theme_description = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': 'Опис теми',
+            'class': 'form-input'
+        }),
+        required=False
+    )
+
+    class Meta:
+        model = TeacherTheme
+        fields = ['theme', 'theme_description']
+
+class TeacherProfileForm(forms.ModelForm):
+    first_name = forms.CharField(
+        label="Ім'я",
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    last_name = forms.CharField(
+        label="Прізвище",
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    patronymic = forms.CharField(
+        label="По-батькові",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    department = forms.ChoiceField(
+        label="Кафедра",
+        choices=CustomUser.DEPARTMENT_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    class Meta:
+        model = OnlyTeacher
+        fields = ['academic_level', 'additional_email', 'phone_number']
+        widgets = {
+            'academic_level': forms.Select(attrs={'class': 'form-select'}),
+            'additional_email': forms.EmailInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'пп.ivan.franko@lnu.edu.ua'
+            }),
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': '68 450 65 46'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['first_name'].initial = user.first_name
+            self.fields['last_name'].initial = user.last_name
+            self.fields['department'].initial = user.department
+            self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
+
+class StudentProfileForm(forms.ModelForm):
+    first_name = forms.CharField(label="Ім'я")
+    last_name = forms.CharField(label="Прізвище")
+    patronymic = forms.CharField(label="По-батькові", required=False)
+    academic_group = forms.CharField(label="Академічна група")  # Це поле тепер тільки для CustomUser
+
+    class Meta:
+        model = OnlyStudent
+        fields = ['speciality', 'course', 'additional_email', 'phone_number']
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['first_name'].initial = user.first_name
+            self.fields['last_name'].initial = user.last_name
+            self.fields['patronymic'].initial = user.patronymic
+            self.fields['academic_group'].initial = user.academic_group
+
+class ProfilePictureUploadForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ['profile_picture']
+
+class CropProfilePictureForm(forms.Form):
+    x = forms.FloatField(widget=forms.HiddenInput())
+    y = forms.FloatField(widget=forms.HiddenInput())
+    width = forms.FloatField(widget=forms.HiddenInput())
+    height = forms.FloatField(widget=forms.HiddenInput())

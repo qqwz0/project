@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from easy_thumbnails.conf import Settings as thumbnail_settings
 
 load_dotenv()  # This loads the .env file into the environment
 
@@ -47,7 +48,10 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'apps.catalog',
     'apps.users',
-    'apps.notifications'
+    'apps.notifications',
+    'image_cropping',
+    'easy_thumbnails',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.users.context_processors.user_profile_picture',
             ],
         },
     },
@@ -150,6 +155,7 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -162,50 +168,35 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '[{levelname}] {asctime} {name} {message}',
-            'style': '{',
-        },
         'simple': {
-            'format': '[{levelname}] {message}',
+            'format': '{levelname} {message}',
             'style': '{',
         },
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',  # Змінив на DEBUG щоб бачити все
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'django_info.log',
-            'formatter': 'verbose',
+            'formatter': 'simple',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
-        'django.request': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
+        'django.utils.autoreload': {  # Suppress file modification logs
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
-        # 'apps.notifications': {
-        #     'handlers': ['console'],
-        #     'level': 'DEBUG',  # Важливо для ваших сигналів
-        #     'propagate': True,
-        # },
     },
-    # 'root': {
-    #     'handlers': ['console'],
-    #     'level': 'INFO',
-    # },
 }
+
+
+
+
 
 
 # Microsoft OAuth Configuration
@@ -221,9 +212,16 @@ MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI')
 ASGI_APPLICATION = 'project.asgi.application' 
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
 }
 
+# Image cropping settings
+THUMBNAIL_PROCESSORS = (
+    'image_cropping.thumbnail_processors.crop_corners',
+) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+IMAGE_CROPPING_BACKEND = 'image_cropping.backends.easy_thumbs.EasyThumbnailsBackend'
+IMAGE_CROPPING_BACKEND_PARAMS = {}
 
