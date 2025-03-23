@@ -588,68 +588,89 @@ p.position {
 .add-theme {
   background: none;
   border: none;
+  color: #4CAF50;
+  font-size: 20px;
   cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #a3a3a3;
-  margin-left: -30px;
-  margin-bottom: 7px;
+  padding: 0 4px;
 }
 
-.add-icon {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.2s ease-in-out;
-}
-
-.add-theme:hover .add-icon {
-  transform: scale(1.2);
+.add-theme:hover {
+  color: #388E3C;
 }
 
 .theme-list {
-  list-style-type: none;
+  list-style: none;
   padding: 0;
-  margin-top: 0;
-  margin-bottom: 2px;
+  margin: 10px 0;
 }
 
 .theme-item {
-  padding: 10px;
   display: flex;
-  width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  height: 10px;
-  align-items: center;
   justify-content: space-between;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  align-items: center;
+  background-color: #f5f5f5;
+  padding: 8px 12px;
   margin-bottom: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.2s ease-in-out;
+  border-radius: 4px;
 }
 
-.theme-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.theme-item input[readonly] {
+  background-color: transparent;
+  border: none;
+  width: 100%;
+  margin-right: 10px;
+  font-size: 14px;
+}
+
+.theme-description {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  resize: vertical;
+  font-size: 14px;
+}
+
+.theme-description[readonly] {
+  background-color: #f8f8f8;
+  border-color: #eee;
+}
+
+#new-theme {
+  width: calc(100% - 40px);
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-right: 8px;
 }
 
 .remove-theme {
   background: none;
   border: none;
-  color: #a3a3a3;
+  color: #ff4444;
+  font-size: 18px;
   cursor: pointer;
-  font-size: 26px;
-  line-height: 1;
-  transition: color 0.3s ease-in-out;
+  padding: 0 4px;
 }
 
 .remove-theme:hover {
-  transform: scale(1.1);
+  color: #cc0000;
+}
+
+.theme-item input[readonly],
+.theme-item textarea[readonly] {
+  background-color: #f5f5f5;
+  border: none;
+  width: 100%;
+  margin-right: 10px;
+}
+
+#id_student_themes[readonly] {
+  background-color: #f5f5f5;
+  color: #666;
 }
 
 .dropdown {

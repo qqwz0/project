@@ -1,84 +1,91 @@
 * {
     font-family: 'Nunito', sans-serif;
+    box-sizing: border-box;
 }
 
 .edit-profile-container {
     max-width: 1200px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: white;
-    border-radius: 8px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
 }
- 
+
 .edit-profile-header {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 5%;
-    flex-direction: row;
-    margin-bottom: 32px;
-    padding: 0 55px;
+    margin-bottom: 30px;
+    gap: 20px;
 }
 
 .profile-image {
-    width: 240px;
-    height: 240px;
+    width: 100px;
+    height: 100px;
     flex-shrink: 0;
 }
 
 .profile-image img {
     width: 100%;
     height: 100%;
+    border-radius: 50%;
     object-fit: cover;
-    border-radius: 8px;
 }
 
 .profile-title h1 {
-    font-family: 'Inter', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: #083A50;
     margin: 0;
+    font-size: 24px;
+    color: #1A1A1A;
 }
 
 .profile-title .email {
-    font-family: 'Poppins', sans-serif;
-    font-size: 21px;
-    font-weight: 400;
-    color: #6A89A6;
-    margin: 0;
+    margin: 5px 0 0;
+    color: #666;
+    font-size: 14px;
 }
 
 .edit-title {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 24px;
-    color: #CACED8;
-    margin-bottom: 32px;
-    padding: 0 55px;
-    color: #083A50;
+    font-size: 20px;
+    color: #1A1A1A;
+    margin-bottom: 20px;
 }
 
 .form-content {
-    padding: 0 55px;
-    margin-top: 32px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .form-sections {
     display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.form-sections.teacher-sections {
     grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+}
+
+.personal-info, .contacts {
+    padding: 20px;
+    background: #F9FAFB;
+    border-radius: 8px;
+}
+
+h3 {
+    font-size: 16px;
+    color: #1A1A1A;
+    margin-bottom: 16px;
 }
 
 .form-row {
-    display: flex;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .form-group {
-    margin-bottom: 1.5rem;
-    flex: 1;
-    
+    margin-bottom: 16px;
 }
 
 .form-group.full-width {
@@ -87,160 +94,227 @@
 
 label {
     display: block;
-    margin-bottom: 0.5rem;
-    color: #666;
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 8px;
 }
 
 input, select {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-size: 16px;
-}
-
-input::placeholder {
-    color: #BBBBBB;  /* Placeholder text color */
-    font-size: 14px;  /* Optional: set the font size */
-}
-input:focus, select:focus {
-  border: 1px solid #1570EF !important;  /* Your custom focus border color */
-  outline: none;
-}
-
-select {
+    padding: 8px 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
     font-size: 14px;
-    padding: 5px;
-    height: 100%;
-    width: 100%;
-    border: 1px solid #DDDDDD;
-    border-radius: 8px;
-    padding: 8px 15px;
-    min-height: 50px;
-    outline: none;
-    font-size: 16px;
-    max-height: 30px;
-  }
+    color: #1A1A1A;
+    background: #FFFFFF;
+}
 
-input {
-    height: 100%;
-    width: 100%;
-    border: 1px solid #DDDDDD;
-    border-radius: 8px;
-    padding: 8px 15px;
-    min-height: 50px;
-    max-height: 30px;
+input:focus, select:focus {
+    border-color: #2563EB;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .phone-input {
     display: flex;
     align-items: center;
-    border-radius: 8px;
-    background-color: white;
-    overflow: hidden;
-    gap: 0.3rem;
+    gap: 8px;
 }
 
 .country-code {
-    padding: 0.75rem 1rem;
-    color: #666;
-    border: 1px solid #cfd7df;
-    border-radius: 6px;
-    margin: 0;
+    font-size: 14px;
+    color: #374151;
+    padding: 8px 0;
 }
 
-.phone-input input {
-    flex: 1;
-    border: none;
-    padding: 0.75rem;
-    outline: none;
-    border: 1px solid #ddd;
+.error-message {
+    color: #DC2626;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.save-button, .back-button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+    text-align: center;
+    width: 160px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .save-button {
-    background-color: #1570ef;
+    background: #2563EB;
     color: white;
-    padding: 14px;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    height: 48px;
-    display: flex;
-    width: 100%;
-    max-width: 150px;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    cursor: pointer;
-    outline: none;
     border: none;
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-    flex: 1;
 }
 
 .save-button:hover {
-    background-color: #1263d4;
+    background: #1D4ED8;
 }
 
-.save-button:active {
-    background-color: #1057bc;
+.back-button {
+    background: #22C55E;
+    color: white;
+    border: none;
 }
 
-h3 {
-    font-family: 'Nunito', sans-serif;
-    font-size: 20px;
-    color: #245265;
-    margin-bottom: 24px;
+.back-button:hover {
+    background: #16A34A;
 }
 
-.form-sections.teacher-sections {
-    /* Create 2 columns with a gap */
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-  }
-  
-  /* Column 1: stack personal-info + quota vertically */
-.form-sections.teacher-sections > div:nth-child(1) {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+.message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    transition: opacity 0.3s ease;
 }
-  
-  /* Column 2: stack contacts + themes vertically */
-.form-sections.teacher-sections > div:nth-child(2) {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+
+.message.success {
+    background-color: #DEF7EC;
+    color: #03543F;
+    border: 1px solid #31C48D;
 }
-  
+
+.themes-section {
+    margin-top: 24px;
+}
+
+#themes-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #F9FAFB;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#themes-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#themes-container::-webkit-scrollbar-track {
+    background: #F3F4F6;
+    border-radius: 4px;
+}
+
+#themes-container::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 4px;
+}
+
+#themes-container::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
 
 .theme-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 8px;
+    margin-bottom: 8px;
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+}
+
+.theme-item:last-child {
+    margin-bottom: 0;
 }
 
 .theme-item input {
     flex: 1;
+    border: none;
+    background: transparent;
+    padding: 4px;
+    font-size: 14px;
 }
 
-.remove-theme, .add-theme {
-    padding: 0.5rem 1rem;
-    border: none;
-    background-color: #e53e3e;
+.theme-item .remove-theme {
+    background: #EF4444;
     color: white;
+    border: none;
     border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+.theme-item .remove-theme:hover {
+    background: #DC2626;
+}
+
+.theme-input-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+}
+
+#new-theme {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .add-theme {
-    background-color: #38a169;
+    width: 32px;
+    height: 32px;
+    background: #22C55E;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    transition: background-color 0.2s;
+    margin-top: 4px;
 }
 
-.remove-theme:hover, .add-theme:hover {
-    opacity: 0.9;
+.add-theme:hover {
+    background: #16A34A;
+}
+
+@media (max-width: 768px) {
+    .form-sections.teacher-sections {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .edit-profile-container {
+        padding: 16px;
+    }
+    
+    .form-content {
+        padding: 16px;
+    }
 }

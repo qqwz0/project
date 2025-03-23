@@ -19,6 +19,9 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
 from django.http import JsonResponse
 from dotenv import load_dotenv
+from django.utils import timezone
+from django.urls import reverse
+from django.template.loader import render_to_string
 
 from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
 from .models import CustomUser
@@ -430,6 +433,10 @@ def fake_login(request):
 
 @login_required
 def profile(request, user_id=None):
+    """
+    Display user profile with their requests and themes.
+    If user_id is provided, display that user's profile, otherwise display the logged-in user's profile.
+    """
     if user_id:
         user_profile = get_object_or_404(CustomUser, id=user_id)
         is_own_profile = request.user.id == user_id
@@ -442,32 +449,55 @@ def profile(request, user_id=None):
         'is_own_profile': is_own_profile,
     }
 
+    # Add role-specific data
     if user_profile.role == 'Викладач':
-        teacher_profile = OnlyTeacher.objects.get(teacher_id=user_profile)
-        themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
-        slots = Slot.objects.filter(teacher_id=teacher_profile)
-        
-        if is_own_profile:
-            received_requests = Request.objects.filter(
-                teacher_id=teacher_profile,
-                request_status='pending'
-            )
-            context['received_requests'] = received_requests
-
+        teacher_profile = get_object_or_404(OnlyTeacher, teacher_id=user_profile)
         context.update({
             'teacher_profile': teacher_profile,
-            'themes': themes,
-            'slots': slots,
+            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
+            'slots': Slot.objects.filter(teacher_id=teacher_profile),
+            'pending_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                teacher_id__teacher_id=user_profile,
+                request_status='Очікує'
+            ),
+            'active_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                teacher_id__teacher_id=user_profile,
+                request_status='Активний'
+            ),
+            'archived_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                teacher_id__teacher_id=user_profile,
+                request_status='Завершено'
+            )
         })
-
-    elif user_profile.role == 'Студент':
-        student_profile = OnlyStudent.objects.filter(student_id=user_profile).first()  # Use filter() to avoid errors
-        if student_profile:
-            if is_own_profile:
-                sent_requests = Request.objects.filter(student_id=user_profile)
-                context['sent_requests'] = sent_requests
-            context['student_profile'] = student_profile
-
+    else:  # Student
+        student_profile = get_object_or_404(OnlyStudent, student_id=user_profile)
+        context.update({
+            'student_profile': student_profile,
+            'sent_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                student_id=user_profile,
+                request_status='Очікує'
+            ),
+            'active_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                student_id=user_profile,
+                request_status='Активний'
+            ),
+            'archived_requests': Request.objects.select_related(
+                'student_id', 'teacher_id', 'teacher_theme', 'slot'
+            ).prefetch_related('student_themes').filter(
+                student_id=user_profile,
+                request_status='Завершено'
+            )
+        })
 
     return render(request, 'profile/profile.html', context)
 
@@ -477,70 +507,70 @@ logger = logging.getLogger('app')
 
 @login_required
 def approve_request(request, request_id):
-    logger.info(f"Approving request ID: {request_id}, User: {request.user}")
-
-    try:
-        req = Request.objects.get(id=request_id)
-    except Request.DoesNotExist:
-        logger.info(f"Request ID {request_id} not found!")
-        messages.info(request, "Запит не знайдено.")
-        return redirect("profile")
-
-    # Only allow the teacher or the student to act
-    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
-        logger.info(f"Unauthorized approval attempt by user {request.user}")
-        messages.error(request, "Неможливо провести операцію.")
-        return redirect("profile")
-
-    if not req.slot:
-        logger.info(f"Request {request_id} does not have a valid slot!")
-        messages.error(request, "Запит не має дійсного слота.")
-        return redirect("profile")
-
-    available_slots = req.slot.get_available_slots()
-    logger.info(f"Available slots: {available_slots}, Quota: {req.slot.quota}, Occupied: {req.slot.occupied}")
-
-    if available_slots <= 0:
-        logger.info(f"Auto-rejecting request {request_id} due to full capacity.")
-        req.request_status = 'rejected'
-        req.rejected_reason = "Усі місця зайняті."
-        req.save()
-        messages.error(request, "Запит автоматично відхилено: усі місця зайняті.")
-        return redirect("profile")
-
-    try:
-        with transaction.atomic():
-            logger.debug(f"Attempting to approve request {request_id}.")
+    """
+    Approve a request and update its status to 'Активний'.
+    """
+    if request.method == 'POST':
+        try:
+            req = Request.objects.get(id=request_id)
             
-            req.request_status = 'accepted'
-            req.save()
-
-            logger.info(f"Request {request_id} successfully approved.")
-            messages.success(request, "Запит успішно підтверджено.")
-    except ValidationError as e:
-        logger.info(f"Validation error: {e}")
-        messages.error(request, str(e))
-    except Exception as e:
-        logger.info(f"Unexpected error approving request {request_id}: {e}")
-        messages.error(request, "Сталася помилка. Спробуйте ще раз.")
-
-    return redirect("profile")
+            # Check if the user is the teacher who received the request
+            if request.user == req.teacher_id.teacher_id:
+                # Update request status
+                req.request_status = 'Активний'
+                req.save()
+                
+                messages.success(request, 'Запит успішно підтверджено')
+                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True})
+                return redirect('profile')
+            else:
+                messages.error(request, 'У вас немає прав для підтвердження цього запиту')
+        except Request.DoesNotExist:
+            messages.error(request, 'Запит не знайдено')
+        except Exception as e:
+            messages.error(request, f'Помилка при підтвердженні запиту: {str(e)}')
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Помилка при обробці запиту'})
+    return redirect('profile')
 
 @login_required
 def reject_request(request, request_id):
-    req = get_object_or_404(Request, id=request_id)
+    """
+    Reject a request and update its status to 'Відхилено'.
+    """
+    if request.method == 'POST':
+        try:
+            req = Request.objects.get(id=request_id)
+            
+            # Check if the user is the teacher who received the request
+            if request.user == req.teacher_id.teacher_id:
+                # Update request status
+                req.request_status = 'Відхилено'
+                req.save()
+                
+                # If there was a teacher theme, mark it as unoccupied
+                if req.teacher_theme:
+                    req.teacher_theme.is_occupied = False
+                    req.teacher_theme.save()
+                
+                messages.success(request, 'Запит успішно відхилено')
+                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True})
+                return redirect('profile')
+            else:
+                messages.error(request, 'У вас немає прав для відхилення цього запиту')
+        except Request.DoesNotExist:
+            messages.error(request, 'Запит не знайдено')
+        except Exception as e:
+            messages.error(request, f'Помилка при відхиленні запиту: {str(e)}')
     
-    if req.teacher_id.teacher_id != request.user and req.student_id != request.user:
-        messages.error(request, "Неможливо провести операцію.")
-        return redirect("profile")
-    
-    if request.method == "POST":
-        reason = request.POST.get("reason", "")
-        req.request_status = "rejected"
-        req.rejected_reason = reason  # Ensure your model has this field
-        req.save()
-        messages.success(request, "Запит відхилено.")
-        return redirect("profile")
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Помилка при обробці запиту'})
+    return redirect('profile')
 
 @login_required
 def update_profile_picture(request):
@@ -640,7 +670,7 @@ def teacher_profile_edit(request):
         messages.error(request, "Доступ заборонено")
         return redirect('profile')
         
-    teacher_profile, created = CatalogTeacher.objects.get_or_create(
+    teacher_profile, created = OnlyTeacher.objects.get_or_create(
         teacher_id=request.user,
         defaults={
             'position': 'Не вказано',
@@ -651,28 +681,70 @@ def teacher_profile_edit(request):
     if request.method == 'POST':
         form = TeacherProfileForm(request.POST, instance=teacher_profile, user=request.user)
         if form.is_valid():
-            request.user.first_name = form.cleaned_data['first_name']
-            request.user.last_name = form.cleaned_data['last_name']
-            request.user.patronymic = form.cleaned_data['patronymic']
-            request.user.department = form.cleaned_data['department']
-            request.user.save()
-            
-            form.save()
-            
-            themes_data = form.cleaned_data.get('themes', '[]')
-            if themes_data:
-                themes = json.loads(themes_data)
-                TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
-                for theme_text in themes:
-                    TeacherTheme.objects.create(
-                        teacher_id=teacher_profile,
-                        theme=theme_text,
-                        theme_description="",
-                        is_occupied=False
-                    )
-            
-            messages.success(request, "Профіль успішно оновлено")
-            return redirect('profile')
+            try:
+                with transaction.atomic():
+                    # Update user fields
+                    request.user.first_name = form.cleaned_data['first_name']
+                    request.user.last_name = form.cleaned_data['last_name']
+                    request.user.patronymic = form.cleaned_data['patronymic']
+                    request.user.department = form.cleaned_data['department']
+                    request.user.save()
+                    
+                    form.save()
+                    
+                    # Get themes data from the form
+                    themes_data = request.POST.get('themes', '[]')
+                    
+                    try:
+                        themes = json.loads(themes_data)
+                        
+                        # Delete existing themes
+                        TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
+                        
+                        # Create new themes
+                        for theme_data in themes:
+                            if isinstance(theme_data, dict):
+                                theme = theme_data.get('theme', '').strip()
+                                description = theme_data.get('description', '').strip()
+                                
+                                if theme:  # Only create if theme is not empty
+                                    TeacherTheme.objects.create(
+                                        teacher_id=teacher_profile,
+                                        theme=theme,
+                                        theme_description=description,
+                                        is_occupied=False
+                                    )
+                        
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': True,
+                                'message': 'Профіль успішно оновлено'
+                            })
+                        messages.success(request, "Профіль успішно оновлено")
+                        return redirect('profile')
+                        
+                    except json.JSONDecodeError:
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': False,
+                                'message': 'Помилка при збереженні тем'
+                            }, status=400)
+                        messages.error(request, "Помилка при збереженні тем")
+                        
+            except Exception as e:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Помилка при збереженні профілю: {str(e)}"
+                    }, status=400)
+                messages.error(request, f"Помилка при збереженні профілю: {str(e)}")
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': dict(form.errors.items())
+                }, status=400)
+            messages.error(request, "Помилка при збереженні профілю")
     else:
         form = TeacherProfileForm(instance=teacher_profile, user=request.user)
     
@@ -698,27 +770,146 @@ def student_profile_edit(request):
     student_profile, created = OnlyStudent.objects.get_or_create(
         student_id=request.user,
         defaults={
-            'speciality': 'Не вказано',
-            'course': 1 
+            'course': 1
         }
     )
     
     if request.method == 'POST':
         form = StudentProfileForm(request.POST, instance=student_profile, user=request.user)
         if form.is_valid():
-            request.user.first_name = form.cleaned_data['first_name']
-            request.user.last_name = form.cleaned_data['last_name']
-            request.user.patronymic = form.cleaned_data['patronymic']
-            request.user.academic_group = form.cleaned_data['academic_group']
-            request.user.save()
-            
-            form.save()
-            
-            messages.success(request, "Профіль успішно оновлено")
-            return redirect('profile')
+            try:
+                with transaction.atomic():
+                    # Update user fields
+                    request.user.first_name = form.cleaned_data['first_name']
+                    request.user.last_name = form.cleaned_data['last_name']
+                    request.user.patronymic = form.cleaned_data['patronymic']
+                    request.user.academic_group = form.cleaned_data['academic_group']
+                    request.user.save()
+                    
+                    # Update student profile fields
+                    student_profile.course = form.cleaned_data['course']
+                    student_profile.additional_email = form.cleaned_data['additional_email']
+                    student_profile.phone_number = form.cleaned_data['phone_number']
+                    student_profile.save()
+                    
+                    messages.success(request, "Профіль успішно оновлено")
+                    
+                    # If it's an AJAX request, return JSON response
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': True,
+                            'message': 'Профіль успішно оновлено',
+                            'redirect_url': reverse('profile')
+                        })
+                    return redirect('profile')
+            except Exception as e:
+                logger.error(f"Error saving student profile: {str(e)}")
+                messages.error(request, f"Помилка при збереженні профілю: {str(e)}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Помилка при збереженні профілю: {str(e)}"
+                    }, status=400)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': dict(form.errors.items())
+                }, status=400)
     else:
         form = StudentProfileForm(instance=student_profile, user=request.user)
     
     return render(request, 'profile/student_edit.html', {
-        'form': form
+        'form': form,
+        'user': request.user
     })
+
+@login_required
+def complete_request(request, request_id):
+    """
+    Complete a request and assign a grade.
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"})
+
+    try:
+        req = Request.objects.get(id=request_id)
+        
+        # Only allow the teacher to complete the request
+        if req.teacher_id.teacher_id != request.user:
+            return JsonResponse({"success": False, "error": "У вас немає прав для завершення цього запиту"})
+            
+        # Get the grade from POST data
+        grade = request.POST.get("grade")
+        if not grade or not grade.isdigit() or int(grade) < 0 or int(grade) > 100:
+            return JsonResponse({"success": False, "error": "Будь ласка, введіть оцінку від 0 до 100"})
+            
+        # Update request status
+        req.request_status = "Завершено"
+        req.grade = int(grade)
+        req.completion_date = timezone.now()
+        req.save()
+        
+        messages.success(request, "Роботу успішно завершено")
+        return JsonResponse({"success": True})
+        
+    except Request.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Запит не знайдено"})
+    except Exception as e:
+        logger.error(f"Error completing request {request_id}: {str(e)}")
+        return JsonResponse({"success": False, "error": "Сталася помилка при обробці запиту"})
+
+@login_required
+def load_profile_tab(request, tab_name):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        context = {'user_profile': request.user}
+        
+        if tab_name == 'active':
+            if request.user.role == 'Викладач':
+                active_requests = Request.objects.filter(
+                    teacher_id__teacher_id=request.user,
+                    request_status='Активний'
+                ).select_related('student_id', 'teacher_id', 'teacher_theme', 'slot')
+            else:
+                active_requests = Request.objects.filter(
+                    student_id=request.user,
+                    request_status='Активний'
+                ).select_related('teacher_id__teacher_id', 'teacher_theme', 'slot')
+            
+            context['active_requests'] = active_requests
+            html = render_to_string('profile/active.html', context, request=request)
+            
+        elif tab_name == 'requests':
+            if request.user.role == 'Викладач':
+                pending_requests = Request.objects.filter(
+                    teacher_id__teacher_id=request.user,
+                    request_status='Очікує'
+                ).select_related('student_id', 'teacher_id', 'teacher_theme', 'slot')
+                context['pending_requests'] = pending_requests
+            else:
+                sent_requests = Request.objects.filter(
+                    student_id=request.user,
+                    request_status='Очікує'
+                ).select_related('teacher_id__teacher_id', 'teacher_theme', 'slot')
+                context['sent_requests'] = sent_requests
+            
+            html = render_to_string('profile/requests.html', context, request=request)
+            
+        elif tab_name == 'archive':
+            if request.user.role == 'Викладач':
+                archive_requests = Request.objects.filter(
+                    teacher_id__teacher_id=request.user,
+                    request_status='Завершено'
+                ).select_related('student_id', 'teacher_id', 'teacher_theme', 'slot')
+            else:
+                archive_requests = Request.objects.filter(
+                    student_id=request.user,
+                    request_status='Завершено'
+                ).select_related('teacher_id__teacher_id', 'teacher_theme', 'slot')
+            
+            context['archived_requests'] = archive_requests
+            html = render_to_string('profile/archive.html', context, request=request)
+        
+        return JsonResponse({'html': html})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)

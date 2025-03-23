@@ -169,10 +169,11 @@ class TeacherProfileForm(forms.ModelForm):
             'class': 'form-select'
         })
     )
+    themes = forms.CharField(required=False, widget=forms.HiddenInput())
     
     class Meta:
         model = OnlyTeacher
-        fields = ['academic_level', 'additional_email', 'phone_number']
+        fields = ['academic_level', 'additional_email', 'phone_number', 'themes']
         widgets = {
             'academic_level': forms.Select(attrs={'class': 'form-select'}),
             'additional_email': forms.EmailInput(attrs={
@@ -195,14 +196,57 @@ class TeacherProfileForm(forms.ModelForm):
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
 
 class StudentProfileForm(forms.ModelForm):
-    first_name = forms.CharField(label="Ім'я")
-    last_name = forms.CharField(label="Прізвище")
-    patronymic = forms.CharField(label="По-батькові", required=False)
-    academic_group = forms.CharField(label="Академічна група")  # Це поле тепер тільки для CustomUser
+    first_name = forms.CharField(
+        label="Ім'я",
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    last_name = forms.CharField(
+        label="Прізвище",
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    patronymic = forms.CharField(
+        label="По-батькові",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    academic_group = forms.CharField(
+        label="Академічна група",
+        max_length=10,
+        widget=forms.TextInput(attrs={'class': 'form-input'})
+    )
+    course = forms.IntegerField(
+        label="Курс",
+        min_value=1,
+        max_value=4,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input',
+            'min': 1,
+            'max': 4
+        })
+    )
+    additional_email = forms.EmailField(
+        label="Додаткова електронна скринька",
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'example@gmail.com'
+        })
+    )
+    phone_number = forms.CharField(
+        label="Номер телефону",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': '68 450 65 46'
+        })
+    )
 
     class Meta:
         model = OnlyStudent
-        fields = ['speciality', 'course', 'additional_email', 'phone_number']
+        fields = ['course', 'additional_email', 'phone_number']
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -211,6 +255,49 @@ class StudentProfileForm(forms.ModelForm):
             self.fields['last_name'].initial = user.last_name
             self.fields['patronymic'].initial = user.patronymic
             self.fields['academic_group'].initial = user.academic_group
+            
+        instance = kwargs.get('instance')
+        if instance:
+            self.fields['course'].initial = instance.course
+            self.fields['additional_email'].initial = instance.additional_email
+            self.fields['phone_number'].initial = instance.phone_number
+
+    def clean(self):
+        cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        academic_group = cleaned_data.get('academic_group')
+
+        if course and academic_group:
+            # Перевіряємо, чи співпадає курс з першою цифрою в номері групи
+            match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', academic_group)
+            if match:
+                group_course = int(match.group(1))
+                if group_course != course:
+                    raise ValidationError({
+                        'academic_group': 'Перша цифра в номері групи повинна відповідати вашому курсу',
+                        'course': 'Курс повинен відповідати першій цифрі в номері групи'
+                    })
+            else:
+                raise ValidationError({
+                    'academic_group': 'Неправильний формат групи. Приклад: ФЕС-21'
+                })
+
+        return cleaned_data
+
+    def clean_academic_group(self):
+        group = self.cleaned_data.get('academic_group')
+        if not group:
+            raise ValidationError("Це поле обов'язкове.")
+            
+        # Convert group to uppercase
+        group = group.upper()
+        
+        # Regular expression to match the correct format
+        pattern = r'^ФЕ[ЇСМЛП]-[1-4][1-9](?:ВПК)?$'
+        if not re.match(pattern, group):
+            raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
+        
+        return group
 
 class ProfilePictureUploadForm(forms.ModelForm):
     class Meta:

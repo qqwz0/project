@@ -219,12 +219,16 @@ and a form allowing the user to propose or enter custom themes.
     function updateThemeCount() {
         var hiddenThemes = document.getElementById('hidden-themes');
         var themeCount = hiddenThemes.querySelectorAll('input[name="student_themes"]').length;
+        var themeInput = document.getElementById('id_student_themes');
 
         if (themeCount >= 3) {
             document.getElementById('add-theme').disabled = true;
-            document.getElementById('id_student_themes').readonly = readonly;
+            themeInput.readOnly = true;
+            themeInput.placeholder = 'Досягнуто ліміт тем';
         } else {
             document.getElementById('add-theme').disabled = false;
+            themeInput.readOnly = false;
+            themeInput.placeholder = 'Введи';
         }
     }
 </script>

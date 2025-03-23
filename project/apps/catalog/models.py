@@ -83,10 +83,10 @@ class Slot(models.Model):
 
 class Request(models.Model):
     STATUS = [
-        ('pending', 'очікується'),
-        ('accepted', 'прийнятий'),
-        ('rejected', 'відхилений'),
-        ('completed', 'завершений'),
+        ('Очікує', 'Очікує'),
+        ('Активний', 'Активний'),
+        ('Відхилено', 'Відхилено'),
+        ('Завершено', 'Завершено'),
     ]
     student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, 
                                  limit_choices_to={'role': 'student'}, 
@@ -99,7 +99,7 @@ class Request(models.Model):
     motivation_text = models.TextField()
     request_date = models.DateTimeField(auto_now_add=True)
     request_status = models.CharField(max_length=100, choices=STATUS, 
-                                    default='pending')
+                                    default='Очікує')
     grade = models.IntegerField(null=True, blank=True)
     rejected_reason = models.TextField(blank=True, null=True)
     completion_date = models.DateTimeField(null=True, blank=True)
@@ -114,7 +114,7 @@ class Request(models.Model):
     @property
     def is_archived(self):
         """Перевіряє чи робота в архіві (завершена)"""
-        return self.request_status == 'completed' and self.grade is not None
+        return self.request_status == 'Завершено' and self.grade is not None
 
     def extract_stream_from_academic_group(self):
         """
@@ -131,13 +131,14 @@ class Request(models.Model):
         """
         if not self.slot:  # Only assign slot if not manually set
             student_stream_code = self.extract_stream_from_academic_group()
-            print(student_stream_code)
+            print(f"Extracted stream code: {student_stream_code}")
             if not student_stream_code:
                 raise ValidationError("Student academic group is missing or invalid.")
 
             # Find the corresponding Stream object
             try:
                 stream = Stream.objects.get(stream_code=student_stream_code)
+                print(f"Found stream: {stream}")
             except Stream.DoesNotExist:
                 raise ValidationError(f"No stream found with code: {student_stream_code}")
 
@@ -146,9 +147,11 @@ class Request(models.Model):
                 teacher_id=self.teacher_id,
                 stream_id=stream
             ).filter(occupied__lt=models.F('quota')).first()
+            
+            print(f"Available slot found: {available_slot}")
 
             if not available_slot:
-                raise ValidationError(f"No available slots for teacher {self.teacher_profile} in stream {stream.code}")
+                raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
 
             # Assign the found slot
             self.slot = available_slot
@@ -157,9 +160,9 @@ class Request(models.Model):
         if self.pk:  # Check if the request already exists
             old_request = Request.objects.get(pk=self.pk)
             if old_request.request_status != self.request_status:
-                if self.request_status == 'accepted':
+                if self.request_status == 'Активний':
                     self.slot.update_occupied_slots(+1)
-                elif old_request.request_status == 'accepted' and self.request_status != 'accepted':
+                elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
 
         if not self.academic_year:

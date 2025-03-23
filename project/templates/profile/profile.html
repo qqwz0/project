@@ -19,12 +19,20 @@
                             {% csrf_token %}
                             <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
                             <label for="profile-pic-input" id="avatar-label">
-                                <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                                {% if user_profile.profile_picture %}
+                                    <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                                {% else %}
+                                    <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
+                                {% endif %}
                             </label>
                             {{ form.cropping }}
                         </form>
                     {% else %}
-                        <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                        {% if user_profile.profile_picture %}
+                            <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                        {% else %}
+                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
+                        {% endif %}
                     {% endif %}
                     {{ form.media }}
                 </div>
@@ -62,12 +70,12 @@
 
         <!-- Tabs Section -->
         <div class="tabs">
-            <div class="tab active" onclick="loadTab('info')">Інформація</div>
+            <div class="tab active" data-tab="info" onclick="loadTab('info')">Інформація</div>
             {% if is_own_profile %}
-                <div class="tab" onclick="loadTab('requests')">Запити</div>
+                <div class="tab" data-tab="requests" onclick="loadTab('requests')">Запити</div>
             {% endif %}
-            <div class="tab" onclick="loadTab('active')">Активні</div>
-            <div class="tab" onclick="loadTab('archive')">Архів</div>
+            <div class="tab" data-tab="active" onclick="loadTab('active')">Активні</div>
+            <div class="tab" data-tab="archive" onclick="loadTab('archive')">Архів</div>
         </div>
     </div>
 
@@ -76,15 +84,15 @@
     </div>
 
     <div id="requests-section" class="tab-content" style="display: none;">
-        {% include 'profile/requests.html' %}
+        {% include 'profile/requests.html' with requests=pending_requests %}
     </div>
 
     <div id="active-section" class="tab-content" style="display: none;">
-        <p>Активні роботи...</p>
+        {% include 'profile/active.html' with active_requests=active_requests %}
     </div>
 
     <div id="archive-section" class="tab-content" style="display: none;">
-        <p>Архів курсів...</p>
+        {% include 'profile/archive.html' with archived_requests=archived_requests %}
     </div>
 
     {% if messages %}
@@ -331,5 +339,159 @@
             })
             .catch(error => console.error("Fetch error:", error));
         });
+
+        function loadTab(tabName) {
+            // Hide all sections
+            document.querySelectorAll('.tab-content').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected section and activate tab
+            const selectedSection = document.getElementById(tabName + '-section');
+            selectedSection.style.display = 'block';
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Load content via AJAX if needed
+            if (['requests', 'active', 'archive'].includes(tabName)) {
+                // Show loading state
+                selectedSection.innerHTML = '<div style="text-align: center; padding: 20px;">Завантаження...</div>';
+                
+                fetch(`/users/profile/load-tab/${tabName}/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.html) {
+                        selectedSection.innerHTML = data.html;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading tab:', error);
+                    selectedSection.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Помилка завантаження даних</div>';
+                });
+            }
+        }
+
+        function handleRequest(action, requestId, additionalData = {}) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            let url;
+            if (action === 'approve') {
+                url = `/users/approve_request/${requestId}/`;
+            } else if (action === 'reject') {
+                url = `/users/reject_request/${requestId}/`;
+            } else if (action === 'complete') {
+                url = `/users/complete_request/${requestId}/`;
+            }
+
+            // Create form data
+            const formData = new FormData();
+            // Add additional data to formData
+            Object.keys(additionalData).forEach(key => {
+                formData.append(key, additionalData[key]);
+            });
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the current tab
+                    const activeTab = document.querySelector('.tab.active');
+                    if (activeTab) {
+                        loadTab(activeTab.getAttribute('data-tab'));
+                    }
+                    // Show success message
+                    if (action === 'approve') {
+                        showMessage('success', 'Запит успішно підтверджено');
+                    } else if (action === 'reject') {
+                        showMessage('success', 'Запит відхилено');
+                    } else if (action === 'complete') {
+                        showMessage('success', 'Роботу завершено');
+                    }
+                } else {
+                    showMessage('error', data.error || 'Сталася помилка');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('error', 'Сталася помилка при обробці запиту');
+            });
+        }
+
+        function showMessage(type, text) {
+            const messagesContainer = document.querySelector('.messages');
+            if (!messagesContainer) return;
+
+            const messageHtml = `
+                <div class="success-popup ${type}">
+                    <img src="/static/images/${type === 'success' ? 'toastIcon.svg' : 'errorIcon.svg'}" alt="${type}" class="success-icon" />
+                    <div>
+                        <div class="popup-content">
+                            <p class="popup-title">${type === 'success' ? 'Успіх!' : 'Помилка!'}</p>
+                            <p class="popup-text">${text}</p>
+                        </div>
+                        <i class="toast-close fas fa-times close" onclick="closePopup()"></i>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.innerHTML = messageHtml;
+            
+            // Auto-hide message after 3 seconds
+            setTimeout(() => {
+                const popup = messagesContainer.querySelector('.success-popup');
+                if (popup) {
+                    popup.remove();
+                }
+            }, 3000);
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTab('info');
+        });
+
+        // Functions for complete modal
+        function showCompleteModal(requestId) {
+            const modal = document.getElementById('completeModal');
+            document.getElementById('completeRequestId').value = requestId;
+            modal.style.display = "flex";
+        }
+
+        function closeCompleteModal() {
+            document.getElementById('completeModal').style.display = "none";
+        }
+
+        function submitComplete() {
+            const requestId = document.getElementById('completeRequestId').value;
+            const grade = document.getElementById('grade').value;
+            
+            if (!grade || grade < 0 || grade > 100) {
+                showMessage('error', 'Будь ласка, введіть оцінку від 0 до 100');
+                return;
+            }
+
+            handleRequest('complete', requestId, { grade: grade });
+            closeCompleteModal();
+        }
     </script>
 {% endblock %}
