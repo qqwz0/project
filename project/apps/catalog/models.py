@@ -46,10 +46,20 @@ class Slot(models.Model):
     occupied = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     
     def get_available_slots(self):
+        active_requests_count = Request.objects.filter(
+            slot=self,
+            request_status='Активний'
+        ).count()
+        
+        self.occupied = active_requests_count
+        self.save()
         return self.quota - self.occupied
     
     @classmethod
     def filter_by_available_slots(cls):
+        slots = cls.objects.all()
+        for slot in slots:
+            slot.get_available_slots()  
         return cls.objects.filter(occupied__lt=F('quota'))
     
     def update_occupied_slots(self, increment):
@@ -61,11 +71,14 @@ class Slot(models.Model):
         if increment > 0 and self.occupied + increment > self.quota:
             raise ValidationError("The number of occupied slots cannot exceed the quota.")
 
-        self.occupied += increment
+        self.occupied = Request.objects.filter(
+            slot=self,
+            request_status='Активний'
+        ).count()
+        
         self.save()
 
         logger.info(f"After update: occupied = {self.occupied}")
-
 
     def clean(self):
         """

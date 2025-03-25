@@ -250,6 +250,8 @@ class AcceptRequestView(View):
         if request.user.role == 'Викладач' and req.teacher_id.teacher_id == request.user:
             req.request_status = 'Активний'
             req.save()
+            if req.slot:
+                req.slot.get_available_slots()
             messages.success(request, 'Запит прийнято')
             return JsonResponse({'success': True})
         return JsonResponse({'success': False}, status=403)
@@ -262,6 +264,8 @@ class CompleteRequestView(View):
             req.completion_date = timezone.now()
             req.grade = request.POST.get('grade')
             req.save()
+            if req.slot:
+                req.slot.get_available_slots()
             messages.success(request, 'Роботу завершено')
             return JsonResponse({'success': True})
         return JsonResponse({'success': False}, status=403)
@@ -323,31 +327,16 @@ def load_tab_content(request, tab_name):
     return JsonResponse({'html': html})
 
 def reject_request(request, request_id):
-    """
-    Reject a request and update its status to 'rejected'.
-    """
     if request.method == 'POST':
         try:
             req = Request.objects.get(id=request_id)
-            
-            # Check if the user is the teacher who received the request
             if request.user == req.teacher_id.teacher_id:
-                # Update request status
                 req.request_status = 'Відхилено'
                 req.save()
-                
-                # If there was a teacher theme, mark it as unoccupied
-                if req.teacher_theme:
-                    req.teacher_theme.is_occupied = False
-                    req.teacher_theme.save()
-                
                 messages.success(request, 'Запит успішно відхилено')
-                
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': True})
                 return redirect('profile')
-            else:
-                messages.error(request, 'У вас немає прав для відхилення цього запиту')
         except Request.DoesNotExist:
             messages.error(request, 'Запит не знайдено')
         except Exception as e:

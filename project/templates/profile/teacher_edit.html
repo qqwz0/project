@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     {% endfor %}
     
-    function addTheme() {
+    window.addTheme = function() {
         const input = document.getElementById('new-theme');
         const theme = input.value.trim();
         
