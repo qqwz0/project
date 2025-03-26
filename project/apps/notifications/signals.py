@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from apps.catalog.models import Request
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,12 +20,13 @@ def send_notification_on_request(sender, instance, created, **kwargs):
             
             student_name = f"{instance.student_id.first_name} {instance.student_id.last_name}"
             message = f"Ви отримали запит від студента {student_name}! 📩"
+            time = instance.request_date 
             
-            # Create the notification event
             event = {
                 "type": "send_notification",
-                "message": message
-            }
+                "message": message,
+                'time': time
+            }  
             
             # Log the group we're sending to
             group_name = f'user_{teacher_user_id}'
@@ -59,13 +61,14 @@ def send_notification_on_request_status_changed(sender, instance,**kwargs):
             teacher_name = f"{instance.teacher_id} "
             emoji = "✅" if status_text == "прийняв" else "❌"
             message = f"{teacher_name} {status_text} ваш запит! {emoji}"
+            time = datetime.now()
             
-            # Create the notification event
             event = {
                 "type": "send_notification",
                 "message": message,
                 'status': status_text,
-                'rejection_reason': instance.rejected_reason if status_text == "відхилив" else None
+                'rejection_reason': instance.rejected_reason if status_text == "відхилив" else None,
+                'time': time
             }
             
             # Log the group we're sending to

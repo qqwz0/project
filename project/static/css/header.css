@@ -142,8 +142,3 @@
   display: inline-block;
   margin: 0;
 }
-
-#notification-list {
-  padding: 0; /* Remove any default ul padding */
-  list-style-type: none;
-}

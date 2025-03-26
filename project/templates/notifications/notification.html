@@ -1,33 +1,52 @@
-<div style="padding: 16px;
+<div class="notification" style="padding: 16px;
            margin-left: 20px;
            margin-top: 16px;
-           text-align: left;" 
+           text-align: left;
+           position: relative;" 
      role="alert" 
      hx-swap-oob="afterbegin:#notification-list">
-    {% if status == 'відхилив'%}
-        <p style="font-family: sans-serif; 
-                  font-size: 16px;
-                  margin-top: 0.8rem;
-                  margin-left: 0.4rem;   
-                  color: #181616; 
-                  word-wrap: break-word;
-                  white-space: normal;
-                  overflow-wrap: break-word;
-                  line-height: 1.4;">
-    {{message}} <span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span> </p>
+    {% if status is not None %}
+        {% if status == 'відхилив'%}
+            <p style="font-family: sans-serif; 
+                      font-size: 16px;
+                      margin-top: 0.8rem;
+                      margin-left: 0.4rem;   
+                      color: #181616; 
+                      word-wrap: break-word;
+                      white-space: normal;
+                      overflow-wrap: break-word;
+                      line-height: 1.4;">
+            {{message}} <span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span> </p>
+        {% else %}
+            <p style="font-family: sans-serif; 
+                      font-size: 16px;
+                      margin-top: 0.8rem;
+                      margin-left: 0.4rem;  
+                      color: #181616; 
+                      word-wrap: break-word;
+                      white-space: normal;
+                      overflow-wrap: break-word;
+                      line-height: 1.4;">
+            {{message}} </p>
+        {% endif %}
     {% else %}
-        <p style="font-family: sans-serif; 
-                  font-size: 16px;
-                  margin-top: 0.8rem;
-                  margin-left: 0.4rem;  
-                  color: #181616; 
-                  word-wrap: break-word;
-                  white-space: normal;
-                  overflow-wrap: break-word;
-                  line-height: 1.4;">
-        {{message}}</p>
+    <a href="{% url 'profile' %}" style="text-decoration: none; display: block;" onclick="window.location='{% url 'profile' %}'; return false;">
+            <p style="font-family: sans-serif; 
+                    font-size: 16px;
+                    margin-top: 0.8rem;
+                    margin-left: 0.4rem;  
+                    color: #181616; 
+                    word-wrap: break-word;
+                    white-space: normal;
+                    overflow-wrap: break-word;
+                    line-height: 1.4;">
+                {{message}}
+            </p>
+    </a>
     {% endif %}
-    {% if message.counts > 1 %}
-        <div class="nt-devider"></div>
-    {% endif %}    
+    
+    <!-- Timestamp at the bottom right -->
+    <div style="text-align: right; margin-top: 6px; font-size: 11px; color: #777; font-family: sans-serif;">
+        {{time}}
+    </div>
 </div>
