@@ -8,6 +8,7 @@
     <!-- Link to external CSS file -->
     <link rel="stylesheet" href="{% static 'css/register.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/header.css' %}">
     <script>
       function closePopup() {
         const popup = document.querySelector('.success-popup');
@@ -16,7 +17,7 @@
       </script>
   </head>
   <body>
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%;">
+    {% include 'header.html' %}  <!-- Include header -->
 
     <!-- Messages -->
     {% if messages %}
@@ -58,13 +59,16 @@
             <a type="submit" href="{% url 'login' %}?redirect=true" class="register-button microsoft-button">
                 <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
               Увійти</a>
+              <a type="submit" href="{% url 'fake_login' %}?redirect=true" class="register-button microsoft-button">
+                <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
+              Fake teacher login</a>
           </div>
+          
           <!-- Registration link -->
           <div class="text">
             <h3>Ще не маєш облікового запису? <a href="{% url 'register' %}">Зареєструйся!</a></h3>
           </div>
         </form>
       </div>
-    </div>
   </body>
 </html>

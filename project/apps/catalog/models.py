@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.db.models import F
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
+from apps.users.models import CustomUser
 import logging
 from django.utils import timezone
 
@@ -28,7 +29,6 @@ class OnlyTeacher(models.Model):
     
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
-    
 
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)
@@ -63,6 +63,8 @@ class Slot(models.Model):
         self.save()
 
         logger.info(f"After update: occupied = {self.occupied}")
+
+
     def clean(self):
         """
         Custom validation to ensure occupied slots never exceed the quota.
@@ -75,32 +77,28 @@ class Slot(models.Model):
         Override save method to include the validation.
         """
         self.clean()  # Call the custom clean method before saving
-        super().save(*args, **kwargs)   
-       
+        super().save(*args, **kwargs)
+
 class Request(models.Model):
-    STATUS= [
+    STATUS = [
         ('pending', 'очікується'),
         ('accepted', 'прийнятий'),
         ('rejected', 'відхилений'),
         ('completed', 'завершений'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', 
-                                   on_delete=models.CASCADE, 
-                                   limit_choices_to={'role': 'student'}, 
-                                   unique=False,
-                                   related_name='users_student_requests')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, 
+                                 limit_choices_to={'role': 'student'}, 
+                                 related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
-    slot = models.ForeignKey(Slot, on_delete=models.CASCADE)
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
                                     null=True, blank=True)
-    
     student_themes = models.ManyToManyField('StudentTheme', blank=True)
     motivation_text = models.TextField()
     request_date = models.DateTimeField(auto_now_add=True)
     request_status = models.CharField(max_length=100, choices=STATUS, 
                                     default='pending')
-    
-    grade = models.IntegerField(blank=True, null=True)
+    grade = models.IntegerField(null=True, blank=True)
     rejected_reason = models.TextField(blank=True, null=True)
     completion_date = models.DateTimeField(null=True, blank=True)
     academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
@@ -115,7 +113,7 @@ class Request(models.Model):
     def is_archived(self):
         """Перевіряє чи робота в архіві (завершена)"""
         return self.request_status == 'completed' and self.grade is not None
-    
+
     def extract_stream_from_academic_group(self):
         """
         Extracts the stream code from the student's academic group.
@@ -124,7 +122,7 @@ class Request(models.Model):
         if self.student_id.academic_group:
             return self.student_id.academic_group[:-1]  # Remove the last digit
         return None
-    
+
     def save(self, *args, **kwargs):
         """
         Assigns the correct Slot before saving.
@@ -181,8 +179,8 @@ class Request(models.Model):
         return teacher_theme_name, student_themes_list
 
     def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
-    
+        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name
+
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     theme = models.CharField(max_length=100)
@@ -193,11 +191,11 @@ class TeacherTheme(models.Model):
         return self.theme
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):
-        return self.theme
+        return self.theme 
 
 class OnlyStudent(models.Model):
     student_id = models.OneToOneField('users.CustomUser', 
@@ -211,4 +209,4 @@ class OnlyStudent(models.Model):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 
     def __str__(self):
-        return f"Student: {self.student_id.get_full_name()}"        
+        return f"Student: {self.student_id.get_full_name()}" 

@@ -63,4 +63,3 @@ def auto_delete_old_file_on_change(sender, instance, **kwargs):
     if old_file and old_file != new_file and os.path.basename(old_file.name) != 'default-avatar.jpg':
         if os.path.exists(old_file.path):
             os.remove(old_file.path)
-
