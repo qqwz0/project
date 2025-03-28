@@ -2,7 +2,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #F8FAFC;  /* Light background */
+    background: #F8FAFC;
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 12px;
@@ -25,13 +25,13 @@
 .user-info a {
     font-size: 18px;
     font-weight: bold;
-    color: #334155;  /* Dark text */
+    color: #334155;
     text-decoration: none;
 }
 
 .user-info p.role {
     font-size: 15px;
-    color: #64748B;  /* Subtle gray */
+    color: #64748B;
     margin-bottom: 5px;
 }
 
@@ -49,18 +49,22 @@
 }
 
 .status.pending {
-    background: #FACC15; /* Yellow */
+    background: #FACC15;
 }
 
 .status.accepted {
-    background: #22C55E; /* Green */
+    background: #22C55E;
 }
 
 .status.rejected {
-    background: #EF4444; /* Red */
+    background: #EF4444;
 }
 
-.tab-content h2{
+.status.completed {
+    background: #3B82F6;
+}
+
+.tab-content h2 {
     margin-bottom: 10px;
 }
 
@@ -68,125 +72,119 @@
     display: flex;
     gap: 8px;
     flex-direction: column;
+    min-width: 120px;
 }
 
 .request-button {
     text-align: center;
-    color: white;
-    padding: 14px;
+    color: #FFFFFF;
+    padding: 8px 16px;
     text-decoration: none;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
-    height: 2.6rem;
+    height: 36px;
     display: flex;
     justify-content: center;
     align-items: center;
-    text-align: center;
     cursor: pointer;
     outline: none;
     border: none;
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-    flex: 1; /* Makes both buttons take up equal width */
+    transition: background-color 0.3s ease;
     width: 100%;
-  }
-  
-
-
-.request-button.accept {
-    background: rgba(111, 207, 151, 1); /* Green */
 }
 
-.request-button.accept:hover {
-    background: rgb(90, 176, 126); /* Green */
+.request-button.accept, 
+.request-button.complete {
+    background: #22C55E;
+}
+
+.request-button.accept:hover,
+.request-button.complete:hover {
+    background: #16A34A;
 }
 
 .request-button.reject {
-    background: #E37375; /* Red */
+    background: #EF4444;
 }
 
 .request-button.reject:hover {
-    background: rgb(181, 56, 56); /* Red */
+    background: #DC2626;
 }
 
-/* Modal background and positioning */
+.request-button i {
+    margin-right: 8px;
+}
+
+/* Modal styles */
 .modal {
-    display: none;  /* Hide modals by default */
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);  /* Overlay background */
+    background-color: rgba(0, 0, 0, 0.5);
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    cursor: pointer;
 }
 
-/* Modal content styling */
 .modal-content {
     background-color: white;
     padding: 25px;
     border-radius: 10px;
-    width: 80%;  /* Take 80% of the screen width */
-    max-width: 500px;  /* Limit maximum width */
-    margin: 0 auto;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);  /* Soft shadow for better focus */
+    width: 80%;
+    max-width: 500px;
+    margin: 10% auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     position: relative;
+    cursor: default;
+    text-align: center;
 }
 
-/* Modal content form */
-.modal-content form {
-    margin-top: 20px;
+.modal-header {
+    margin-bottom: 1.5rem;
 }
 
-/* Label styling */
-.modal-content label {
-    font-size: 16px;
-    font-weight: 600;
-    color: #334155;  /* Dark text */
-    margin-bottom: 8px;
-    display: block;
-}
-
-/* Textarea styling */
-.modal-content textarea {
-    width: 100%;  /* Full width of the modal */
-    height: 120px;  /* Fixed height */
-    resize: none;  /* Disable resizing */
-    font-size: 15px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
     color: #333;
-    background-color: #f9f9f9;  /* Slightly light background */
 }
 
-.close-modal {
-    cursor: pointer;
+.grade-input {
+    margin-bottom: 1.5rem;
 }
 
-/* Modal button layout */
-.modal-buttons {
-    margin-top: 20px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.modal-buttons button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 15px;
+.grade-input label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
     font-size: 16px;
-    cursor: pointer;
-    width: 48%;  /* Make buttons take up equal space */
 }
 
-.modal-buttons button:hover {
-    background-color: #0056b3;  /* Darker blue on hover */
+.grade-input input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+}
+
+.grade-input input:focus {
+    outline: none;
+    border-color: #4a90e2;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
 }
 
 /* Optional: Add space for larger screen sizes */
