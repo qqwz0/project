@@ -6,6 +6,7 @@
     <title>Реєстрація</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/register.css' %}">
+    <link rel="stylesheet" href="{% static 'css/header.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script>
       function updateRole(role) {
@@ -68,6 +69,7 @@
     </script>
   </head>
   <body>
+    {% include 'header.html' %}  <!-- Include header -->
     <div class="wrapper">
       <h2>Створити обліковий запис</h2>
       <form method="POST" action="{% url 'register' %}">
@@ -103,8 +105,7 @@
           </div>
         {% endif %}
 
-        <!-- Messages -->
-        <!-- Messages -->
+    <!-- Messages -->
     {% if messages %}
       <div class="messages">
         {% for message in messages %}

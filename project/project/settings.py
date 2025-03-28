@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from easy_thumbnails.conf import Settings as thumbnail_settings
 
 load_dotenv()  # This loads the .env file into the environment
 
@@ -41,8 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'widget_tweaks',
     'apps.catalog',
-    'apps.users'
+    'apps.users',
+    'image_cropping',
+    'easy_thumbnails',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -68,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.users.context_processors.user_profile_picture',
             ],
         },
     },
@@ -145,6 +151,7 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -154,43 +161,37 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,  # Keep existing loggers enabled
+    'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '[{levelname}] {asctime} {name} {message}',
-            'style': '{',
-        },
         'simple': {
-            'format': '[{levelname}] {message}',
+            'format': '{levelname} {message}',
             'style': '{',
         },
     },
     'handlers': {
         'console': {
-            'level': 'INFO',  # Set the logging level to INFO or higher
-            'class': 'logging.StreamHandler',  # Sends logs to the console
-            'formatter': 'verbose',  # Use the 'verbose' formatter
-        },
-        'file': {
-            'level': 'INFO',  # Log INFO and above to a file
-            'class': 'logging.FileHandler',
-            'filename': 'django_info.log',
-            'formatter': 'verbose',  # Use the 'verbose' formatter
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],  # Use both console and file handlers
-            'level': 'INFO',  # Minimum log level is INFO
-            'propagate': True,  # Allow propagation to ancestor loggers
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
         },
-        'django.request': {
-            'handlers': ['console', 'file'],  # Log requests separately
-            'level': 'INFO',  # Minimum log level for requests
-            'propagate': False,  # Prevent propagation to other loggers
+        'django.utils.autoreload': {  # Suppress file modification logs
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
 }
+
+
+
+
 
 
 # Microsoft OAuth Configuration
@@ -202,4 +203,12 @@ MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
 MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
 MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
 MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
+
+# Image cropping settings
+THUMBNAIL_PROCESSORS = (
+    'image_cropping.thumbnail_processors.crop_corners',
+) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+IMAGE_CROPPING_BACKEND = 'image_cropping.backends.easy_thumbs.EasyThumbnailsBackend'
+IMAGE_CROPPING_BACKEND_PARAMS = {}
 

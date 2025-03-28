@@ -1,0 +1,246 @@
+* {
+    font-family: 'Nunito', sans-serif;
+}
+
+.edit-profile-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+}
+ 
+.edit-profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5%;
+    flex-direction: row;
+    margin-bottom: 32px;
+    padding: 0 55px;
+}
+
+.profile-image {
+    width: 240px;
+    height: 240px;
+    flex-shrink: 0;
+}
+
+.profile-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.profile-title h1 {
+    font-family: 'Inter', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: #083A50;
+    margin: 0;
+}
+
+.profile-title .email {
+    font-family: 'Poppins', sans-serif;
+    font-size: 21px;
+    font-weight: 400;
+    color: #6A89A6;
+    margin: 0;
+}
+
+.edit-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #CACED8;
+    margin-bottom: 32px;
+    padding: 0 55px;
+    color: #083A50;
+}
+
+.form-content {
+    padding: 0 55px;
+    margin-top: 32px;
+}
+
+.form-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    flex: 1;
+    
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #666;
+}
+
+input, select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-size: 16px;
+}
+
+input::placeholder {
+    color: #BBBBBB;  /* Placeholder text color */
+    font-size: 14px;  /* Optional: set the font size */
+}
+input:focus, select:focus {
+  border: 1px solid #1570EF !important;  /* Your custom focus border color */
+  outline: none;
+}
+
+select {
+    font-size: 14px;
+    padding: 5px;
+    height: 100%;
+    width: 100%;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 8px 15px;
+    min-height: 50px;
+    outline: none;
+    font-size: 16px;
+    max-height: 30px;
+  }
+
+input {
+    height: 100%;
+    width: 100%;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 8px 15px;
+    min-height: 50px;
+    max-height: 30px;
+}
+
+.phone-input {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    background-color: white;
+    overflow: hidden;
+    gap: 0.3rem;
+}
+
+.country-code {
+    padding: 0.75rem 1rem;
+    color: #666;
+    border: 1px solid #cfd7df;
+    border-radius: 6px;
+    margin: 0;
+}
+
+.phone-input input {
+    flex: 1;
+    border: none;
+    padding: 0.75rem;
+    outline: none;
+    border: 1px solid #ddd;
+}
+
+.save-button {
+    background-color: #1570ef;
+    color: white;
+    padding: 14px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    height: 48px;
+    display: flex;
+    width: 100%;
+    max-width: 150px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    flex: 1;
+}
+
+.save-button:hover {
+    background-color: #1263d4;
+}
+
+.save-button:active {
+    background-color: #1057bc;
+}
+
+h3 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 20px;
+    color: #245265;
+    margin-bottom: 24px;
+}
+
+.form-sections.teacher-sections {
+    /* Create 2 columns with a gap */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  /* Column 1: stack personal-info + quota vertically */
+.form-sections.teacher-sections > div:nth-child(1) {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+  
+  /* Column 2: stack contacts + themes vertically */
+.form-sections.teacher-sections > div:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+  
+
+.theme-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.theme-item input {
+    flex: 1;
+}
+
+.remove-theme, .add-theme {
+    padding: 0.5rem 1rem;
+    border: none;
+    background-color: #e53e3e;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.add-theme {
+    background-color: #38a169;
+}
+
+.remove-theme:hover, .add-theme:hover {
+    opacity: 0.9;
+}

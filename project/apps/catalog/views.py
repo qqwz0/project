@@ -1,53 +1,158 @@
 from .utils import HtmxLoginRequiredMixin
-from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme 
-from django.views.generic import ListView, DetailView, FormView
-from .forms import RequestForm
+from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request
+from django.core.exceptions import ValidationError 
+from django.views.generic import ListView, DetailView, FormView, TemplateView
+from .forms import RequestForm, FilteringSearchingForm
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.http import JsonResponse
 from django.contrib import messages
+from django.db.models import F
+from django.shortcuts import render
+
 import re
 
-class TeachersListView(ListView):
+class TeachersCatalogView(TemplateView, FormView):
     """
-    Displays a list of teachers along with their available slots.
+    Displays the teachers catalog page with filtering and searching capabilities.
+    
+    This view combines TemplateView and FormView to render a catalog of teachers
+    that can be filtered and searched by various criteria.
+    
+    Attributes:
+        template_name (str): Path to the template that renders the catalog.
+        form_class: Form class for filtering and searching teachers.
+    
+    Methods:
+        get: Handles GET requests to display the teachers catalog with the filter form.
+    """
+    template_name = 'catalog/teachers_catalog.html'
+    form_class = FilteringSearchingForm
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Handles GET requests to display the teachers catalog.
+        
+        Args:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            HttpResponse: Rendered template with the filter form.
+        """
+        form = self.form_class()
+        context = {'form': form}
+        return render(request, self.template_name, context)
+    
+class TeachersListView(ListView):    
+    """
+    API view that provides a list of teachers with their available slots.
+    
+    This view extends Django's ListView to return JSON data containing
+    teacher information and availability slots. It handles filtering based on
+    the authenticated student's academic group.
+    
+    Attributes:
+        model (Model): The OnlyTeacher model class.
+        context_object_name (str): Name for the context variable containing the data.
+    
+    Methods:
+        get: Returns JSON data with teacher information and available slots.
     """
     model = OnlyTeacher
-    template_name = 'catalog/teachers_catalog.html'
     context_object_name = 'data'
     
-    def get_queryset(self):
+    def get(self, request, *args, **kwargs):
         """
-        Returns a list of dictionaries that each contain:
-        - Teacher instance
-        - Free slots for that teacher
-        """
-        # Using `select_related` to optimize queries.
-        teachers = OnlyTeacher.objects.select_related('teacher_id').all()
+        Returns a JSON response with teacher data and their available slots.
         
-        # Get all slots with available quotas.
+        For authenticated students, slots are filtered by the student's academic group.
+        Each teacher entry includes personal information and availability data.
+        
+        Args:
+            request (HttpRequest): The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+            
+        Returns:
+            JsonResponse: JSON data containing teachers and their available slots.
+                Format:
+                [
+                    {
+                        'teacher': {
+                            'id': int,
+                            'position': str,
+                            'photo': str (url),
+                            'teacher_id': {
+                                'first_name': str,
+                                'last_name': str,
+                                'department': str,
+                            }
+                        },
+                        'free_slots': [
+                            {
+                                'stream_id': {
+                                    'stream_code': str
+                                },
+                                'get_available_slots': int
+                            }
+                        ],
+                        'is_matched': bool
+                    }
+                ]
+        """
+        teachers = OnlyTeacher.objects.select_related('teacher_id').all()
         slots = Slot.filter_by_available_slots()
         data = []
         is_matched = False
-        
-        # If user is a student, filter slots based on user's academic group.
-        if self.request.user.is_authenticated and self.request.user.role == 'Студент':
-            user = self.request.user
+
+        if request.user.is_authenticated and request.user.role == 'Студент':
+            user = request.user
             match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
             if match:
                 user_stream = match.group(1) + '-' + match.group(2)
                 slots = slots.filter(stream_id__stream_code__iexact=user_stream)
                 is_matched = True
-        
-        # Collect teacher and corresponding free slots in a list of dicts.
+
         for teacher in teachers:
             free_slots = slots.filter(teacher_id=teacher)
+            already_requested = True if Request.objects.filter(student_id=request.user, teacher_id=teacher.pk).exists() else False
+    
+            if teacher.teacher_id.patronymic:
+                patronymic = teacher.teacher_id.patronymic
+                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name} {patronymic}"
+            else:
+                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}" 
+                   
             data.append({
-                'teacher': teacher,
-                'free_slots': free_slots,
+                'teacher': {
+                    'id': teacher.pk,
+                    'academic_level': teacher.academic_level,
+                    'photo': None,
+                    'url': teacher.get_absolute_url(),
+                    'already_requested': already_requested,
+                    'teacher_id': {
+                        'first_name': teacher.teacher_id.first_name,
+                        'last_name': teacher.teacher_id.last_name,
+                        'department': teacher.teacher_id.department,
+                        'full_name': full_name
+                    }
+                    
+                },
+                'free_slots': [
+                    {
+                        'stream_id': {
+                            'stream_code': slot.stream_id.stream_code
+                        },
+                        'get_available_slots': slot.get_available_slots()
+                    }
+                    for slot in free_slots
+                ],
                 'is_matched': is_matched
             })
-        return data    
+
+        return JsonResponse(data, safe=False)  
 
 class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, FormView):
     """
@@ -128,10 +233,11 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         req.save()
 
         # Save each student theme from cleaned data.
-        student_themes = form.cleaned_data['student_themes']
-        for theme in student_themes:
+        student_themes_data = form.cleaned_data['student_themes']
+        for theme in student_themes_data:
             if theme:
-                StudentTheme.objects.create(student_id=self.request.user, theme=theme, request_id=req)
+                student_theme = StudentTheme.objects.create(student_id=self.request.user, theme=theme)
+                req.student_themes.add(student_theme)
         
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             messages.success(self.request, self.get_success_message(form.cleaned_data))
@@ -147,23 +253,32 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = 'pending'
         
+        student_stream_code = form.instance.extract_stream_from_academic_group()
+        if student_stream_code:
+            try:
+                stream = Stream.objects.get(stream_code=student_stream_code)
+                available_slot = Slot.objects.filter(
+                    teacher_id=form.instance.teacher_id,
+                    stream_id=stream,
+                    occupied__lt=F('quota')
+                ).first()
+                
+                if available_slot:
+                    form.instance.slot = available_slot
+                else:
+                    raise ValidationError(f"No available slots for teacher {form.instance.teacher_id} in stream {stream.stream_code}")
+            except Stream.DoesNotExist:
+                raise ValidationError(f"No stream found with code: {student_stream_code}")
 
-        proposed_theme = form.cleaned_data.get('proposed_themes')
-        student_themes = form.cleaned_data.get('student_themes')
-
-        if proposed_theme:
+        teacher_theme = form.cleaned_data.get('teacher_themes')
+        if teacher_theme:
             # Mark the chosen teacher theme as occupied.
-            theme = TeacherTheme.objects.get(theme=proposed_theme, teacher_id=form.instance.teacher_id)
-            form.instance.proposed_theme_id = theme
-            theme.is_ocupied = True
+            theme = TeacherTheme.objects.get(theme=teacher_theme, teacher_id=form.instance.teacher_id)
+            form.instance.teacher_theme = theme
+            theme.is_occupied = True
             theme.save()
-        elif student_themes:
-            form.instance.student_themes = student_themes
 
 
-
-            
-        
 
     
     
