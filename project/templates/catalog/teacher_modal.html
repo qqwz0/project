@@ -31,7 +31,7 @@
         {% endif %}
         
         <!-- Display teacher's department -->
-        <h3>Кафедра {{ teacher.teacher_id.department | title }}</h3>
+        <h3>Кафедра {{ teacher.teacher_id.department | capfirst }}</h3>
 
         <!-- Display slot availability -->
         {% if is_matched %}
@@ -99,14 +99,16 @@
             </div>
         
             <!-- Motivation text input -->
-            <div>
+            <div class = 'textera-container'>
+
                 {{ form.motivation_text }}
                 <div class="error-message"></div>
-            </div>
-        
-            <div class="textera-capacity">
-                <p>Max. 2000 characters</p>
-            </div>
+            
+            
+                <div class="textera-capacity">
+                    <p>Max. 2000 characters</p>
+                </div>
+             </div>   
         
             <!-- Submit button -->
             {% if free_slots %}

@@ -724,7 +724,9 @@ p.single-slot {
 
 .tooltip-custom .tooltiptext {
   visibility: hidden;
-  width: 220px;
+  width: auto;
+  min-width: 150px;
+  max-width: 220px;
   background-color: #dc3545; 
   color: #fff;
   text-align: center;
@@ -976,6 +978,10 @@ p.position {
   margin-bottom: 0.5rem;
   box-shadow: 0.125rem 0.25rem 0.25rem rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
+  font-weight: 400; 
+  font-family: var(--default-font);
+  color: #3f3e3e;  
+  font-size: 1rem;
 }
 
 .theme-item:hover {
@@ -1005,7 +1011,6 @@ p.position {
   display: flex;
   align-items: center;
   position: relative;
-  width: 100%;
 }
 
 .dropdown-input  input { 
@@ -1040,7 +1045,7 @@ p.position {
   position: absolute;
   margin-top: -0.938rem;
   left: 0;
-  width: 100%;
+  width: 97.5%;
   border: 0.0625rem solid #ccc;
   border-radius: 0.5rem;
   box-shadow: 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
@@ -1060,21 +1065,27 @@ p.position {
   background-color: #f1f1f1;
 }
 
-.form-textarea {
-  width: 95%;
+.textera-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.textera-container textarea {
+  width: 94%;
   padding: 0.625rem;
   border: 0.0625rem solid #ccc;
   border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
-  margin-top: 0.25rem;
+  margin-bottom: 1rem;
   font-size: 1rem;
   font-family: var(--default-font);
-  height: 6.25rem; /* 100px */
+  height: 6.25rem;
   min-height: 4.688rem;
   box-shadow: 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
   resize: none;
-  scroll-behavior: smooth;
+  display: block;
 }
 
 .form-input::placeholder,
@@ -1114,14 +1125,17 @@ label[for="id_student_themes"] {
   margin-bottom: 15px;
 }
 
+.textera-capacity {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding-right: 0.5rem;
+}
+
 .textera-capacity p {
   color: #a3a3a3;
-  margin-bottom: 0;
-  margin-top: 0;
-  font-size: 1rem;
-  font-family: var(--default-font);
-  text-align: right;
-  margin-left: auto;
+  margin: 0;
+  font-size: 0.75rem;
 }
 
 .close-modal {
@@ -1142,7 +1156,6 @@ label[for="id_student_themes"] {
 
 .close-modal:hover {
   transform: scale(1.1);
-  background-color: #f0f0f0;
 }
 
 .teacher-modal {

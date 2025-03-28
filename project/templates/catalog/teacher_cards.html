@@ -59,7 +59,7 @@
       </div>
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
-        {% if user.is_authenticated or user.role == 'Студент' %}
+        {% if user.is_authenticated and user.role == 'Студент' %}
           <template x-if="!item.teacher.already_requested">
             <button class="modal-button"
               :hx-get='item.teacher.url'
