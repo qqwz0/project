@@ -1,12 +1,13 @@
 from django.db import models
 from django.urls import reverse
 
-class Notification(models.Model):
-    message = models.TextField()
+class Message(models.Model):
+    message_text = models.TextField()
     is_read = models.BooleanField(default=False)
     recipient = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
     sender = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, related_name='sender_notifications')
     created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, blank=True, null=True)  
     
     class Meta:
         ordering = ['-created_at']

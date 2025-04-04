@@ -1,5 +1,6 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.template.loader import get_template
+from asgiref.sync import sync_to_async
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
             context['status'] = event['status']
         
         # Render appropriate template
-        html = get_template(template_name).render(context)
+        html = await sync_to_async(get_template(template_name).render)(context)
         await self.send(text_data=html)
 
 

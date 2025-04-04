@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Header</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    {% load static %}
+    <link rel="stylesheet" href="{% static 'assets/css/notification.css' %}">
 </head>
 <body hx-ext="ws" ws-connect="/ws/notifications/">
 
@@ -33,7 +35,36 @@
                         </div>
                     </ul> 
                 </a>
-                <i class="fas fa-envelope"></i>
+                <a href="#" id="messageDropdownButton" role="button" style="position: relative; cursor: pointer; color: #000;">
+                    <i class="fa-solid fa-circle" id="message-indicator" style="color: #1570ef; display: {% if unread %}block{% else %}none{% endif %}; position: absolute; font-size: 0.5em; z-index: 2; top: 15%; left: 80%; transform: translate(-50%, -50%);"></i>
+                    <i class="fas fa-envelope"></i>
+                    <div class="message-popup" id="message-popup">
+                        {% if message_list%}
+                         <div class="message-header">
+                                <h3>Повідомлення</h3>
+                          </div>
+                        {% for item in message_list %}
+                            <div class="message-item message {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
+                                {% if  item.status is not None%}
+                                  <p>{{ item.message_text }} {%if item.status == 'відхилив' %}<span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span>{%endif%} </p>
+                                  <span class="timestamp">{{ item.created_at }}</span>
+                                {% else %}
+                                    <div class="profile-message-link" onclick="window.location='{% url 'profile' %}'">
+                                        <p>{{ item.message_text }}</p>
+                                        <span class="timestamp">{{ item.created_at }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                         {%else%}
+                            <div class="no-messages">
+                                <p class="empty-state-title">Ваша скринька порожня</p>
+                                <p class="empty-state-message">Коли з'являться нові повідомлення, ви побачите їх тут.</p>
+                            </div>
+                        {%endif%}   
+                    </div>
+                </a>
+
                 {% if user.is_authenticated %}
                     <div class="header-pic">
                         <a href="{% url 'profile' %}">
@@ -52,45 +83,5 @@
     </div>
 
 </body>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const toggleBtn = document.getElementById('dropdownMenuButton');
-        const dropdown = document.getElementById('notification-list');
-        const notificationDot = document.getElementById('notification-indicator');
-        
-        if (toggleBtn && dropdown) {
-            toggleBtn.addEventListener('click', event => {
-                event.preventDefault();
-                dropdown.classList.toggle('show');
-                
-                // Hide the notification dot when opened
-                if (dropdown.classList.contains('show')) {
-                    notificationDot.style.display = 'none';
-                }
-            });
-        }
-    });
-    
-    document.body.addEventListener('htmx:wsAfterMessage', function(event) {
-        // Show notification indicator for any message
-        const notificationDot = document.getElementById('notification-indicator');
-        if (notificationDot) {
-            notificationDot.style.display = 'block';
-        }
-        
-        // Remove "no notifications" message if it exists
-        const noNotificationsMsg = document.getElementById('no-notifications-message');
-        if (noNotificationsMsg) {
-            noNotificationsMsg.remove();
-        }
-        
-        // Add the new notification to the container
-        if (event.detail.message) {
-            const container = document.getElementById('notifications-container');
-            if (container) {
-                container.insertAdjacentHTML('afterbegin', event.detail.message);
-            }
-        }
-    });
-</script>
+<script src="{% static 'assets\js\notification.js' %}"></script>
 </html>
