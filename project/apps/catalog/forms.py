@@ -38,29 +38,28 @@ class FilteringSearchingForm(forms.Form):
             - CSS class: 'form-searching'
     """
     DEPARTMENT_CHOICES = [
-        ('Кафедра інженерії програмного забезпечення', 'Кафедра інженерії програмного забезпечення'),
-        ('Кафедра інформаційних систем та технологій', 'Кафедра інформаційних систем та технологій'),
-        ("Кафедра комп'ютерних наук", "Кафедра комп'ютерних наук")
+        (department, (department[:25] + '...' if len(department) > 25 else department))
+        for department in filter(None, CustomUser.objects.values_list('department', flat=True).distinct())
+    ]
+    ACADEMIC_LEVELS = [
+        (level, level) for level in filter(None, OnlyTeacher.objects.values_list('academic_level', flat=True).distinct())
     ]
     
-    ACADEMIC_LEVEL_CHOICES = [
-        ('Доктор технічних наук', 'Доктор технічних наук'),
-        ('Кандидат технічних наук', 'Кандидат технічних наук'),
-        ('Доцент', 'Доцент'),
-        ('Професор', 'Професор')
-    ]
-
-    QUOTA_CHOICES = [(i, str(i)) for i in range(1, 6)]
-
-    department = forms.MultipleChoiceField(
+    slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
+    min_slots = min(slot_values) if slot_values else 1
+    max_slots = max(slot_values) if slot_values else 10
+    
+    label_suffix = ''
+    
+    departments = forms.MultipleChoiceField(
         label='Кафедра',
         choices=DEPARTMENT_CHOICES,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    academic_level = forms.MultipleChoiceField(
+    academic_levels = forms.MultipleChoiceField(
         label='Науковий ступінь',
-        choices=ACADEMIC_LEVEL_CHOICES,
+        choices=ACADEMIC_LEVELS,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
@@ -69,10 +68,10 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.NumberInput(attrs={
             'type': 'range',
             'class': 'form-range',
-            'min': 1,
-            'max': 10,
+            'min': min_slots,
+            'max': max_slots,
             'step': 1,
-            'value': 1
+            'value': min_slots
         }),
         required=False
     )

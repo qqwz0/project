@@ -10,32 +10,32 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='onlystudent',
-            name='academic_group',
-        ),
-        migrations.RemoveField(
-            model_name='onlyteacher',
-            name='photo',
-        ),
-        migrations.AddField(
-            model_name='request',
-            name='academic_year',
-            field=models.CharField(blank=True, max_length=7),
-        ),
-        migrations.AddField(
-            model_name='request',
-            name='completion_date',
-            field=models.DateTimeField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='request',
-            name='grade',
-            field=models.IntegerField(blank=True, null=True),
-        ),
-        migrations.AlterField(
-            model_name='request',
-            name='request_status',
-            field=models.CharField(choices=[('Очікує', 'Очікує'), ('Активний', 'Активний'), ('Відхилено', 'Відхилено'), ('Завершено', 'Завершено')], default='Очікує', max_length=100),
-        ),
+        # migrations.RemoveField(
+        #     model_name='onlystudent',
+        #     name='academic_group',
+        # ),
+        # migrations.RemoveField(
+        #     model_name='onlyteacher',
+        #     name='photo',
+        # ),
+        # migrations.AddField(
+        #     model_name='request',
+        #     name='academic_year',
+        #     field=models.CharField(blank=True, max_length=7),
+        # ),
+        # migrations.AddField(
+        #     model_name='request',
+        #     name='completion_date',
+        #     field=models.DateTimeField(blank=True, null=True),
+        # ),
+        # migrations.AddField(
+        #     model_name='request',
+        #     name='grade',
+        #     field=models.IntegerField(blank=True, null=True),
+        # ),
+        # migrations.AlterField(
+        #     model_name='request',
+        #     name='request_status',
+        #     field=models.CharField(choices=[('Очікує', 'Очікує'), ('Активний', 'Активний'), ('Відхилено', 'Відхилено'), ('Завершено', 'Завершено')], default='Очікує', max_length=100),
+        # ),
     ]
