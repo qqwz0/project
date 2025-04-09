@@ -1,0 +1,86 @@
+{% load static %}
+<section class="teacher-info">
+    <div class="teacher-card" >
+      <div class="photo-container">
+        <div class="teacher-photo">
+          <!-- If a teacher photo is available, display it; otherwise use a default image. -->
+          <template x-if="item.teacher.photo">
+            <img x-bind:src="`${item.teacher.photo}`" alt="Teacher photo">
+          </template>
+          <template x-if="!item.teacher.photo">
+            <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
+          </template>
+        </div>
+      </div>
+      <div class="teacher-details">
+        <!-- Display teacher credentials such as name, position, and department. -->
+        <h2 x-text="`${item.teacher.teacher_id.full_name}`"></h2>
+        <template x-if="item.teacher.academic_level">
+          <p x-text="`${item.teacher.academic_level}`"></p>
+        </template>
+        <template x-if="item.teacher.academic_level === null">
+          <p>Викладач</p>
+        </template>  
+        <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`"></h3>
+
+        <!-- Conditional logic for displaying the number of free slots. -->
+        <template x-if="item.is_matched">
+          <div>
+            <template x-if="item.free_slots.length < 1">
+              <div class="slots-info no-slots">
+                <p><strong>Місць немає</strong></p>
+              </div>
+            </template>
+            <template x-if="item.free_slots.length === 1">
+              <p x-html="`<strong>Місця:</strong> ${item.free_slots[0].get_available_slots}`" class="single-slot"></p>
+            </template>  
+          </div>
+        </template>
+        <template x-if="!item.is_matched">
+          <div>
+          <template x-if="item.free_slots.length < 1">
+            <div class="slots-info no-slots">
+              <p><strong>Місць немає</strong></p>
+            </div>
+          </template>
+            <div x-show="item.free_slots.length >=1" class="slots-info multiple-slots">
+              <p><strong>Загальна кількість місць:</strong></p>
+              <ul>
+                <template x-for="slot in item.free_slots">
+                  <li>
+                    <strong x-text="`${slot.stream_id.stream_code}`"></strong>:
+                    <span x-text="`${slot.get_available_slots}`"></span>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </div>
+        </template>
+      </div>
+      <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
+      <div class="card-right-side">
+        {% if user.is_authenticated and user.role == 'Студент' %}
+          <template x-if="!item.teacher.already_requested">
+            <button class="modal-button"
+              :hx-get='item.teacher.url'
+              hx-target="#inner_modal"
+              hx-trigger="click"
+              x-init="htmx.process($el)">
+              <span class="arrow-icon">›</span>
+            </button>
+          </template>
+          <template x-if="item.teacher.already_requested">
+            <button class="modal-button tooltip-custom" disabled>
+              <span class="arrow-icon">›</span>
+              <span class="tooltiptext">Ви вже надіслали запит до цього викладача</span>
+            </button>
+          </template>
+        {% else %}
+          <button class="modal-button tooltip-custom" disabled>
+            <span class="arrow-icon">›</span>
+            <span class="tooltiptext">У вас немає прав для надсилання запитів</span>
+          </button>
+        {% endif %}
+      </div>
+    </div> 
+  </section>

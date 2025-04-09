@@ -15,20 +15,18 @@ class OnlyTeacher(models.Model):
         ('Доцент', 'Доцент'),
         ('Професор', 'Професор'),
     ]
-
     teacher_id = models.OneToOneField('users.CustomUser', 
-                                    on_delete=models.CASCADE, 
-                                    primary_key=True, 
-                                    limit_choices_to={'role': 'teacher'}, 
-                                    related_name='catalog_teacher_profile')
-    academic_level = models.CharField(
-        max_length=50,
-        choices=ACADEMIC_LEVELS,
-        default='Асистент'
-    )
-    additional_email = models.EmailField(null=True, blank=True)
-    phone_number = models.CharField(max_length=20, null=True, blank=True)
-
+                                      on_delete=models.CASCADE, 
+                                      primary_key=True, 
+                                      limit_choices_to={'role': 'teacher'},
+                                      related_name='catalog_teacher_profile')
+    academic_level = models.CharField(max_length=50, choices=ACADEMIC_LEVELS, default='Асистент')
+    additional_email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    
+    def get_absolute_url(self):
+        return reverse("modal", kwargs={"pk": self.pk})
+    
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
 

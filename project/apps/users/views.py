@@ -285,6 +285,18 @@ def handle_registration_callback(request, code):
 
         if created:
             logger.info("New user registered: %s", email)
+            # Створюємо профіль в залежності від ролі
+            if derived_role == "Студент":
+                OnlyStudent.objects.create(
+                    student_id=user,
+                    course=1,  # Значення за замовчуванням
+                    speciality="Не вказано"  # Значення за замовчуванням
+                )
+            elif derived_role == "Викладач":
+                OnlyTeacher.objects.create(
+                    teacher_id=user,
+                    academic_level="Асистент"  # Значення за замовчуванням
+                )
 
         # Redirect user to the desired page after registration
         messages.success(request, "Успішно зареєстровано! Будь ласка, увійдіть.")
@@ -476,7 +488,18 @@ def profile(request, user_id=None):
             )
         })
     else:  # Student
+<<<<<<< HEAD
         student_profile = get_object_or_404(OnlyStudent, student_id=user_profile)
+=======
+        # Створюємо профіль студента, якщо він не існує
+        student_profile, created = OnlyStudent.objects.get_or_create(
+            student_id=user_profile,
+            defaults={
+                'course': 1,
+                'speciality': 'Не вказано'
+            }
+        )
+>>>>>>> origin/master
         context.update({
             'student_profile': student_profile,
             'sent_requests': Request.objects.select_related(

@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin, AccessMixin
 from django.shortcuts import redirect
+from .models import Request
 
 
 class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
@@ -26,9 +27,12 @@ class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
         Overridden dispatch method.
         Checks if the user is authenticated and not a teacher. Otherwise, calls `handle_no_permission`.
         """
+        already_requested = Request.objects.filter(student_id=request.user, teacher_id=self.kwargs['pk']).exists()
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         if request.user.role == 'Викладач':
+            return self.handle_no_permission()
+        if already_requested:
             return self.handle_no_permission()
         # If checks pass, proceed with the normal dispatch flow
         return super().dispatch(request, *args, **kwargs)
