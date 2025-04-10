@@ -693,6 +693,10 @@ p.single-slot {
   margin: -1rem 0 -1rem 0;
 }
 
+.modal-box {
+  max-width: 1000px;
+}
+
 .modal-button {
   background-color: #0378ec;
   color: #fff;
@@ -918,6 +922,7 @@ p.position {
 .add-theme-container {
   position: relative;
   margin-top: 0;
+  width: 100%;
 }
 
 .input-add {
@@ -1068,6 +1073,7 @@ p.position {
   padding: 0.625rem;
   font-size: 1rem;
   cursor: pointer;
+  font-weight: 400;
 }
 
 .dropdown-item:hover {
