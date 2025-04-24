@@ -6,8 +6,15 @@ from .views import (
     AcceptRequestView,
     CompleteRequestView,
     reject_request,
-    load_tab_content
+    load_tab_content,
+    UploadFileView,
+    DeleteFileView,
+    DownloadFileView,
+    AddCommentView,
+    DeleteCommentView
 )
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('', TeachersCatalogView.as_view(), name='teachers_catalog'),
@@ -17,4 +24,13 @@ urlpatterns = [
     path('complete-request/<int:pk>/', CompleteRequestView.as_view(), name='complete_request'),
     path('reject-request/<int:request_id>/', reject_request, name='reject_request'),
     path('load-tab/<str:tab_name>/', load_tab_content, name='load_tab_content'),
-]
+    
+    # File handling
+    path('request/<int:request_id>/upload-file/', UploadFileView.as_view(), name='upload_file'),
+    path('file/<int:pk>/delete/', DeleteFileView.as_view(), name='delete_file'),
+    path('file/<int:pk>/download/', DownloadFileView.as_view(), name='download_file'),
+    
+    # Comments
+    path('file/<int:file_id>/comment/', AddCommentView.as_view(), name='add_comment'),
+    path('comment/<int:pk>/delete/', DeleteCommentView.as_view(), name='delete_comment'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

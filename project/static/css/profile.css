@@ -292,9 +292,129 @@ body {
     display: none !important;
 }
 
+/* Кнопка завершення роботи */
+.request-button.complete {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.request-button.complete:hover {
+    background-color: #2563eb;
+}
+
+.request-button.complete i {
+    font-size: 14px;
+}
+
 .no-requests {
     text-align: center;
     color: #666;
     padding: 20px;
     font-style: italic;
+}
+
+/* Rejected Request Card */
+.request-card.rejected {
+    background-color: #fef2f2;
+    border-left: 4px solid #ef4444;
+}
+
+.request-card.accepted {
+    background-color: #f0fdf4;
+    border-left: 4px solid #22c55e;
+}
+
+.request-card.completed {
+    background-color: #f0f4fd;
+    border-left: 4px solid #3b82f6;
+}
+
+.status.Відхилено {
+    display: inline-block;
+    padding: 4px 10px;
+    background-color: #fecaca;
+    color: #dc2626;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status.Активний {
+    display: inline-block;
+    padding: 4px 10px;
+    background-color: #dcfce7;
+    color: #16a34a;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status.Завершено {
+    display: inline-block;
+    padding: 4px 10px;
+    background-color: #dbeafe;
+    color: #2563eb;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.request-button.restore {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: #cbd5e1;
+    color: #475569;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.request-button.restore:hover {
+    background-color: #94a3b8;
+    color: #1e293b;
+}
+
+/* Section Headings */
+h2.mt-4 {
+    margin-top: 2rem;
+}
+
+/* Стилі для карток запитів різних типів */
+.request-card.pending-request {
+    background-color: #f9fafb;
+    border-left: 4px solid #f59e0b;
+}
+
+.request-card.accepted-request {
+    background-color: #f0fdf4;
+    border-left: 4px solid #22c55e;
+}
+
+.request-card.completed-request {
+    background-color: #f0f4fd;
+    border-left: 4px solid #3b82f6;
+}
+
+.request-card.rejected-request {
+    background-color: #fef2f2;
+    border-left: 4px solid #ef4444;
+}
+
+/* Додаткові стилі для дат */
+.date {
+    color: #64748b;
+    font-size: 0.9em;
 }

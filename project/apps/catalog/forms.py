@@ -1,5 +1,5 @@
 from django import forms
-from .models import Request, TeacherTheme, OnlyTeacher, Slot
+from .models import Request, TeacherTheme, OnlyTeacher, Slot, RequestFile, FileComment
 from apps.users.models import CustomUser
 
 
@@ -191,3 +191,23 @@ class RequestForm(forms.ModelForm):
         }
      
         
+
+class RequestFileForm(forms.ModelForm):
+    class Meta:
+        model = RequestFile
+        fields = ['file', 'description']
+        widgets = {
+            'description': forms.Textarea(attrs={
+                'rows': 3, 
+                'placeholder': 'Опис файлу (необов\'язково)'
+            }),
+        }
+
+class FileCommentForm(forms.ModelForm):
+    class Meta:
+        model = FileComment
+        fields = ['text', 'attachment']
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Додайте коментар...'}),
+            'attachment': forms.FileInput(attrs={'class': 'form-control-file'})
+        }

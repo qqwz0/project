@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from apps.users.models import CustomUser
 import logging
 from django.utils import timezone
+import os
 
 logger = logging.getLogger(__name__)
         
@@ -226,3 +227,55 @@ class OnlyStudent(models.Model):
 
     def __str__(self):
         return f"Student: {self.student_id.get_full_name()}" 
+
+class RequestFile(models.Model):
+    """
+    Model for storing files attached to requests.
+    """
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='request_files/%Y/%m/%d/')
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    version = models.IntegerField(default=1)  
+    description = models.TextField(blank=True)  
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"File for request {self.request.id} (v{self.version})"
+
+    def get_filename(self):
+        return os.path.basename(self.file.name)
+
+
+class FileComment(models.Model):
+    """
+    Model for storing comments on request files.
+    """
+    file = models.ForeignKey(RequestFile, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    text = models.TextField()
+    attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.author.get_full_name()} on {self.file}"
+        
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            print(f"[DEBUG] Creating new FileComment: {self.text[:50]}...")
+        super().save(*args, **kwargs)
+        if is_new:
+            print(f"[DEBUG] FileComment created with ID: {self.pk}")
+
+    def get_attachment_filename(self):
+        """Повертає ім'я прикріпленого файлу без шляху"""
+        if self.attachment:
+            return self.attachment.name.split('/')[-1]
+        return None

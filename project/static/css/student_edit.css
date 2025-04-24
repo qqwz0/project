@@ -318,3 +318,118 @@ input:focus, select:focus {
         padding: 16px;
     }
 }
+
+/* Стилі для секції квот */
+.quota-section {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.slot-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.quota-input {
+    width: 80px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.stream-input {
+    width: 120px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #e9ecef;
+}
+
+.add-stream-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-stream-btn:hover {
+    background-color: #218838;
+}
+
+/* Стилі для модального вікна вибору потоку */
+.stream-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+}
+
+.modal-content h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #1a1a1a;
+}
+
+.modal-content .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-content select,
+.modal-content input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-buttons button:first-child {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+
+.modal-buttons button:last-child {
+    background-color: #28a745;
+    color: white;
+    border: none;
+}
+
+.modal-buttons button:hover {
+    opacity: 0.9;
+}

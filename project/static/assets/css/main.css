@@ -806,10 +806,16 @@ p.single-slot {
 }
 
 .modal-backdrop {
-  position: absolute;
-  top: 1rem; /* 16px */
-  right: 1rem; /* 16px */
-  z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal .single-slot {
@@ -934,12 +940,6 @@ p.position {
 .add-theme {
   background: none;
   border: none;
-<<<<<<< HEAD
-  color: #4CAF50;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0 4px;
-=======
   color: #a3a3a3;
   font-size: 20px;
   cursor: pointer;
@@ -951,7 +951,6 @@ p.position {
   justify-content: center;
   margin-left: -1.875rem;
   margin-bottom: 0.4375rem;
->>>>>>> origin/master
 }
 
 .add-theme:hover {
@@ -961,52 +960,6 @@ p.position {
 .theme-list {
   list-style: none;
   padding: 0;
-<<<<<<< HEAD
-  margin: 10px 0;
-}
-
-.theme-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #f5f5f5;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-
-.theme-item input[readonly] {
-  background-color: transparent;
-  border: none;
-  width: 100%;
-  margin-right: 10px;
-  font-size: 14px;
-}
-
-.theme-description {
-  width: 100%;
-  min-height: 60px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  resize: vertical;
-  font-size: 14px;
-}
-
-.theme-description[readonly] {
-  background-color: #f8f8f8;
-  border-color: #eee;
-}
-
-#new-theme {
-  width: calc(100% - 40px);
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-right: 8px;
-=======
   margin-top: 0;
   margin-bottom: 0.125rem;
 }
@@ -1034,22 +987,15 @@ p.position {
 
 .theme-item:hover {
   box-shadow: 0.125rem 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
->>>>>>> origin/master
 }
 
 .remove-theme {
   background: none;
   border: none;
   color: #ff4444;
-  font-size: 18px;
-  cursor: pointer;
-<<<<<<< HEAD
-  padding: 0 4px;
-=======
   font-size: 1.625rem;
   line-height: 1;
   transition: color 0.3s ease-in-out;
->>>>>>> origin/master
 }
 
 .remove-theme:hover {
@@ -1237,69 +1183,88 @@ label[for="id_student_themes"] {
   left: 50%;
   transform: translateX(-50%);
   background-color: white;
-  padding: 1rem;
-  border-radius: 0.75rem; /* 12px */
-  border: 0.1875rem solid #6FCF97; /* 3px */
-  box-shadow: none;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 2px solid #6FCF97;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   text-align: center;
   animation: fadeIn 0.5s ease-in-out;
   display: flex;
-  max-width: 25rem;
+  max-width: 400px;
   width: 100%;
   align-items: center;
 }
 
-.success-icon {
-  width: 2.8rem;
-  height: 2.8rem;
-  margin-right: 0.625rem; /* 10px */
-}
-
-.popup-content {
+.success-popup .popup-content {
   text-align: start;
+  flex-grow: 1;
 }
 
-.popup-title {
-  font-size: 1rem;
-  font-weight: 700;
+.success-popup .popup-title {
+  font-size: 1.125rem;
+  font-weight: 600;
   color: #333;
-  margin-bottom: 0.313rem;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
 }
 
-.popup-text {
+.success-popup .popup-text {
   font-size: 0.875rem;
-  color: #333;
-  margin: 0.25rem 0 0;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
 }
 
-.toast-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  font-size: 1rem;
-  cursor: pointer;
-  color: #333;
-  border: 0.0625rem solid #ccc;
-  background: white;
-  width: 1.5rem;
-  height: 1.5rem;
+.success-popup .popup-buttons {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  justify-content: flex-end;
+}
+
+.success-popup button {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  font-family: var(--default-font);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
 
-.toast-close:hover {
-  color: #111;
-  transform: scale(1.1);
+/* Зелена кнопка OK */
+.success-popup .confirm-btn {
+  background-color: #6FCF97;
+  color: white;
+}
+
+.success-popup .confirm-btn:hover {
+  background-color: #5fb583;
+  transform: scale(1.02);
+}
+
+/* Червона кнопка Скасувати */
+.success-popup .cancel-btn {
+  background-color: #FF4444;
+  color: white;
+}
+
+.success-popup .cancel-btn:hover {
+  background-color: #e63939;
+  transform: scale(1.02);
+}
+
+.success-popup .success-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-right: 1rem;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-1.25rem); /* -20px */
+    transform: translateX(-50%) translateY(-1.25rem);
   }
   to {
     opacity: 1;
@@ -1342,4 +1307,181 @@ textarea.error,
 
 .error-message {
   animation: shake 0.5s ease-in-out;
+}
+
+.confirmation-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 0.1875rem solid #0378ec;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1051;
+  width: 400px;
+  font-family: var(--default-font);
+}
+
+.confirmation-popup .popup-content {
+  text-align: center;
+}
+
+.confirmation-popup .popup-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.confirmation-popup .popup-text {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.confirmation-popup .popup-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.confirmation-popup button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.confirmation-popup .cancel-btn {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.confirmation-popup .confirm-btn {
+  background-color: #0378ec;
+  color: white;
+}
+
+.confirmation-popup .cancel-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.confirmation-popup .confirm-btn:hover {
+  background-color: #0256af;
+}
+
+/* Контейнер для файлів */
+.file-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Прокручуваний список файлів */
+.file-list-scrollable {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    /* Стилі для скролбару */
+    scrollbar-width: thin;
+    scrollbar-color: #6FCF97 #f0f0f0;
+}
+
+/* Стилі для скролбару WebKit (Chrome, Safari) */
+.file-list-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.file-list-scrollable::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+
+.file-list-scrollable::-webkit-scrollbar-thumb {
+    background-color: #6FCF97;
+    border-radius: 3px;
+}
+
+/* Елементи файлів */
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: white;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.file-item:last-child {
+    margin-bottom: 0;
+}
+
+.file-item:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Інформація про файл */
+.file-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.file-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-date {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Дії з файлами */
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: 1rem;
+}
+
+.file-actions .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Стилі для форми завантаження */
+.file-upload-form {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+#files-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#files-container::-webkit-scrollbar-track {
+    background: #F0F0F0;
+    border-radius: 4px;
+}
+
+#files-container::-webkit-scrollbar-thumb {
+    background-color: #C0C0C0;
+    border-radius: 4px;
+}
+
+#files-container::-webkit-scrollbar-thumb:hover {
+    background-color: #A0A0A0;
 }

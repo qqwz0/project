@@ -20,21 +20,22 @@ class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
         if self.raise_exception or self.request.htmx:
             return HttpResponse(status=403)
         else:
-            return redirect('teachers_catalog')
+            return redirect('catalog:teachers_catalog')
 
     def dispatch(self, request, *args, **kwargs):
         """
         Overridden dispatch method.
         Checks if the user is authenticated and not a teacher. Otherwise, calls `handle_no_permission`.
         """
-        already_requested = Request.objects.filter(student_id=request.user, teacher_id=self.kwargs['pk']).exists()
+        if 'pk' in self.kwargs:
+            already_requested = Request.objects.filter(student_id=request.user, teacher_id=self.kwargs['pk']).exists()
+            if already_requested:
+                return self.handle_no_permission()
+                
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         if request.user.role == 'Викладач':
             return self.handle_no_permission()
-        if already_requested:
-            return self.handle_no_permission()
+        
         # If checks pass, proceed with the normal dispatch flow
         return super().dispatch(request, *args, **kwargs)
-   
-
