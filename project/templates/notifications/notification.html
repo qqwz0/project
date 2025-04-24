@@ -1,52 +1,15 @@
-<div class="notification" style="padding: 16px;
-           margin-left: 20px;
-           margin-top: 16px;
-           text-align: left;
-           position: relative;" 
-     role="alert" 
-     hx-swap-oob="afterbegin:#notification-list">
-    {% if status is not None %}
-        {% if status == 'відхилив'%}
-            <p style="font-family: sans-serif; 
-                      font-size: 16px;
-                      margin-top: 0.8rem;
-                      margin-left: 0.4rem;   
-                      color: #181616; 
-                      word-wrap: break-word;
-                      white-space: normal;
-                      overflow-wrap: break-word;
-                      line-height: 1.4;">
-            {{message}} <span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span> </p>
-        {% else %}
-            <p style="font-family: sans-serif; 
-                      font-size: 16px;
-                      margin-top: 0.8rem;
-                      margin-left: 0.4rem;  
-                      color: #181616; 
-                      word-wrap: break-word;
-                      white-space: normal;
-                      overflow-wrap: break-word;
-                      line-height: 1.4;">
-            {{message}} </p>
-        {% endif %}
-    {% else %}
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'assets/css/notification.css' %}">
+</head>
+<div class="notification" role="alert" hx-swap-oob="afterbegin:#notification-list">
     <a href="{% url 'profile' %}" style="text-decoration: none; display: block;" onclick="window.location='{% url 'profile' %}'; return false;">
-            <p style="font-family: sans-serif; 
-                    font-size: 16px;
-                    margin-top: 0.8rem;
-                    margin-left: 0.4rem;  
-                    color: #181616; 
-                    word-wrap: break-word;
-                    white-space: normal;
-                    overflow-wrap: break-word;
-                    line-height: 1.4;">
-                {{message}}
+            <p class="notification-text">
+                <strong>Увага!</strong> {{notification}}
             </p>
     </a>
-    {% endif %}
-    
     <!-- Timestamp at the bottom right -->
-    <div style="text-align: right; margin-top: 6px; font-size: 11px; color: #777; font-family: sans-serif;">
+    <div class="notification-time">
         {{time}}
     </div>
 </div>

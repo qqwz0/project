@@ -29,14 +29,20 @@
                     <i class="fa-solid fa-circle" id="notification-indicator" style="color: #1570ef; display: none; position: absolute; font-size: 0.5em; z-index: 2; top: 15%; left: 80%; transform: translate(-50%, -50%);"></i>
                     <i class="fas fa-bell" style="position: relative; z-index: 1;"></i>
                     <ul class="notification-dropdown" id="notification-list">
-                        <div class="no-notifications" id="no-notifications-message">
-                            <i class="fa-solid fa-circle-info"></i>
-                            <span>У вас не має нових сповіщень!</span>
+                        <div class="empty-notifications" id="no-notifications-message">
+                            <h3 class="notification-empty-title">Сповіщень немає</h3>
+                            <div class="notification-divider"></div>
+                            <p class="notification-empty-message">Тут з'являтимуться ваші сповіщення</p>
                         </div>
-                    </ul> 
+                    </ul>
                 </a>
+
                 <a href="#" id="messageDropdownButton" role="button" style="position: relative; cursor: pointer; color: #000;">
-                    <i class="fa-solid fa-circle" id="message-indicator" style="color: #1570ef; display: {% if unread %}block{% else %}none{% endif %}; position: absolute; font-size: 0.5em; z-index: 2; top: 15%; left: 80%; transform: translate(-50%, -50%);"></i>
+                    {%if unread%}
+                        <div class="message-badge" id="message-indicator">
+                            {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
+                        </div>
+                    {%endif%}
                     <i class="fas fa-envelope"></i>
                     <div class="message-popup" id="message-popup">
                         {% if message_list%}
@@ -47,11 +53,11 @@
                             <div class="message-item message {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
                                 {% if  item.status is not None%}
                                   <p>{{ item.message_text }} {%if item.status == 'відхилив' %}<span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span>{%endif%} </p>
-                                  <span class="timestamp">{{ item.created_at }}</span>
+                                  <span class="timestamp">{{ item.created_at|date:"d.m.Y H:i" }}</span>
                                 {% else %}
                                     <div class="profile-message-link" onclick="window.location='{% url 'profile' %}'">
                                         <p>{{ item.message_text }}</p>
-                                        <span class="timestamp">{{ item.created_at }}</span>
+                                        <span class="timestamp">{{ item.created_at |date:"d.m.Y H:i" }}</span>
                                     </div>
                                 {% endif %}
                             </div>

@@ -18,11 +18,11 @@ class MessageListView(LoginRequiredMixin,ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['message_list'] = self.get_queryset()
-        context['unread'] = False
-        if Message.objects.filter(recipient=self.request.user, is_read=False).exists():
-            context['unread'] = True
+        unread_messages = context['message_list'].filter(is_read=False)
+        context['unread_count'] = unread_messages.count()
+        context['unread'] = context['unread_count'] > 0
         return context
-    
+        
 
 
 @method_decorator(csrf_exempt, name='dispatch') 

@@ -5,8 +5,10 @@ def user_messages(request):
     if request.user.is_authenticated:
         messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
         unread = Message.objects.filter(recipient=request.user, is_read=False).exists()
+        unread_count = messages.filter(is_read=False).count()
         return {
             'message_list': messages,
-            'unread': unread
+            'unread': unread,
+            'unread_count': unread_count
         }
     return {'message_list': [], 'unread': False}   

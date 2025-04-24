@@ -34,7 +34,7 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
         # Choose template based on notification type if provided
         template_name = 'notifications/notification.html'
         context = {
-            'message': event['message'],
+            'notification': event['notification'],
             'time': event['time'] 
         }
         

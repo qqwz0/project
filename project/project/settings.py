@@ -126,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE =  'Europe/Kiev'
 
 USE_I18N = True
 
@@ -148,6 +148,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # Replace with your email
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Replace with your email password 'NAME': os.getenv('DB_NAME')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+ACAUSE_EMAIL_SUBJECT_PREFIX = 'SciAvisor - '
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
@@ -170,7 +171,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
@@ -191,6 +192,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
+        },
+        'apps.notifications': {  
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Set to DEBUG to see all logs
+            'propagate': True,
         },
     },
 }
@@ -226,3 +232,10 @@ THUMBNAIL_PROCESSORS = (
 IMAGE_CROPPING_BACKEND = 'image_cropping.backends.easy_thumbs.EasyThumbnailsBackend'
 IMAGE_CROPPING_BACKEND_PARAMS = {}
 
+
+BASE_URL = 'http://localhost:8000'
+
+LOGIN_URL = '/users/login/'
+
+SESSION_COOKIE_AGE = 1209600  
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
