@@ -1,0 +1,62 @@
+{% load static %}
+
+{% if user_profile.role == "Студент" %}
+    {% if archived_requests %}
+        <h2>📂 Архів робіт</h2>
+        {% for request in archived_requests|dictsortreversed:"completion_date" %}
+            <div class="request-card">
+                <div class="request-user">
+                    {% if request.teacher_id.teacher_id.profile_picture %}
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
+                        <p class="role">{{ request.teacher_id.academic_level }}</p>
+                        {% if request.teacher_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
+                        {% endif %}
+                        <strong>Дата завершення:</strong>
+                        <p>{{ request.completion_date|date:"d.m.Y" }}</p>
+                        <strong>Оцінка:</strong>
+                        <p class="grade">{{ request.grade }}/100</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="no-requests">У вас немає завершених робіт</p>
+    {% endif %}
+
+{% elif user_profile.role == "Викладач" %}
+    {% if archived_requests %}
+        <h2>📂 Архів робіт</h2>
+        {% for request in archived_requests|dictsortreversed:"completion_date" %}
+            <div class="request-card">
+                <div class="request-user">
+                    {% if request.student_id.profile_picture %}
+                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <h3>{{ request.student_id.get_full_name }}</h3>
+                        <p class="role">{{ request.student_id.academic_group }}</p>
+                        {% if request.teacher_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
+                        {% endif %}
+                        <strong>Дата завершення:</strong>
+                        <p>{{ request.completion_date|date:"d.m.Y" }}</p>
+                        <strong>Оцінка:</strong>
+                        <p class="grade">{{ request.grade }}/100</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="no-requests">У вас немає завершених робіт</p>
+    {% endif %}
+{% endif %} 

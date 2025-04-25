@@ -1,0 +1,124 @@
+{% csrf_token %}
+
+{% for file in files %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="card-title mb-0">{{ file.get_filename }}</h5>
+        </div>
+        <div>
+            <small class="text-muted">Версія {{ file.version }} | Завантажено: {{ file.uploaded_at|date:"d.m.Y H:i" }}</small>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if file.description %}
+        <p class="card-text">{{ file.description }}</p>
+        {% endif %}
+        
+        <div class="btn-group">
+            <a href="{% url 'download_file' file.pk %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-download"></i> Завантажити
+            </a>
+            {% if user == file.uploaded_by %}
+            <button class="btn btn-sm btn-danger delete-file" 
+                    data-file-id="{{ file.pk }}" 
+                    data-url="{% url 'delete_file' file.pk %}">
+                <i class="fas fa-trash"></i>
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Секція коментарів -->
+        <div class="mt-4">
+            <h6>Коментарі</h6>
+            {% include 'catalog/partials/file_comments.html' with file=file %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<p class="text-muted">Немає завантажених файлів</p>
+{% endfor %}
+
+<!-- Форма завантаження файлу -->
+<form method="post" enctype="multipart/form-data" class="file-upload-form mt-3">
+    {% csrf_token %}
+    <div class="input-group">
+        <input type="file" name="file" class="form-control" required>
+        <input type="text" name="description" class="form-control" placeholder="Опис файлу (необов'язково)">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Завантажити
+        </button>
+    </div>
+</form>
+
+<script>
+$(document).ready(function() {
+    // Обробка завантаження файлу
+    $('.file-upload-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var formData = new FormData(this);
+        var requestId = '{{ request.id }}';
+        
+        $.ajax({
+            url: `/catalog/request/${requestId}/upload-file/`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Очищаємо форму
+                    form.find('input[type="file"]').val('');
+                    form.find('input[type="text"]').val('');
+                    // Оновлюємо список файлів
+                    location.reload();
+                } else {
+                    alert('Помилка: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', xhr.responseText);
+                try {
+                    const errorData = JSON.parse(xhr.responseText);
+                    alert('Помилка: ' + (errorData.message || 'Не вдалося завантажити файл'));
+                } catch (e) {
+                    alert('Помилка при завантаженні файлу');
+                }
+            }
+        });
+    });
+
+    // Обробка видалення файлу
+    $('.delete-file').on('click', function(e) {
+        e.preventDefault();
+        var button = $(this);
+        var fileId = button.data('file-id');
+        var url = button.data('url');
+            
+            if (confirm('Ви впевнені, що хочете видалити цей файл?')) {
+            $.ajax({
+                url: url,
+                type: 'POST',
+                    headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        loadTab('active');
+                    } else {
+                        alert(response.error || 'Помилка при видаленні файлу');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', xhr.responseText);
+                    alert('Помилка при видаленні файлу');
+                }
+                });
+            }
+    });
+});
+</script>

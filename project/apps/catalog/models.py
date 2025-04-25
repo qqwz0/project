@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 import logging
 from django.utils import timezone
+import os
 
 logger = logging.getLogger(__name__)
         
@@ -44,10 +45,20 @@ class Slot(models.Model):
     occupied = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     
     def get_available_slots(self):
+        active_requests_count = Request.objects.filter(
+            slot=self,
+            request_status='Активний'
+        ).count()
+        
+        self.occupied = active_requests_count
+        self.save()
         return self.quota - self.occupied
     
     @classmethod
     def filter_by_available_slots(cls):
+        slots = cls.objects.all()
+        for slot in slots:
+            slot.get_available_slots()  
         return cls.objects.filter(occupied__lt=F('quota'))
     
     def update_occupied_slots(self, increment):
@@ -59,10 +70,15 @@ class Slot(models.Model):
         if increment > 0 and self.occupied + increment > self.quota:
             raise ValidationError("The number of occupied slots cannot exceed the quota.")
 
-        self.occupied += increment
+        self.occupied = Request.objects.filter(
+            slot=self,
+            request_status='Активний'
+        ).count()
+        
         self.save()
 
         logger.info(f"After update: occupied = {self.occupied}")
+
     def clean(self):
         """
         Custom validation to ensure occupied slots never exceed the quota.
@@ -75,14 +91,14 @@ class Slot(models.Model):
         Override save method to include the validation.
         """
         self.clean()  # Call the custom clean method before saving
-        super().save(*args, **kwargs)   
-       
+        super().save(*args, **kwargs)
+
 class Request(models.Model):
     STATUS = [
-        ('pending', 'очікується'),
-        ('accepted', 'прийнятий'),
-        ('rejected', 'відхилений'),
-        ('completed', 'завершений'),
+        ('Очікує', 'Очікує'),
+        ('Активний', 'Активний'),
+        ('Відхилено', 'Відхилено'),
+        ('Завершено', 'Завершено'),
     ]
     student_id = models.ForeignKey('users.CustomUser', 
                                    on_delete=models.CASCADE, 
@@ -90,7 +106,7 @@ class Request(models.Model):
                                    unique=False,
                                    related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
-    slot = models.ForeignKey(Slot, on_delete=models.CASCADE)
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
                                     null=True, blank=True)
     
@@ -98,9 +114,8 @@ class Request(models.Model):
     motivation_text = models.TextField()
     request_date = models.DateTimeField(default=timezone.now)
     request_status = models.CharField(max_length=100, choices=STATUS, 
-                                    default='pending')
-    
-    grade = models.IntegerField(blank=True, null=True)
+                                    default='Очікує')
+    grade = models.IntegerField(null=True, blank=True)
     rejected_reason = models.TextField(blank=True, null=True)
     completion_date = models.DateTimeField(null=True, blank=True)
     academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
@@ -114,8 +129,8 @@ class Request(models.Model):
     @property
     def is_archived(self):
         """Перевіряє чи робота в архіві (завершена)"""
-        return self.request_status == 'completed' and self.grade is not None
-    
+        return self.request_status == 'Завершено' and self.grade is not None
+
     def extract_stream_from_academic_group(self):
         """
         Extracts the stream code from the student's academic group.
@@ -131,13 +146,14 @@ class Request(models.Model):
         """
         if not self.slot:  # Only assign slot if not manually set
             student_stream_code = self.extract_stream_from_academic_group()
-            print(student_stream_code)
+            print(f"Extracted stream code: {student_stream_code}")
             if not student_stream_code:
                 raise ValidationError("Student academic group is missing or invalid.")
 
             # Find the corresponding Stream object
             try:
                 stream = Stream.objects.get(stream_code=student_stream_code)
+                print(f"Found stream: {stream}")
             except Stream.DoesNotExist:
                 raise ValidationError(f"No stream found with code: {student_stream_code}")
 
@@ -146,9 +162,11 @@ class Request(models.Model):
                 teacher_id=self.teacher_id,
                 stream_id=stream
             ).filter(occupied__lt=models.F('quota')).first()
+            
+            print(f"Available slot found: {available_slot}")
 
             if not available_slot:
-                raise ValidationError(f"No available slots for teacher {self.teacher_profile} in stream {stream.code}")
+                raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
 
             # Assign the found slot
             self.slot = available_slot
@@ -157,9 +175,9 @@ class Request(models.Model):
         if self.pk:  # Check if the request already exists
             old_request = Request.objects.get(pk=self.pk)
             if old_request.request_status != self.request_status:
-                if self.request_status == 'accepted':
+                if self.request_status == 'Активний':
                     self.slot.update_occupied_slots(+1)
-                elif old_request.request_status == 'accepted' and self.request_status != 'accepted':
+                elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
 
         if not self.academic_year:
@@ -197,7 +215,7 @@ class StudentTheme(models.Model):
     theme = models.CharField(max_length=100)
     
     def __str__(self):
-        return self.theme
+        return self.theme 
 
 class OnlyStudent(models.Model):
     student_id = models.OneToOneField('users.CustomUser', 
@@ -211,4 +229,58 @@ class OnlyStudent(models.Model):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 
     def __str__(self):
-        return f"Student: {self.student_id.get_full_name()}"  
+        return f"Student: {self.student_id.get_full_name()}" 
+
+class RequestFile(models.Model):
+    """
+    Model for storing files attached to requests.
+    """
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='request_files/%Y/%m/%d/')
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    version = models.IntegerField(default=1)  
+    description = models.TextField(blank=True)  
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"File for request {self.request.id} (v{self.version})"
+
+    def get_filename(self):
+        return os.path.basename(self.file.name)
+
+
+
+
+class FileComment(models.Model):
+    """
+    Model for storing comments on request files.
+    """
+    file = models.ForeignKey(RequestFile, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    text = models.TextField()
+    attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.author.get_full_name()} on {self.file}"
+        
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            print(f"[DEBUG] Creating new FileComment: {self.text[:50]}...")
+        super().save(*args, **kwargs)
+        if is_new:
+            print(f"[DEBUG] FileComment created with ID: {self.pk}")
+
+    def get_attachment_filename(self):
+        """Повертає ім'я прикріпленого файлу без шляху"""
+        if self.attachment:
+            return self.attachment.name.split('/')[-1]
+        return None

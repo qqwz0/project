@@ -1,59 +1,67 @@
 {% load static %}
 
+<!-- Font Awesome stylesheet for icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-<!--
-This template displays teacher information, available slots,
-and a form allowing the user to propose or enter custom themes.
--->
+
 <section class="info-request-section">
+    <!-- Close modal button -->
     <a class="close-modal fas fa-times" href="#" onclick="document.getElementById('details_request_modal').close();"></a>
        
     <div class="left-container">
-        <!-- If a teacher photo exists, use it, otherwise show a default image. -->
+        <!-- Display teacher's photo or a default image -->
         {% if photo %}
             <img src="{{ photo.url }}" alt="Teacher">
         {% else %}
             <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
         {% endif %}
-        <!-- Display teacher's name, position, and department. -->
-        <h2>{{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}</h2>
-        {% if teacher.position %}
+        
+        <!-- Display teacher's name -->
+        <h2>
+            {%if teacher.teacher_id.patronymic%}
+                 {{ teacher.teacher_id.first_name | capfirst }} {{teacher.teacher_id.patronymic| capfirst}} {{ teacher.teacher_id.last_name | capfirst }}
+            {% else %}
+                {{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}
+            {% endif %}
+        </h2>
+        <!-- Display teacher's position or a default value -->
+        {% if teacher.academic_level%}
             <p class="position">{{ teacher.academic_level | capfirst }}</p>
         {% else %}
             <p class="position">Викладач</p>
-
         {% endif %}
-        <h3>Кафедра {{ teacher.teacher_id.department | title }}</h3>
+        
+        <!-- Display teacher's department -->
+        <h3>Кафедра {{ teacher.teacher_id.department | capfirst }}</h3>
 
-        <!-- Show slots in different ways, depending on how many free slots exist. -->
+        <!-- Display slot availability -->
         {% if is_matched %}
-        <div>
-            <p class="single-slot"><strong>Місця:</strong> {{ free_slots.first.get_available_slots }}</p>
-        </div>
+            <div>
+                <p class="single-slot"><strong>Місця:</strong> {{ free_slots.first.get_available_slots }}</p>
+            </div>
         {% elif free_slots.count < 1 %}
-          <div class="slots-info no-slots">
-            <p><strong>Місць немає</strong></p>
-          </div>
+            <div class="slots-info no-slots">
+                <p><strong>Місць немає</strong></p>
+            </div>
         {% else %}
-          <div class="slots-info multiple-slots">
-            <p><strong>Загальна кількість місць:</strong></p>
-            <ul>
-                {% for slot in free_slots %}
-                    <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
-                {% endfor %}
-            </ul>
-        </div>
+            <div class="slots-info multiple-slots">
+                <p><strong>Загальна кількість місць:</strong></p>
+                <ul>
+                    {% for slot in free_slots %}
+                        <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
         {% endif %}
     </div>
 
     <div class="right-container">
-        <!-- Form for submitting a request to the teacher. -->
+        <!-- Form for submitting a request -->
         <form hx-post="{% url 'modal' teacher.pk %}" class="teacher-modal" id="request-form">
             <div id="form-errors" class="error-container"></div>
             <h1>Подай заявку!</h1>
             <input type="hidden" name="csrfmiddlewaretoken" id="csrf_token" value="{{ csrf_token }}">
         
-            <!-- A dropdown menu for proposed themes. -->
+            <!-- Dropdown for selecting teacher themes -->
             <div class="dropdown">
                 {{ form.teacher_themes.label_tag|cut:":" }}
                 <div class="dropdown-input">
@@ -76,7 +84,7 @@ and a form allowing the user to propose or enter custom themes.
         
             <p>та/або</p>
         
-            <!-- The container for adding custom themes. -->
+            <!-- Section for adding custom themes -->
             <div id="student-themes-container" class="add-theme-container">
                 {{ form.student_themes.label_tag|cut:":" }}
                 <div class="input-add">
@@ -90,30 +98,32 @@ and a form allowing the user to propose or enter custom themes.
                 <ul id="theme-list" class="theme-list"></ul>
             </div>
         
-            <!-- Textarea for detailed motivation explanation. -->
-            <div>
+            <!-- Motivation text input -->
+            <div class = 'textera-container'>
+
                 {{ form.motivation_text }}
                 <div class="error-message"></div>
-            </div>
+            
+            
+                <div class="textera-capacity">
+                    <p>Max. 2000 characters</p>
+                </div>
+             </div>   
         
-            <div class="textera-capacity">
-                <p>Max. 2000 characters</p>
-            </div>
-        
-            <!-- Submit button is only enabled if free slots exist. -->
+            <!-- Submit button -->
             {% if free_slots %}
                 <button type='submit' class="submit-btn" id="submit-btn">Надіслати</button>
             {% else %}
                 <button type='submit' class="submit-btn" id="submit-btn" disabled>Надіслати</button>
             {% endif %}
-
         </form>
     </div>
 </section>
 
 <script>
+    // Handle form submission via AJAX
     document.getElementById('submit-btn').addEventListener('click', function(event) {
-        event.preventDefault();  // Stop traditional form submission
+        event.preventDefault();
         var form = document.getElementById('request-form');
         
         // Get the main student_themes input field
@@ -131,8 +141,7 @@ and a form allowing the user to propose or enter custom themes.
         var formData = new FormData(form);
         var errorContainer = document.getElementById('form-errors');
         errorContainer.innerHTML = '';
-    
-        // Post form data with fetch and handle JSON response
+
         fetch("{% url 'modal' teacher.pk %}", {
             method: 'POST',
             body: formData,
@@ -149,19 +158,16 @@ and a form allowing the user to propose or enter custom themes.
             }
             
             if (data.success) {
-                // Close modal, then reload the page on successful request
                 document.getElementById('details_request_modal').close();
                 location.reload();
             } else {
-                // Create elements to display each field error
                 const errorElements = [];
                 for (var field in data.errors) {
                     var fieldElement = document.querySelector(`[name="${field}"]:not([type="hidden"])`);
                     var errorDiv = document.createElement('div');
                     errorDiv.className = 'error-message';
                     errorDiv.innerHTML = data.errors[field].join('<br>');
-    
-                    // If the field exists in the form, put error below it; otherwise show at top
+
                     if (fieldElement) {
                         // Look for an existing error message to replace first
                         var existingError = fieldElement.parentNode.querySelector('.error-message');
@@ -177,8 +183,7 @@ and a form allowing the user to propose or enter custom themes.
                         errorElements.push(errorDiv);
                     }
                 }
-    
-                // Remove error messages after 5 seconds
+
                 setTimeout(() => {
                     errorElements.forEach(element => {
                         element.remove();
@@ -195,13 +200,13 @@ and a form allowing the user to propose or enter custom themes.
         });
     });
 
-    // Toggles the dropdown menu for proposed themes.
+    // Toggle dropdown menu visibility
     document.getElementById('dropdown-toggle').addEventListener('click', function() {
         var dropdownMenu = document.getElementById('dropdown-menu');
         dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
     });
 
-    // Sets the proposed_themes input when a dropdown item is clicked, then hides the menu.
+    // Handle dropdown item selection
     document.querySelectorAll('.dropdown-item').forEach(function(item) {
         item.addEventListener('click', function() {
             document.querySelector('input[name="teacher_themes"]').value = this.getAttribute('data-value');
@@ -209,14 +214,14 @@ and a form allowing the user to propose or enter custom themes.
         });
     });
 
-    // Closes the dropdown if a click occurs outside it.
+    // Close dropdown menu when clicking outside
     document.addEventListener('click', function(event) {
         if (!event.target.closest('.dropdown')) {
             document.getElementById('dropdown-menu').style.display = 'none';
         }
     });
 
-    // Adds a custom theme to the hidden field list and the visible list on the page.
+    // Add custom themes to the list
     document.getElementById('add-theme').addEventListener('click', function() {
         var input = document.querySelector('input[name="student_themes"]');
         var theme = input.value.trim();
@@ -224,20 +229,16 @@ and a form allowing the user to propose or enter custom themes.
             var hiddenThemes = document.getElementById('hidden-themes');
             var themeList = document.getElementById('theme-list');
 
-            // Create a hidden input for the new theme.
             var hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'student_themes';
             hiddenInput.value = theme;
             hiddenThemes.appendChild(hiddenInput);
 
-            // Create a list item to show the theme text.
             var listItem = document.createElement('li');
             listItem.className = 'theme-item';
-            // Truncate if the theme string is overly long.
             listItem.textContent = theme.length > 30 ? theme.substring(0, 30) + '...' : theme;
 
-            // Create a button to remove the theme from both hidden and displayed lists.
             var removeButton = document.createElement('button');
             removeButton.innerHTML = '&times;';
             removeButton.className = 'remove-theme';
@@ -249,24 +250,26 @@ and a form allowing the user to propose or enter custom themes.
             listItem.appendChild(removeButton);
             themeList.appendChild(listItem);
 
-            // Reset the input field and update the theme count.
             input.value = '';
             updateThemeCount();
         }
     });
 
-    // Disables the ability to add more custom themes when the limit is reached.
+    // Update theme count and disable input if limit is reached
     function updateThemeCount() {
         var hiddenThemes = document.getElementById('hidden-themes');
         var themeCount = hiddenThemes.querySelectorAll('input[name="student_themes"]').length;
-        var inputField = document.getElementById('id_student_themes');
+        var themeInput = document.getElementById('id_student_themes');
         var addButton = document.getElementById('add-theme');
-    
+
         if (themeCount >= 3) {
-            inputField.setAttribute('disabled', true);
+            addButton.disabled = true;
+            themeInput.disabled = true;
+            themeInput.placeholder = 'Досягнуто ліміт тем';
         } else {
-            inputField.removeAttribute('disabled');
+            addButton.disabled = false;
+            themeInput.disabled = false;
+            themeInput.placeholder = 'Введи';
         }
     }
 </script>
-   

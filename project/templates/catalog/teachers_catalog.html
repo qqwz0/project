@@ -1,127 +1,138 @@
 {% extends "catalog/base.html" %}
 {% load static %}
-{%load widget_tweaks%} 
-  <!-- 
-  This template displays a list of teachers and highlights their available slots.
-  It provides a modal dialog to submit requests. 
-  When a user triggers the HX request (via button click), the modal is swapped in with HTMX. 
+{% load widget_tweaks %}
+
+<!-- 
+This template displays a list of teachers and highlights their available slots.
+It provides a modal dialog to submit requests. 
+When a user triggers the HX request (via button click), the modal is swapped in with HTMX. 
 -->
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
 {% block content %}
 
-    <!-- Loop through 'data' which contains each teacher and their free slots. -->
-    <div x-data="{ 
-      data: [], 
-      departments: [], 
-      academic_levels: [], 
-      slots: null,
-      show_occupied: false,
-      full_names: [],
-      searchQuery: '', 
-      filteredData: [],  
-      async initData() {
-        this.data = await (await fetch('{% url 'teachers_list' %}')).json();
-        this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));        
-        }
-    }" 
-    x-init="initData()"> 
-    <div class="search-section">
-      <!-- A heading providing context for the search feature. -->
-      <h1>Знайди свого ідеального наукового керівника!</h1> 
+<!-- Main container with Alpine.js state management -->
+<div class="main-container" 
+  x-data="{ 
+     data: [], 
+     departments: [], 
+     academic_levels: [], 
+     slots: null,
+     show_occupied: false,
+     full_names: [], 
+     searchQuery: '', 
+     filteredData: [],  
+     async initData() {
+      this.data = await (await fetch('{% url 'teachers_list' %}')).json();
+      this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));        
+     }
+  }" 
+  x-init="initData()">
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+     <div class="filter-header">
+      <h3>Фільтри</h3>
+      <img src="{% static 'assets/img/filters.svg' %}" alt="Filters">
+     </div>
+     <div class="filter-content">
+      <hr class="devider">
+      <h3 class="option-label">{{ form.departments.label }}</h3>
+      {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+      
+      <hr class="devider">
+      <h3 class="option-label">{{ form.slots.label }}</h3>
+      <div class="range-container">
+       <template x-if="show_occupied">
+        {% render_field form.slots class="form-range" autocomplete="off" x-bind="{disabled: show_occupied}" @input="slots = $el.value" %}
+       </template>
+       <template x-if="!show_occupied">
+        {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" %}
+       </template>
+       <span class="range-value" x-text="slots || '0'"></span>
+      </div>
+
+      <hr class="devider">
+      <h3 class="option-label">Науковий ступінь</h3>
+      {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
+      
+      <hr class="devider">
+      <div class="checkbox-wrapper">
+       <span class="checkbox-text">Викладачі без вільних місць</span>
+       {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
+      </div>
+      <button class="filter-button" @click="applyFilters()">Фільтрувати</button>
+     </div>
+    </div>
+
+    <!-- Content Section -->
+    <div class="content-section">
+     <!-- Search Section -->
+     <div class="search-section">
+      <h1>Знайди свого ідеального наукового керівника!</h1>
       <div class="search-container">
-          <!-- Search input for filtering teachers (frontend only, no backend code). -->
-          {% render_field form.searching class="form-searching" autocomplete="off" x-model="searchQuery" @keydown.enter="applySearch()" %}
-          <button class="search-button" @click="applySearch()">
-            <img src="{% static 'assets\img\search.svg' %}" alt="Search">
-          </button>
+       {% render_field form.searching class="form-searching" autocomplete="off" x-model="searchQuery" @keydown.enter="applySearch()" %}
+       <button class="search-button" @click="applySearch()">
+        <img src="{% static 'assets/img/search.svg' %}" alt="Search">
+       </button>
       </div>
-    </div>
-    <div class="filter-panel" >
-      <div class="filter-header">
-          <h3>Фільтри</h3>
-          <img src="{% static 'assets\img\filters.svg' %}" alt="Filters">
-      </div>
-      <div class="filter-content">
-        <hr class='devider'></hr>
-        <h3 class='option-label'>{{form.departments.label}}</h3>
-        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
-        <hr class='devider'></hr>
-        <h3 class='option-label'>{{form.slots.label}}</h3>
-        <div class="range-container">
-          <template x-if="show_occupied">
-          {% render_field form.slots class="form-range" autocomplete="off"  x-bind='{disabled: show_occupied}' @input="slots = $el.value" %}
-          </template>
-          <template x-if="!show_occupied">
-          {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" %}
-          </template>  
-          <span class="range-value" x-text="slots || '0'"></span>
-        </div>
+     </div>
 
-        <hr class='devider'></hr>
-        <hr class='devider'></hr>
-        <hr class='devider'></hr>
-        <h3 class='option-label'>{{form.academic_levels.label}}</h3>
-        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
-        <hr class='devider'></hr>
-        <div class="checkbox-wrapper">
-          <span class="checkbox-text">Викладачі без вільних місць</span>
-          {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
-        </div>
-        <button class="filter-button" @click="applyFilters()">Фільтрувати</button>  
-      </div> 
-    </div>
-    <template x-if="filteredData.length === 0">
+     <!-- No Results Message -->
+     <template x-if="filteredData.length === 0">
       <div class="no-results">
-        <h2>Нічого не знайдено!</h2>
+       <h2>Нічого не знайдено!</h2>
       </div>
-    </template>  
-    <template x-for="item in filteredData">
-        {% include "catalog/teacher_cards.html" %}
-    </template>
+     </template>
+
+     <!-- Teacher Cards -->
+     <template x-for="item in filteredData">
+      {% include "catalog/teacher_cards.html" %}
+     </template>
     </div>
+</div>
 
-
-
-    <!-- A dialog element wrapping the HTMX content for the teacher modal. -->
-    <dialog id="details_request_modal" class="modal">
-      <div class="modal-box" id="inner_modal">
-          <h3>Подати заявку</h3>
-          <!-- Clicking this form's button closes the dialog. Actual request form is loaded via HTMX. -->
-        <form method="dialog" class="modal-backdrop">
-          <button>Close</button>
-        </form> 
-      </div>   
-    </dialog> 
-    
-    <!-- Display any messages from Django's messages framework in a popup. -->
-    {% if messages %}
-    <div class="messages">
-      {% for message in messages %}
-        <div class="success-popup {{ message.tags }}">
-          {% if message.tags == 'success' %}
-            <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
-          {% elif message.tags == 'error' %}
-            <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
-          {% endif %}
-          <div class="popup-content">
-            <p class="popup-title">
-              {% if message.tags == 'success' %}
-                Успіх!
-              {% elif message.tags == 'error' %}
-                Помилка!
-              {% endif %}
-            </p>
-            <p class="popup-text">
-              {{ message }}
-            </p>
-          </div>
-          <i class="toast-close fas fa-times" onclick="closePopup()"></i>
-        </div>
-      {% endfor %}
+<!-- Modal Dialog for Request Submission -->
+<dialog id="details_request_modal" class="modal">
+    <div class="modal-box" id="inner_modal">
+     <h3>Подати заявку</h3>
+     <form method="dialog" class="modal-backdrop">
+      <button>Close</button>
+     </form>
     </div>
-    {% endif %}
+</dialog>
 
-  <script src="{% static 'assets/js/teacher_modal.js' %}"></script>
-  <script src="{% static 'assets/js/filtering.js' %}"></script>
+<!-- Django Messages Framework -->
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+     <div class="success-popup {{ message.tags }}">
+      {% if message.tags == 'success' %}
+       <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
+      {% elif message.tags == 'error' %}
+       <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
+      {% endif %}
+      <div class="popup-content">
+       <p class="popup-title">
+        {% if message.tags == 'success' %}
+            Успіх!
+        {% elif message.tags == 'error' %}
+            Помилка!
+        {% endif %}
+       </p>
+       <p class="popup-text">
+        {{ message }}
+       </p>
+      </div>
+      <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+     </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- External JavaScript Files -->
+<script src="{% static 'assets/js/teacher_modal.js' %}"></script>
+<script src="{% static 'assets/js/filtering.js' %}"></script>
+
 {% endblock %}

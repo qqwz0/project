@@ -2,13 +2,6 @@
 {% load static %}
 
 {% block content %}
-<head>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/student_edit.css' %}">
-</head>
-
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
@@ -19,15 +12,25 @@
             {% endif %}
         </div>
         <div class="profile-title">
-            <h1>{{ user.get_full_name_with_patronymic }}</h1>
+            <h1>{{ user.get_full_name }}</h1>
             <p class="email">{{ user.email }}</p>
         </div>
     </div>
  
     <h2 class="edit-title">Редагувати профіль</h2>
 
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="form-content">
-        <form method="post" class="edit-form">
+        <form method="post" class="edit-form" id="studentProfileForm">
             {% csrf_token %}
             
             <div class="form-sections">
@@ -37,26 +40,31 @@
                         <div class="form-group">
                             <label for="{{ form.first_name.id_for_label }}">Ім'я</label>
                             {{ form.first_name }}
+                            <div class="error-message" id="first_name-error"></div>
                         </div>
                         <div class="form-group">
                             <label for="{{ form.patronymic.id_for_label }}">По-батькові</label>
                             {{ form.patronymic }}
+                            <div class="error-message" id="patronymic-error"></div>
                         </div>
                     </div>
 
                     <div class="form-group full-width">
                         <label for="{{ form.last_name.id_for_label }}">Прізвище</label>
                         {{ form.last_name }}
+                        <div class="error-message" id="last_name-error"></div>
                     </div>
 
                     <div class="form-group full-width">
                         <label for="{{ form.academic_group.id_for_label }}">Академічна група</label>
                         {{ form.academic_group }}
+                        <div class="error-message" id="academic_group-error"></div>
                     </div>
 
                     <div class="form-group full-width">
                         <label for="{{ form.course.id_for_label }}">Курс</label>
                         {{ form.course }}
+                        <div class="error-message" id="course-error"></div>
                     </div>
                 </div>
 
@@ -65,6 +73,7 @@
                     <div class="form-group">
                         <label for="{{ form.additional_email.id_for_label }}">Додаткова електронна скринька</label>
                         {{ form.additional_email }}
+                        <div class="error-message" id="additional_email-error"></div>
                     </div>
 
                     <div class="form-group phone-group">
@@ -73,12 +82,129 @@
                             <span class="country-code">+380</span>
                             {{ form.phone_number }}
                         </div>
+                        <div class="error-message" id="phone_number-error"></div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="save-button">Зберегти</button>
+            <div class="form-buttons">
+                <button type="submit" class="save-button">Зберегти</button>
+                <a href="{% url 'profile' %}" class="back-button">Завершити</a>
+            </div>
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('studentProfileForm');
+    const courseInput = document.querySelector('input[name="course"]');
+    const groupInput = document.querySelector('input[name="academic_group"]');
+    
+    function clearErrors() {
+        document.querySelectorAll('.error-message').forEach(error => {
+            error.textContent = '';
+        });
+    }
+
+    function displayErrors(errors) {
+        clearErrors();
+        Object.keys(errors).forEach(field => {
+            const errorElement = document.getElementById(`${field}-error`);
+            if (errorElement) {
+                errorElement.textContent = errors[field].join(' ');
+            }
+        });
+    }
+
+    function showSuccessMessage(message) {
+        const messagesContainer = document.querySelector('.messages');
+        if (!messagesContainer) {
+            const newMessagesContainer = document.createElement('div');
+            newMessagesContainer.className = 'messages';
+            document.querySelector('.edit-title').insertAdjacentElement('afterend', newMessagesContainer);
+        }
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message success';
+        messageElement.textContent = message;
+        
+        document.querySelector('.messages').innerHTML = '';
+        document.querySelector('.messages').appendChild(messageElement);
+        
+        setTimeout(() => {
+            messageElement.style.opacity = '0';
+            setTimeout(() => messageElement.remove(), 300);
+        }, 3000);
+    }
+
+    function updateGroupNumber() {
+        if (!groupInput.value) return;
+        
+        const course = courseInput.value;
+        const currentGroup = groupInput.value;
+        
+        const match = currentGroup.match(/ФЕ[ЇСМЛП]-(\d)/);
+        if (match) {
+            const newGroup = currentGroup.replace(/-\d/, `-${course}`);
+            groupInput.value = newGroup;
+        }
+    }
+
+    function validateAndSyncCourse() {
+        const group = groupInput.value;
+        const match = group.match(/ФЕ[ЇСМЛП]-(\d)/);
+        
+        if (match) {
+            const groupCourse = parseInt(match[1]);
+            if (groupCourse >= 1 && groupCourse <= 4) {
+                courseInput.value = groupCourse;
+            }
+        }
+    }
+
+    courseInput.addEventListener('change', function() {
+        const course = parseInt(this.value);
+        if (course >= 1 && course <= 4) {
+            updateGroupNumber();
+        }
+    });
+
+    groupInput.addEventListener('input', function() {
+        validateAndSyncCourse();
+    });
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearErrors();
+        
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessMessage(data.message || 'Профіль успішно оновлено');
+            } else {
+                if (data.errors) {
+                    displayErrors(data.errors);
+                } else if (data.message) {
+                    alert(data.message);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.');
+        });
+    });
+});
+</script>
 {% endblock %} 

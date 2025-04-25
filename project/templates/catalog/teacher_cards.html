@@ -14,7 +14,7 @@
       </div>
       <div class="teacher-details">
         <!-- Display teacher credentials such as name, position, and department. -->
-        <h2 x-text="`${item.teacher.teacher_id.last_name} ${item.teacher.teacher_id.first_name}`"></h2>
+        <h2 x-text="`${item.teacher.teacher_id.full_name}`"></h2>
         <template x-if="item.teacher.academic_level">
           <p x-text="`${item.teacher.academic_level}`"></p>
         </template>
@@ -59,13 +59,28 @@
       </div>
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
-       <button class="modal-button"
-        :hx-get='item.teacher.url'
-        hx-target="#inner_modal"
-        hx-trigger="click"
-        x-init="htmx.process($el)">
-       <span class="arrow-icon">›</span>
-      </button>
+        {% if user.is_authenticated and user.role == 'Студент' %}
+          {% comment %} <template x-if="!item.teacher.already_requested"> {% endcomment %}
+            <button class="modal-button"
+              :hx-get='item.teacher.url'
+              hx-target="#inner_modal"
+              hx-trigger="click"
+              x-init="htmx.process($el)">
+              <span class="arrow-icon">›</span>
+            </button>
+          {% comment %} </template> {% endcomment %}
+          {% comment %} <template x-if="item.teacher.already_requested">
+            <button class="modal-button tooltip-custom" disabled>
+              <span class="arrow-icon">›</span>
+              <span class="tooltiptext">Ви вже надіслали запит до цього викладача</span>
+            </button>
+          </template> {% endcomment %}
+        {% else %}
+          <button class="modal-button tooltip-custom" disabled>
+            <span class="arrow-icon">›</span>
+            <span class="tooltiptext">У вас немає прав для надсилання запитів</span>
+          </button>
+        {% endif %}
       </div>
     </div> 
   </section>
