@@ -39,3 +39,31 @@ class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
         
         # If checks pass, proceed with the normal dispatch flow
         return super().dispatch(request, *args, **kwargs)
+
+
+class FileAccessMixin(LoginRequiredMixin, AccessMixin):
+    """
+    A mixin that only checks if the user is authenticated.
+    Returns a 403 response for HTMX requests or redirects otherwise.
+    """
+    raise_exception = True
+
+    def handle_no_permission(self):
+        """
+        Handles scenarios where the user does not have permission.
+        Returns a 403 for HTMX requests or redirects to login.
+        """
+        if self.raise_exception or self.request.htmx:
+            return HttpResponse(status=403)
+        else:
+            return redirect('login')
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Overridden dispatch method.
+        Only checks if the user is authenticated.
+        """
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        
+        return super().dispatch(request, *args, **kwargs)

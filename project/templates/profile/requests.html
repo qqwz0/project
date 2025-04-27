@@ -75,34 +75,34 @@
         <!-- Прийняті запити -->
         <div class="request-section accepted-section">
             <h2>✅ Прийняті запити</h2>
-            {% for request in sent_requests|dictsortreversed:"request_date" %}
+        {% for request in sent_requests|dictsortreversed:"request_date" %}
                 {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
                     <div class="request-card accepted-request">
-                        <div class="request-user">
-                            {% if request.teacher_id.teacher_id.profile_picture %}
-                                <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                            {% else %}
-                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
-                            {% endif %}
-                            <div class="user-info">
-                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
-                                    {{ request.teacher_id.teacher_id.get_full_name }}
-                                </a>
-                                <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
-                                {% endif %}
-                                {% if request.student_themes.all %}
-                                    <strong>Тематика студента:</strong>
-                                    <ul style="list-style-type: none">
-                                        {% for theme in request.student_themes.all %}
-                                            <li>{{ theme.theme }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                <div class="request-user">
+                    {% if request.teacher_id.teacher_id.profile_picture %}
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                            {{ request.teacher_id.teacher_id.get_full_name }}
+                        </a>
+                        <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
+                        {% if request.teacher_theme %}
+                            <strong>Тема викладача:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
+                        {% endif %}
+                        {% if request.student_themes.all %}
+                            <strong>Тематика студента:</strong>
+                            <ul style="list-style-type: none">
+                                {% for theme in request.student_themes.all %}
+                                    <li>{{ theme.theme }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <strong>Мотивація:</strong>
+                        <p class="motivation">{{ request.motivation_text }}</p>
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -176,22 +176,22 @@
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
-                            </div>
-                        </div>
-                        <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                    </div>
+                </div>
+                <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
                     </div>
                 {% endif %}
             {% empty %}
                 <div class="no-requests rejected-no-requests">
                     <p>Немає відхилених запитів.</p>
-                </div>
-            {% endfor %}
+            </div>
+        {% endfor %}
         </div>
     {% else %}
         <p>Ви ще не надсилали запитів.</p>
     {% endif %}
 
-{% elif user_profile.role == "Викладач" %}
+    {% elif user_profile.role == "Викладач" %}
     <!-- Фільтри для запитів викладача -->
     <link rel="stylesheet" href="{% static 'css/profile.css' %}">
     <link rel="stylesheet" href="{% static 'css/filter-buttons.css' %}">
@@ -216,53 +216,53 @@
 
     <!-- Очікують на підтвердження -->
     <div class="request-section pending-section">
-        {% if pending_requests %}
+    {% if pending_requests %}
             <h2>📥 Очікують на підтвердження</h2>
-            {% for request in pending_requests|dictsortreversed:"request_date" %}
+        {% for request in pending_requests|dictsortreversed:"request_date" %}
                 {% if request.request_status == 'Очікує' %}
                 <div class="request-card pending-request">
-                    <div class="request-user">
-                        {% if request.student_id.profile_picture %}
-                            <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                        {% else %}
-                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                <div class="request-user">
+                    {% if request.student_id.profile_picture %}
+                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
+                    <div class="user-info">
+                        <h3>{{ request.student_id.get_full_name }}</h3>
+                        <p class="role">{{ request.student_id.academic_group }}</p>
+
+                        {% if request.teacher_theme %}
+                            <strong>Запропонована тема:</strong>
+                            <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
-                        <div class="user-info">
-                            <h3>{{ request.student_id.get_full_name }}</h3>
-                            <p class="role">{{ request.student_id.academic_group }}</p>
 
-                            {% if request.teacher_theme %}
-                                <strong>Запропонована тема:</strong>
-                                <p class="theme">{{ request.teacher_theme.theme }}</p>
-                            {% endif %}
+                        <strong>Теми студента:</strong>
+                        {% if request.student_themes.all %}
+                            <ul style="list-style-type: none">
+                                {% for theme in request.student_themes.all %}
+                                    <li>{{ theme.theme }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
 
-                            <strong>Теми студента:</strong>
-                            {% if request.student_themes.all %}
-                                <ul style="list-style-type: none">
-                                    {% for theme in request.student_themes.all %}
-                                        <li>{{ theme.theme }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            <strong>Мотивація:</strong>
-                            <p class="motivation">{{ request.motivation_text }}</p>
+                        <strong>Мотивація:</strong>
+                        <p class="motivation">{{ request.motivation_text }}</p>
                             
                             <strong>Дата запиту:</strong>
                             <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Buttons for approval/decline -->
-                    <div class="request-actions">
-                        <button onclick="handleRequest('approve', {{ request.id }})" class="request-button accept">
-                            <i class="fas fa-check"></i> Прийняти
-                        </button>
-                        <button onclick="handleRequest('reject', {{ request.id }})" class="request-button reject">
-                            <i class="fas fa-times"></i> Відхилити
-                        </button>
                     </div>
                 </div>
+
+                <!-- Buttons for approval/decline -->
+                <div class="request-actions">
+                    <button onclick="handleRequest('approve', {{ request.id }})" class="request-button accept">
+                        <i class="fas fa-check"></i> Прийняти
+                    </button>
+                    <button onclick="handleRequest('reject', {{ request.id }})" class="request-button reject">
+                        <i class="fas fa-times"></i> Відхилити
+                    </button>
+                </div>
+            </div>
                 {% endif %}
             {% endfor %}
         {% else %}
@@ -389,8 +389,8 @@
                         </div>
                     </div>
                 {% endif %}
-            {% endfor %}
-        {% else %}
+        {% endfor %}
+    {% else %}
             <div class="no-requests rejected-no-requests">
                 <p>Немає відхилених запитів.</p>
             </div>
