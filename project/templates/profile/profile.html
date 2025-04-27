@@ -398,7 +398,7 @@
             if (action === 'approve') {
                 url = `/users/approve_request/${requestId}/`;
             } else if (action === 'reject') {
-                url = `/users/reject-request/${requestId}/`;
+                url = `/users/reject_request/${requestId}/`;
             } else if (action === 'complete') {
                 url = `/users/complete_request/${requestId}/`;
             } else if (action === 'restore') {
@@ -407,10 +407,15 @@
 
             // Create form data
             const formData = new FormData();
+            // Add CSRF token to formData explicitly
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
             // Add additional data to formData
             Object.keys(additionalData).forEach(key => {
                 formData.append(key, additionalData[key]);
             });
+
+            console.log(`Sending ${action} request to ${url}`);
 
             fetch(url, {
                 method: 'POST',
@@ -420,18 +425,34 @@
                 },
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log(`Response status: ${response.status}`);
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Error response body:', text);
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
                     // Оновлюємо сторінку для відображення змін
-                    location.reload();
+                    showMessage('success', action === 'approve' ? 'Запит підтверджено' : 
+                                           action === 'reject' ? 'Запит відхилено' : 
+                                           action === 'restore' ? 'Запит відновлено' : 'Операцію виконано');
+                    // Reload the tab instead of full page
+                    setTimeout(() => {
+                        loadTab('requests');
+                    }, 1000);
                 } else {
-                    alert(data.error || 'Сталася помилка при обробці запиту');
+                    showMessage('error', data.error || 'Сталася помилка при обробці запиту');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Сталася помилка при обробці запиту');
+                showMessage('error', 'Сталася помилка при обробці запиту');
             });
         }
 

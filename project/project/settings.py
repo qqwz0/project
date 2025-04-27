@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'easy_thumbnails',
     'django_extensions',
     'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -217,7 +219,7 @@ MICROSOFT_TENANT_ID = os.getenv('MICROSOFT_TENANT_ID')
 MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
 MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
 MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
-MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI')
+MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
 
 ASGI_APPLICATION = 'project.asgi.application' 
 
@@ -270,3 +272,14 @@ LOGIN_URL = '/users/login/'
 
 SESSION_COOKIE_AGE = 1209600  
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}

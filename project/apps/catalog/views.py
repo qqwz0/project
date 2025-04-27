@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.db.models import Max
 from django.utils import timezone
 from django.template.loader import render_to_string
-from .utils import HtmxLoginRequiredMixin
+from .utils import HtmxLoginRequiredMixin, FileAccessMixin
 
 from django.shortcuts import render
 
@@ -497,12 +497,12 @@ class UploadFileView(View):
             return HttpResponseServerError(str(e))
 
 
-class DeleteFileView(HtmxLoginRequiredMixin, View):
+class DeleteFileView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             file = RequestFile.objects.get(pk=pk)
             
-            if request.user != file.uploaded_by and request.user != file.request.teacher_id.teacher_id:
+            if not (request.user == file.uploaded_by or request.user == file.request.teacher_id.teacher_id):
                 return JsonResponse({
                     'status': 'error',
                     'message': 'У вас немає прав для видалення цього файлу'
@@ -525,13 +525,13 @@ class DeleteFileView(HtmxLoginRequiredMixin, View):
             })
 
 
-class DownloadFileView(HtmxLoginRequiredMixin, View):
+class DownloadFileView(FileAccessMixin, View):
     def get(self, request, pk):
         try:
             file = RequestFile.objects.get(pk=pk)
             course_request = file.request
             
-            if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
+            if not (request.user == file.uploaded_by or request.user == course_request.student_id or request.user == course_request.teacher_id.teacher_id):
                 return HttpResponseForbidden('Немає прав доступу')
             
             response = FileResponse(file.file)
@@ -574,8 +574,8 @@ class AddCommentView(HtmxLoginRequiredMixin, View):
             if attachment:
                 comment.attachment = attachment
             
-            comment.save()
-            
+                comment.save()
+                
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 response_data = {
                     'success': True,

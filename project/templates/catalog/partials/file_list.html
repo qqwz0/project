@@ -11,9 +11,39 @@
         </div>
     </div>
     <div class="card-body">
-        {% if file.description %}
-        <p class="card-text">{{ file.description }}</p>
-        {% endif %}
+        <div class="description-container" id="description-container-{{ file.pk }}">
+            <div class="description-display" id="description-display-{{ file.pk }}">
+                {% if file.description %}
+                <p class="card-text d-flex justify-content-between align-items-start">
+                    <span id="description-{{ file.pk }}">{{ file.description }}</span>
+                    {% if user == file.uploaded_by %}
+                    <button class="btn btn-link btn-sm p-0 ml-2" onclick="showEditDescription('{{ file.pk }}')" title="Редагувати опис">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% endif %}
+                </p>
+                {% elif user == file.uploaded_by %}
+                <p class="card-text d-flex justify-content-between align-items-start">
+                    <span id="description-{{ file.pk }}" class="text-muted">Додати опис</span>
+                    <button class="btn btn-link btn-sm p-0 ml-2" onclick="showEditDescription('{{ file.pk }}')" title="Додати опис">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </p>
+                {% endif %}
+            </div>
+            
+            <div class="description-edit d-none" id="description-edit-{{ file.pk }}">
+                <form class="description-form" onsubmit="return updateDescription('{{ file.pk }}', event)">
+                    <div class="form-group">
+                        <textarea class="form-control mb-2" id="description-input-{{ file.pk }}" rows="3"></textarea>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-secondary btn-sm mr-2" onclick="cancelEditDescription('{{ file.pk }}')">Скасувати</button>
+                            <button type="submit" class="btn btn-primary btn-sm">Зберегти</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
         
         <div class="btn-group">
             <a href="{% url 'download_file' file.pk %}" class="btn btn-primary btn-sm">
@@ -42,16 +72,191 @@
 <!-- Форма завантаження файлу -->
 <form method="post" enctype="multipart/form-data" class="file-upload-form mt-3">
     {% csrf_token %}
-    <div class="input-group">
-        <input type="file" name="file" class="form-control" required>
-        <input type="text" name="description" class="form-control" placeholder="Опис файлу (необов'язково)">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-upload"></i> Завантажити
-        </button>
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="mainFileUpload" class="form-label">Виберіть файл</label>
+                <input type="file" name="file" class="form-control" id="mainFileUpload" required onchange="updateMainFileName(this)">
+            </div>
+            <div class="mb-3">
+                <label for="fileDescription" class="form-label">Опис файлу</label>
+                <input type="text" name="description" id="fileDescription" class="form-control" placeholder="Опис файлу (необов'язково)">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-upload"></i> Завантажити файл
+            </button>
+        </div>
     </div>
 </form>
 
+<style>
+.custom-file-container {
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.file-upload-interface {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.file-upload-interface:hover {
+    border-color: #0d6efd;
+    background-color: #f1f8ff;
+}
+
+.file-upload-placeholder {
+    margin-bottom: 15px;
+}
+
+.file-upload-placeholder i {
+    font-size: 2rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.file-upload-placeholder span {
+    color: #6c757d;
+}
+
+.file-selected .file-upload-placeholder {
+    color: #0d6efd;
+}
+
+.file-selected .file-upload-placeholder i {
+    color: #0d6efd;
+}
+
+.description-container .btn-link {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.description-container .btn-link:hover {
+    color: #0d6efd;
+}
+
+.description-form textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.description-form .btn {
+    min-width: 80px;
+}
+</style>
+
 <script>
+function updateFileName(input) {
+    // Для елементу span в профілі
+    const fileNameSpan = document.getElementById(`file-name-${input.id.split('-').pop()}`);
+    if (fileNameSpan) {
+        if (input.files && input.files[0]) {
+            fileNameSpan.textContent = input.files[0].name;
+            fileNameSpan.style.color = '#000000';
+        } else {
+            fileNameSpan.textContent = 'Файл не вибрано';
+            fileNameSpan.style.color = '#6B7280';
+        }
+    }
+}
+
+function updateMainFileName(input) {
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        input.parentElement.querySelector('.form-label').textContent = fileName;
+    } else {
+        input.parentElement.querySelector('.form-label').textContent = 'Виберіть файл';
+    }
+}
+
+function showEditDescription(fileId) {
+    const descriptionText = document.getElementById(`description-text-${fileId}`);
+    const currentDescription = descriptionText.textContent.trim();
+    const isEmptyDescription = currentDescription === 'Додати опис';
+    
+    const newDescription = prompt(isEmptyDescription ? 'Додати опис:' : 'Редагувати опис:', isEmptyDescription ? '' : currentDescription);
+    
+    if (newDescription !== null) {
+        $.ajax({
+            url: `/catalog/file/${fileId}/update-description/`,
+            type: 'POST',
+            data: {
+                description: newDescription,
+                csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    descriptionText.textContent = newDescription || 'Додати опис';
+                    if (!newDescription) {
+                        descriptionText.classList.add('text-muted');
+                    } else {
+                        descriptionText.classList.remove('text-muted');
+                    }
+                } else {
+                    alert(response.error || 'Помилка при оновленні опису');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', xhr.responseText);
+                alert('Помилка при оновленні опису');
+            }
+        });
+    }
+}
+
+function cancelEditDescription(fileId) {
+    const displayDiv = document.getElementById(`description-display-${fileId}`);
+    const editDiv = document.getElementById(`description-edit-${fileId}`);
+    
+    // Show display, hide edit form
+    displayDiv.classList.remove('d-none');
+    editDiv.classList.add('d-none');
+}
+
+function updateDescription(fileId, event) {
+    event.preventDefault();
+    
+    const textarea = document.getElementById(`description-input-${fileId}`);
+    const newDescription = textarea.value.trim();
+    const textSpan = document.getElementById(`description-${fileId}`);
+    
+    $.ajax({
+        url: `/catalog/file/${fileId}/update-description/`,
+        type: 'POST',
+        data: {
+            description: newDescription
+        },
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                textSpan.textContent = newDescription || 'Додати опис';
+                if (!newDescription) {
+                    textSpan.classList.add('text-muted');
+                } else {
+                    textSpan.classList.remove('text-muted');
+                }
+                cancelEditDescription(fileId);
+            } else {
+                alert(response.error || 'Помилка при оновленні опису');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', xhr.responseText);
+            alert('Помилка при оновленні опису');
+        }
+    });
+    
+    return false;
+}
+
 $(document).ready(function() {
     // Обробка завантаження файлу
     $('.file-upload-form').on('submit', function(e) {

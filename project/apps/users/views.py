@@ -538,8 +538,13 @@ def approve_request(request, request_id):
         try:
             req = Request.objects.get(id=request_id)
             
-            # Check if the user is the teacher who received the request
-            if request.user == req.teacher_id.teacher_id:
+            # Add debugging logs
+            logger.debug(f"Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}")
+            logger.debug(f"Current user: {request.user.id} - {request.user}")
+            logger.debug(f"Teacher user: {req.teacher_id.teacher_id.id} - {req.teacher_id.teacher_id}")
+            
+            # Check if the user is the teacher who received the request - use more reliable comparison
+            if req.teacher_id.teacher_id == request.user:
                 # Update request status
                 req.request_status = 'Активний'
                 req.save()
@@ -550,10 +555,12 @@ def approve_request(request, request_id):
                     return JsonResponse({'success': True})
                 return redirect('profile')
             else:
+                logger.warning(f"User {request.user.id} attempted to approve request {request_id} belonging to teacher {req.teacher_id.teacher_id.id}")
                 messages.error(request, 'У вас немає прав для підтвердження цього запиту')
         except Request.DoesNotExist:
             messages.error(request, 'Запит не знайдено')
         except Exception as e:
+            logger.exception(f"Error approving request {request_id}: {str(e)}")
             messages.error(request, f'Помилка при підтвердженні запиту: {str(e)}')
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -569,8 +576,13 @@ def reject_request(request, request_id):
         try:
             req = Request.objects.get(id=request_id)
             
+            # Add debugging logs
+            logger.debug(f"Reject Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}")
+            logger.debug(f"Current user: {request.user.id} - {request.user}")
+            logger.debug(f"Teacher user: {req.teacher_id.teacher_id.id} - {req.teacher_id.teacher_id}")
+            
             # Check if the user is the teacher who received the request
-            if request.user == req.teacher_id.teacher_id:
+            if req.teacher_id.teacher_id == request.user:
                 # Update request status
                 req.request_status = 'Відхилено'
                 req.save()
@@ -586,10 +598,12 @@ def reject_request(request, request_id):
                     return JsonResponse({'success': True})
                 return redirect('profile')
             else:
+                logger.warning(f"User {request.user.id} attempted to reject request {request_id} belonging to teacher {req.teacher_id.teacher_id.id}")
                 messages.error(request, 'У вас немає прав для відхилення цього запиту')
         except Request.DoesNotExist:
             messages.error(request, 'Запит не знайдено')
         except Exception as e:
+            logger.exception(f"Error rejecting request {request_id}: {str(e)}")
             messages.error(request, f'Помилка при відхиленні запиту: {str(e)}')
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -716,55 +730,50 @@ def teacher_profile_edit(request):
                     
                     form.save()
                     
-                    # ЗАКОМЕНТОВАНО: оновлення квот (буде відновлено пізніше)
-                    """
-                    # Update slots
-                    for key, value in request.POST.items():
-                        if key.startswith('quota_'):
-                            try:
-                                stream_id = int(key.split('_')[1])
-                                quota = int(value)
-                                slot, created = Slot.objects.get_or_create(
-                                    teacher_id=teacher_profile,
-                                    stream_id_id=stream_id,
-                                    defaults={'quota': quota, 'occupied': 0}
-                                )
-                                if not created:
-                                    slot.quota = quota
-                                    slot.save()
-                            except (ValueError, IndexError):
-                                continue
-                    """
-                    
                     # Handle themes
                     new_themes_data = request.POST.get('themes_data', '[]')
+                    logger.debug(f"Themes data received: {new_themes_data}")
+                    
                     try:
                         new_themes = json.loads(new_themes_data)
+                        logger.debug(f"Parsed themes: {new_themes}")
                         
                         # Delete existing themes
                         TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
                         
                         # Create new themes
                         for theme_data in new_themes:
-                            theme = theme_data.get('theme', '').strip()
-                            description = theme_data.get('description', '').strip()
-                            if theme:  # Only create if theme is not empty
-                                TeacherTheme.objects.create(
-                                    teacher_id=teacher_profile,
-                                    theme=theme,
-                                    theme_description=description
-                                )
+                                theme = theme_data.get('theme', '').strip()
+                                description = theme_data.get('description', '').strip()
+                                logger.debug(f"Processing theme: {theme}, description: {description}")
+                                if theme:  # Only create if theme is not empty
+                                    TeacherTheme.objects.create(
+                                        teacher_id=teacher_profile,
+                                        theme=theme,
+                                        theme_description=description
+                                    )
                         
+                        messages.success(request, "Профіль успішно оновлено")
+                        
+                        # Return JSON response for AJAX requests without redirect
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                             return JsonResponse({
                                 'success': True,
-                                'message': 'Профіль успішно оновлено',
-                                'redirect_url': reverse('profile')
+                                'message': 'Профіль успішно оновлено'
                             })
-                        messages.success(request, "Профіль успішно оновлено")
-                        return redirect('profile')
                         
-                    except json.JSONDecodeError:
+                        # For regular requests, stay on the same page
+                        return render(request, 'profile/teacher_edit.html', {
+                            'form': form,
+                            'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
+                            'slots': Slot.objects.filter(teacher_id=teacher_profile),
+                            'available_streams': Stream.objects.exclude(
+                                id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
+                            )
+                        })
+                        
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON Decode Error: {str(e)} - Data: {new_themes_data}")
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                             return JsonResponse({
                                 'success': False,
@@ -990,7 +999,7 @@ def load_profile_tab(request, tab_name):
             
             context['archived_requests'] = archive_requests
             html = render_to_string('profile/archive.html', context, request=request)
-            return JsonResponse({'html': html})
+        return JsonResponse({'html': html})
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -1003,8 +1012,13 @@ def restore_request(request, request_id):
         try:
             req = Request.objects.get(id=request_id)
             
+            # Add debugging logs
+            logger.debug(f"Restore Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}")
+            logger.debug(f"Current user: {request.user.id} - {request.user}")
+            logger.debug(f"Teacher user: {req.teacher_id.teacher_id.id} - {req.teacher_id.teacher_id}")
+            
             # Check if the user is the teacher who rejected the request
-            if request.user == req.teacher_id.teacher_id:
+            if req.teacher_id.teacher_id == request.user:
                 # Check if request is in rejected status
                 if req.request_status == 'Відхилено':
                     # Update request status back to pending
@@ -1019,10 +1033,12 @@ def restore_request(request, request_id):
                 else:
                     messages.error(request, 'Відновити можна лише відхилені запити')
             else:
+                logger.warning(f"User {request.user.id} attempted to restore request {request_id} belonging to teacher {req.teacher_id.teacher_id.id}")
                 messages.error(request, 'У вас немає прав для відновлення цього запиту')
         except Request.DoesNotExist:
             messages.error(request, 'Запит не знайдено')
         except Exception as e:
+            logger.exception(f"Error restoring request {request_id}: {str(e)}")
             messages.error(request, f'Помилка при відновленні запиту: {str(e)}')
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':

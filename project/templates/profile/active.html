@@ -199,11 +199,15 @@
                             
                             <script>
                                 function updateFileName(input) {
-                                    var fileName = input.files[0] ? input.files[0].name : 'Файл не вибрано';
-                                    var fileNameSpan = document.getElementById('file-name-' + input.id.split('-').pop());
-                                    if (fileNameSpan) {
-                                        fileNameSpan.textContent = fileName;
-                                        fileNameSpan.style.color = input.files[0] ? '#000000' : '#6B7280';
+                                    const fileId = input.id.split('-').pop();
+                                    const fileNameSpan = document.getElementById(`file-name-${fileId}`);
+                                    
+                                    if (input.files && input.files[0]) {
+                                        fileNameSpan.textContent = input.files[0].name;
+                                        fileNameSpan.style.color = '#000000';
+                                    } else {
+                                        fileNameSpan.textContent = 'Файл не вибрано';
+                                        fileNameSpan.style.color = '#6B7280';
                                     }
                                 }
 
@@ -461,6 +465,20 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
+// Глобальна функція для оновлення назви файлу
+function updateFileName(input) {
+    const fileId = input.id.split('-').pop();
+    const fileNameSpan = document.getElementById(`file-name-${fileId}`);
+    
+    if (input.files && input.files[0]) {
+        fileNameSpan.textContent = input.files[0].name;
+        fileNameSpan.style.color = '#000000';
+    } else {
+        fileNameSpan.textContent = 'Файл не вибрано';
+        fileNameSpan.style.color = '#6B7280';
+    }
+}
+
 // Глобальна функція для оновлення назви файлу для коментаря
 function updateCommentFile(input) {
     console.log('File selection changed:', input.id);
