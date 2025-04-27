@@ -111,7 +111,7 @@ def send_notification_on_request_status_changed(sender, instance,**kwargs):
             
             teacher_user = CustomUser.objects.get(id=instance.teacher_id.pk)
             # Create appropriate message based on status
-            status_text = "прийняв" if instance.request_status == "accepted" else "відхилив"
+            status_text = "відхилив" if instance.request_status == "Відхилено" else "прийняв"
             teacher_name = f"{instance.teacher_id} "
             emoji = "✅" if status_text == "прийняв" else "❌"
             message = f"{teacher_name} {status_text} ваш запит! {emoji}"

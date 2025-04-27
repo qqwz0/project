@@ -1,8 +1,4 @@
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
 // Helper function to mark a message as read
 function markMessageAsRead(messageElement) {
@@ -14,7 +10,7 @@ function markMessageAsRead(messageElement) {
     fetch(`/notifications/read/${messageId}/`, {
         method: "POST",
         headers: {
-            "X-CSRFToken": getCookie("csrftoken"), 
+            "X-CSRFToken": csrfToken, 
             "Content-Type": "application/json"
         }
     })
