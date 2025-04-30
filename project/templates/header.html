@@ -51,15 +51,10 @@
                           </div>
                         {% for item in message_list %}
                             <div class="message-item message {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
-                                {% if  item.status is not None%}
-                                  <p>{{ item.message_text }} {%if item.status == 'відхилив' %}<span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span>{%endif%} </p>
-                                  <span class="timestamp">{{ item.created_at|date:"d.m.Y H:i" }}</span>
-                                {% else %}
                                     <div class="profile-message-link" onclick="window.location='{% url 'profile' %}'">
-                                        <p>{{ item.message_text }}</p>
+                                        <p>{{ item.message_text }} {%if item.status == 'відхилив' %}<span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span>{%endif%} </p>
                                         <span class="timestamp">{{ item.created_at |date:"d.m.Y H:i" }}</span>
                                     </div>
-                                {% endif %}
                             </div>
                         {% endfor %}
                          {%else%}

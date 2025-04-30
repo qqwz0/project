@@ -1,0 +1,30 @@
+<html>
+    {% load static %}
+    <body style="font-family: Arial, sans-serif; color: #333; padding: 15px;">
+        <h2 style="color: #2c3e50;">Сповіщення від системи</h2>
+        <div style="border-left: 4px solid #28a745; padding-left: 10px;">
+            <p style="font-size: 16px;">
+                <strong>{{ teacher_name }}</strong> завершив(ла) перевірку вашої роботи та оцінив(ла) її.
+            </p>
+            <div style="margin-top: 10px;">
+                <p style="background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
+                    <strong>Ваша оцінка:</strong> <span style="font-size: 18px; color: #28a745;">{{ grade }}</span>
+                </p>
+            </div>
+            <p style="margin-top: 15px; padding: 10px 0;">
+                Дякуємо за вашу наполегливу працю та відповідальність у виконанні завдання.<br>
+                Бажаємо подальших успіхів у навчанні та нових досягнень!
+            </p>
+            <p style="font-size: 14px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+                Перегляньте детальнішу інформацію на сторінці вашого <a href="{{profile_url}}" style="color: #007bff; font-weight: 500;">профілю</a>.
+            </p>
+            <div style="text-align: right; color: #888; font-size: 13px; margin-top: 20px; font-style: italic;">
+                {{ time }}
+            </div>
+        </div>
+        <div style="margin-top: 30px; color: #555; font-size: 15px;">
+            З найкращими побажаннями,<br>
+            Команда підтримки студентського порталу ЛНУ
+        </div>
+    </body>
+</html>

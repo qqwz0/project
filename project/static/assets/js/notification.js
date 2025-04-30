@@ -1,4 +1,8 @@
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+let csrfToken = '';
+const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+if (csrfInput) {
+    csrfToken = csrfInput.value;
+}
 
 // Helper function to mark a message as read
 function markMessageAsRead(messageElement) {

@@ -542,7 +542,7 @@ class DownloadFileView(FileAccessMixin, View):
             return HttpResponseNotFound('Файл не знайдено')
 
 
-class AddCommentView(HtmxLoginRequiredMixin, View):
+class AddCommentView(FileAccessMixin, View):
     def post(self, request, file_id):
         """Обробляє POST-запит для додавання коментаря до файлу"""
         try:
@@ -574,7 +574,7 @@ class AddCommentView(HtmxLoginRequiredMixin, View):
             if attachment:
                 comment.attachment = attachment
             
-                comment.save()
+            comment.save()
                 
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 response_data = {
@@ -614,7 +614,7 @@ class AddCommentView(HtmxLoginRequiredMixin, View):
                 return redirect('profile')
 
 
-class DeleteCommentView(HtmxLoginRequiredMixin, View):
+class DeleteCommentView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             comment = FileComment.objects.get(pk=pk)
