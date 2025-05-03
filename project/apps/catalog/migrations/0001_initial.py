@@ -12,16 +12,16 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Message',
+            name='FileComment',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message_text', models.TextField()),
-                ('is_read', models.BooleanField(default=False)),
+                ('text', models.TextField()),
+                ('attachment', models.FileField(blank=True, null=True, upload_to='comment_attachments/%Y/%m/%d/')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('status', models.CharField(blank=True, max_length=20, null=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': ['-created_at'],
+                'ordering': ['created_at'],
             },
         ),
     ]

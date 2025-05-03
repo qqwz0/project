@@ -428,12 +428,12 @@ def fake_login(request):
             phone_number="+380991234567"
         )
         
-        Slot.objects.create(
-            teacher_id=teacher_profile,
-            stream_id=1,
-            quota=5,
-            occupied=0
-        )
+        # Slot.objects.create(
+        #     teacher_id=teacher_profile,
+        #     stream_id=1,
+        #     quota=5,
+        #     occupied=0
+        # )
         
     auth_login(request, user)
     return redirect("profile")

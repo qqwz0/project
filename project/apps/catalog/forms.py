@@ -44,6 +44,7 @@ class FilteringSearchingForm(forms.Form):
     ]
     ACADEMIC_LEVELS = [
         (level, level) for level in filter(None, OnlyTeacher.objects.values_list('academic_level', flat=True).distinct())
+
     ]
     
     slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
