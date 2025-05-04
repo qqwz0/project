@@ -1,0 +1,26 @@
+<html>
+    {% load static %}
+    <body style="font-family: Arial, sans-serif; color: #333; padding: 15px;">
+        <h2 style="color: #2c3e50;">Сповіщення від системи</h2>
+        <div style="border-left: 4px solid #007bff; padding-left: 10px;">
+            <p style="font-size: 16px;">
+                Ви отримали запит від студента <strong>{{student_name}}</strong>!
+            </p>
+            
+            <p style="margin-top: 10px; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
+                Ви можете отримати більше інформації про запит або прийняти/відхилити його на сторінці 
+                <a href="{{profile_url}}" 
+                style="color: #007bff; font-weight: 500;">вашого профілю</a>.
+            </p>
+        </div>
+        <p style="margin-top: 15px; border-top: 1px solid #eee; padding: 10px;">
+            Більш детальну інформацію про студента можна переглянути на сторінці 
+            <a href="{{student_profile_url}}" 
+            style="color: #007bff; font-weight: 500;">його профілю</a>.
+        </p>
+            
+        <div style="text-align: right; color: #888; font-size: 13px; margin-top: 20px; font-style: italic;">
+            {{time}}
+        </div>
+    </body>
+</html>

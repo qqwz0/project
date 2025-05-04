@@ -3,9 +3,9 @@ from django.urls import reverse
 from django.db.models import F
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
-from apps.users.models import CustomUser
 import logging
 from django.utils import timezone
+import os
 
 logger = logging.getLogger(__name__)
         
@@ -29,6 +29,7 @@ class OnlyTeacher(models.Model):
     
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
+    
 
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)
@@ -99,16 +100,19 @@ class Request(models.Model):
         ('Відхилено', 'Відхилено'),
         ('Завершено', 'Завершено'),
     ]
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, 
-                                 limit_choices_to={'role': 'student'}, 
-                                 related_name='users_student_requests')
+    student_id = models.ForeignKey('users.CustomUser', 
+                                   on_delete=models.CASCADE, 
+                                   limit_choices_to={'role': 'student'}, 
+                                   unique=False,
+                                   related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
                                     null=True, blank=True)
+    
     student_themes = models.ManyToManyField('StudentTheme', blank=True)
     motivation_text = models.TextField()
-    request_date = models.DateTimeField(auto_now_add=True)
+    request_date = models.DateTimeField(default=timezone.now)
     request_status = models.CharField(max_length=100, choices=STATUS, 
                                     default='Очікує')
     grade = models.IntegerField(null=True, blank=True)
@@ -135,7 +139,7 @@ class Request(models.Model):
         if self.student_id.academic_group:
             return self.student_id.academic_group[:-1]  # Remove the last digit
         return None
-
+    
     def save(self, *args, **kwargs):
         """
         Assigns the correct Slot before saving.
@@ -195,8 +199,8 @@ class Request(models.Model):
         return teacher_theme_name, student_themes_list
 
     def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name
-
+        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
+    
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     theme = models.CharField(max_length=100)
@@ -226,3 +230,57 @@ class OnlyStudent(models.Model):
 
     def __str__(self):
         return f"Student: {self.student_id.get_full_name()}" 
+
+class RequestFile(models.Model):
+    """
+    Model for storing files attached to requests.
+    """
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='request_files/%Y/%m/%d/')
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    version = models.IntegerField(default=1)  
+    description = models.TextField(blank=True)  
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"File for request {self.request.id} (v{self.version})"
+
+    def get_filename(self):
+        return os.path.basename(self.file.name)
+
+
+
+
+class FileComment(models.Model):
+    """
+    Model for storing comments on request files.
+    """
+    file = models.ForeignKey(RequestFile, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    text = models.TextField()
+    attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.author.get_full_name()} on {self.file}"
+        
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            print(f"[DEBUG] Creating new FileComment: {self.text[:50]}...")
+        super().save(*args, **kwargs)
+        if is_new:
+            print(f"[DEBUG] FileComment created with ID: {self.pk}")
+
+    def get_attachment_filename(self):
+        """Повертає ім'я прикріпленого файлу без шляху"""
+        if self.attachment:
+            return self.attachment.name.split('/')[-1]
+        return None

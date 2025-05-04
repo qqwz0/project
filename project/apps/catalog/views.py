@@ -1,17 +1,20 @@
-from .utils import HtmxLoginRequiredMixin
-from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request
-from django.core.exceptions import ValidationError 
-from django.views.generic import ListView, DetailView, FormView, TemplateView
-from .forms import RequestForm, FilteringSearchingForm
-from django.urls import reverse_lazy
-from django.contrib.messages.views import SuccessMessageMixin
-from django.http import JsonResponse
-from django.contrib import messages
-from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError
+from django.contrib.auth.decorators import login_required
+from .forms import RequestForm, FilteringSearchingForm, RequestFileForm, FileCommentForm
+from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request, RequestFile, FileComment
+from django.core.exceptions import ValidationError 
+from django.views.generic import ListView, DetailView, FormView, TemplateView
+from django.urls import reverse_lazy
+from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib import messages
+from django.db.models import Max
 from django.utils import timezone
 from django.template.loader import render_to_string
+from .utils import HtmxLoginRequiredMixin, FileAccessMixin
+
+from django.shortcuts import render
 
 import re
 
@@ -220,6 +223,7 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         
         context['free_slots'] = slots
         context['is_matched'] = is_matched
+        context['photo'] = None
         return context
     
     def form_invalid(self, form):
@@ -415,17 +419,33 @@ def get_requests_data(request):
     print(f"Found active requests: {active_requests.count()}")
     print(f"Found archived requests: {archived_requests.count()}")
     
+    # Get files for active requests
+    active_request_files = {}
+    for request_obj in active_requests:
+        files = RequestFile.objects.filter(request=request_obj).select_related('uploaded_by')
+        active_request_files[str(request_obj.id)] = list(files)  # Convert QuerySet to list and use string key
+    
     return {
         'pending_requests': pending_requests,
         'active_requests': active_requests,
-        'archived_requests': archived_requests
+        'archived_requests': archived_requests,
+        'active_request_files': active_request_files,
     }
 
 def load_tab_content(request, tab_name):
-    data = get_requests_data(request)
-    template_name = f'profile/{tab_name}.html'
-    html = render_to_string(template_name, data, request=request)
-    return JsonResponse({'html': html})
+    try:
+        data = get_requests_data(request)
+        
+        data.update({
+            'user': request.user,
+            'request': request, 
+        })
+        
+        template_name = f'profile/{tab_name}.html'
+        html = render_to_string(template_name, data, request=request)
+        return JsonResponse({'html': html})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def reject_request(request, request_id):
     if request.method == 'POST':
@@ -444,5 +464,200 @@ def reject_request(request, request_id):
             messages.error(request, f'Помилка при відхиленні запиту: {str(e)}')
     
     return redirect('profile')
-    
-    
+
+class UploadFileView(View):
+    def post(self, request, request_id):
+        try:
+            course_request = Request.objects.get(pk=request_id)
+            
+            if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
+                return HttpResponseForbidden('Немає прав доступу')
+            
+            if course_request.request_status != 'Активний':
+                return HttpResponseBadRequest('Файли можна додавати тільки до активних запитів')
+            
+            form = RequestFileForm(request.POST, request.FILES)
+            if form.is_valid():
+                file = form.save(commit=False)
+                file.request = course_request
+                file.uploaded_by = request.user
+                
+                latest_version = RequestFile.objects.filter(request=course_request).aggregate(Max('version'))['version__max']
+                file.version = (latest_version or 0) + 1
+                
+                file.save()
+                
+                return redirect('profile')
+            
+            return HttpResponseBadRequest('Помилка у формі')
+            
+        except Request.DoesNotExist:
+            return HttpResponseNotFound('Запит не знайдено')
+        except Exception as e:
+            return HttpResponseServerError(str(e))
+
+
+class DeleteFileView(FileAccessMixin, View):
+    def post(self, request, pk):
+        try:
+            file = RequestFile.objects.get(pk=pk)
+            
+            if not (request.user == file.uploaded_by or request.user == file.request.teacher_id.teacher_id):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'У вас немає прав для видалення цього файлу'
+                })
+            
+            file.delete()
+            return JsonResponse({
+                'success': True,
+                'message': 'Файл успішно видалено'
+            })
+        except RequestFile.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Файл не знайдено'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+
+class DownloadFileView(FileAccessMixin, View):
+    def get(self, request, pk):
+        try:
+            file = RequestFile.objects.get(pk=pk)
+            course_request = file.request
+            
+            if not (request.user == file.uploaded_by or request.user == course_request.student_id or request.user == course_request.teacher_id.teacher_id):
+                return HttpResponseForbidden('Немає прав доступу')
+            
+            response = FileResponse(file.file)
+            response['Content-Disposition'] = f'attachment; filename="{file.get_filename()}"'
+            return response
+            
+        except RequestFile.DoesNotExist:
+            return HttpResponseNotFound('Файл не знайдено')
+
+
+class AddCommentView(FileAccessMixin, View):
+    def post(self, request, file_id):
+        """Обробляє POST-запит для додавання коментаря до файлу"""
+        try:
+            file = RequestFile.objects.get(pk=file_id)
+            course_request = file.request
+            
+            if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
+                else:
+                    messages.error(request, 'Немає прав доступу для додавання коментаря')
+                    return redirect('profile')
+            
+            text = request.POST.get('text')
+            if not text and not request.FILES.get('attachment'):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Коментар не може бути порожнім, додайте текст або прикріпіть файл'}, status=400)
+                else:
+                    messages.error(request, 'Коментар не може бути порожнім, додайте текст або прикріпіть файл')
+                    return redirect('profile')
+            
+            comment = FileComment(
+                file=file,
+                author=request.user,
+                text=text or ''  
+            )
+            
+            attachment = request.FILES.get('attachment')
+            if attachment:
+                comment.attachment = attachment
+            
+            comment.save()
+                
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                response_data = {
+                    'success': True,
+                    'comment_id': comment.id,
+                    'text': comment.text,
+                    'author': comment.author.get_full_name(),
+                    'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+                }
+                
+                if comment.attachment:
+                    response_data['attachment'] = {
+                        'name': comment.get_attachment_filename(),
+                        'url': comment.attachment.url
+                    }
+                
+                return JsonResponse(response_data)
+            else:
+                messages.success(request, 'Коментар успішно додано')
+                return redirect('profile')
+            
+        except RequestFile.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Файл не знайдено'}, status=404)
+            else:
+                messages.error(request, 'Файл не знайдено')
+                return redirect('profile')
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            else:
+                messages.error(request, f'Помилка при додаванні коментаря: {str(e)}')
+                return redirect('profile')
+
+
+class DeleteCommentView(FileAccessMixin, View):
+    def post(self, request, pk):
+        try:
+            comment = FileComment.objects.get(pk=pk)
+            
+            if request.user != comment.author:
+                return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
+            
+            comment.delete()
+            return JsonResponse({'success': True})
+            
+        except FileComment.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Коментар не знайдено'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+
+@login_required
+def add_comment(request, file_id):
+    file = get_object_or_404(RequestFile, id=file_id)
+    if request.method == 'POST':
+        form = FileCommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.file = file
+            comment.author = request.user
+            comment.save()
+            return JsonResponse({
+                'status': 'success',
+                'comment': {
+                    'id': comment.id,
+                    'text': comment.text,
+                    'author': comment.author.get_full_name(),
+                    'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+            })
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def delete_comment(request, pk):
+    comment = get_object_or_404(FileComment, pk=pk)
+    if comment.author == request.user or request.user.is_staff:
+        comment.delete()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)

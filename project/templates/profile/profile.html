@@ -375,6 +375,12 @@
                 .then(data => {
                     if (data.html) {
                         selectedSection.innerHTML = data.html;
+                        
+                        // Ініціалізуємо фільтри після завантаження вкладки "requests"
+                        if(tabName === 'requests' && typeof initializeFilters === 'function') {
+                            console.log('Initializing filters after AJAX load');
+                            setTimeout(initializeFilters, 100); // Невелика затримка для гарантії завантаження DOM
+                        }
                     }
                 })
                 .catch(error => {
@@ -394,14 +400,21 @@
                 url = `/users/reject_request/${requestId}/`;
             } else if (action === 'complete') {
                 url = `/users/complete_request/${requestId}/`;
+            } else if (action === 'restore') {
+                url = `/users/restore_request/${requestId}/`;
             }
 
             // Create form data
             const formData = new FormData();
+            // Add CSRF token to formData explicitly
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
             // Add additional data to formData
             Object.keys(additionalData).forEach(key => {
                 formData.append(key, additionalData[key]);
             });
+
+            console.log(`Sending ${action} request to ${url}`);
 
             fetch(url, {
                 method: 'POST',
@@ -411,24 +424,29 @@
                 },
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log(`Response status: ${response.status}`);
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Error response body:', text);
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
-                    // Reload the current tab
-                    const activeTab = document.querySelector('.tab.active');
-                    if (activeTab) {
-                        loadTab(activeTab.getAttribute('data-tab'));
-                    }
-                    // Show success message
-                    if (action === 'approve') {
-                        showMessage('success', 'Запит успішно підтверджено');
-                    } else if (action === 'reject') {
-                        showMessage('success', 'Запит відхилено');
-                    } else if (action === 'complete') {
-                        showMessage('success', 'Роботу завершено');
-                    }
+                    // Оновлюємо сторінку для відображення змін
+                    showMessage('success', action === 'approve' ? 'Запит підтверджено' : 
+                                           action === 'reject' ? 'Запит відхилено' : 
+                                           action === 'restore' ? 'Запит відновлено' : 'Операцію виконано');
+                    // Reload the tab instead of full page
+                    setTimeout(() => {
+                        loadTab('requests');
+                    }, 1000);
                 } else {
-                    showMessage('error', data.error || 'Сталася помилка');
+                    showMessage('error', data.error || 'Сталася помилка при обробці запиту');
                 }
             })
             .catch(error => {
@@ -492,6 +510,30 @@
 
             handleRequest('complete', requestId, { grade: grade });
             closeCompleteModal();
+            
+            // Оновлюємо тільки вкладку з запитами без перезавантаження всієї сторінки
+            setTimeout(() => {
+                loadTab('requests');
+            }, 500);
         }
     </script>
+
+    <!-- Модальне вікно для завершення роботи -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCompleteModal()">&times;</span>
+            <h3>Завершити роботу студента</h3>
+            <form id="completeForm">
+                <input type="hidden" id="completeRequestId" name="requestId">
+                <div class="form-group">
+                    <label for="grade">Оцінка (0-100):</label>
+                    <input type="number" id="grade" name="grade" min="0" max="100" class="form-control" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeCompleteModal()">Скасувати</button>
+                    <button type="button" class="btn-submit" onclick="submitComplete()">Завершити</button>
+                </div>
+            </form>
+        </div>
+    </div>
 {% endblock %}

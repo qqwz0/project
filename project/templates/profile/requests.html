@@ -1,10 +1,83 @@
 {% load static %}
+{% load catalog_extras %}
 
 {% if user_profile.role == "Студент" %}
+    <!-- Підключаємо стилі для фільтрації -->
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="{% static 'css/filter-buttons.css' %}">
+    
+    <!-- Фільтри для запитів студента -->
+    <div class="request-filters">
+        <div class="filter-title">Фільтрувати запити:</div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">
+                <i class="fas fa-list-ul"></i> Всі
+            </button>
+            <button class="filter-btn" data-filter="pending">
+                <i class="fas fa-clock"></i> Очікують
+            </button>
+            <button class="filter-btn" data-filter="accepted">
+                <i class="fas fa-check-circle"></i> Прийняті
+            </button>
+            <button class="filter-btn" data-filter="rejected">
+                <i class="fas fa-times-circle"></i> Відхилені
+            </button>
+        </div>
+    </div>
+
     {% if sent_requests %}
-        <h2>📩 Надіслані запити</h2>
+        <!-- Запити, що очікують -->
+        <div class="request-section pending-section">
+            <h2>⏳ Очікують відповіді</h2>
+            {% for request in sent_requests|dictsortreversed:"request_date" %}
+                {% if request.request_status == 'Очікує' %}
+                    <div class="request-card pending-request">
+                        <div class="request-user">
+                            {% if request.teacher_id.teacher_id.profile_picture %}
+                                <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                            {% else %}
+                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                            {% endif %}
+                            <div class="user-info">
+                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                    {{ request.teacher_id.teacher_id.get_full_name }}
+                                </a>
+                                <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
+                                {% if request.teacher_theme %}
+                                    <strong>Тема викладача:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+                                {% if request.student_themes.all %}
+                                    <strong>Тематика студента:</strong>
+                                    <ul style="list-style-type: none">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <strong>Мотивація:</strong>
+                                <p class="motivation">{{ request.motivation_text }}</p>
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                            </div>
+                        </div>
+                        <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                    </div>
+                {% endif %}
+            {% empty %}
+                <div class="no-requests pending-no-requests">
+                    <p>Немає запитів, що очікують відповіді.</p>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Прийняті запити -->
+        <div class="request-section accepted-section">
+            <h2>✅ Прийняті запити</h2>
         {% for request in sent_requests|dictsortreversed:"request_date" %}
-            <div class="request-card">
+                {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
+                    <div class="request-card accepted-request">
                 <div class="request-user">
                     {% if request.teacher_id.teacher_id.profile_picture %}
                         <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
@@ -30,21 +103,124 @@
                         {% endif %}
                         <strong>Мотивація:</strong>
                         <p class="motivation">{{ request.motivation_text }}</p>
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                
+                                {% if request.completion_date %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-flag-checkered" style="margin-right: 5px;"></i> Робота завершена
+                                        </h4>
+                                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                            <strong style="color: #2563eb; min-width: 100px;">Дата завершення:</strong>
+                                            <p class="date" style="margin: 0;">{{ request.completion_date|date:"d.m.Y" }}</p>
+                                        </div>
+                                        {% if request.grade %}
+                                            <div style="display: flex; align-items: center;">
+                                                <strong style="color: #2563eb; min-width: 100px;">Оцінка:</strong>
+                                                <p style="font-size: 16px; font-weight: 600; color: #1e40af; margin: 0;">{{ request.grade }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="status {{ request.request_status }}">
+                            {% if request.request_status == 'Завершено' %}
+                                Завершено
+                            {% else %}
+                                Прийнято
+                            {% endif %}
+                        </span>
+                    </div>
+                {% endif %}
+            {% empty %}
+                <div class="no-requests accepted-no-requests">
+                    <p>Немає прийнятих запитів.</p>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Відхилені запити -->
+        <div class="request-section rejected-section">
+            <h2>❌ Відхилені запити</h2>
+            {% for request in sent_requests|dictsortreversed:"request_date" %}
+                {% if request.request_status == 'Відхилено' %}
+                    <div class="request-card rejected-request">
+                        <div class="request-user">
+                            {% if request.teacher_id.teacher_id.profile_picture %}
+                                <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                            {% else %}
+                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                            {% endif %}
+                            <div class="user-info">
+                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                    {{ request.teacher_id.teacher_id.get_full_name }}
+                                </a>
+                                <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
+                                {% if request.teacher_theme %}
+                                    <strong>Тема викладача:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+                                {% if request.student_themes.all %}
+                                    <strong>Тематика студента:</strong>
+                                    <ul style="list-style-type: none">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <strong>Мотивація:</strong>
+                                <p class="motivation">{{ request.motivation_text }}</p>
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                     </div>
                 </div>
                 <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                    </div>
+                {% endif %}
+            {% empty %}
+                <div class="no-requests rejected-no-requests">
+                    <p>Немає відхилених запитів.</p>
             </div>
         {% endfor %}
+        </div>
     {% else %}
         <p>Ви ще не надсилали запитів.</p>
     {% endif %}
 
-
     {% elif user_profile.role == "Викладач" %}
+    <!-- Фільтри для запитів викладача -->
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="{% static 'css/filter-buttons.css' %}">
+    
+    <div class="request-filters">
+        <div class="filter-title">Фільтрувати запити:</div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">
+                <i class="fas fa-list-ul"></i> Всі
+            </button>
+            <button class="filter-btn" data-filter="pending">
+                <i class="fas fa-clock"></i> Очікують
+            </button>
+            <button class="filter-btn" data-filter="accepted">
+                <i class="fas fa-check-circle"></i> Прийняті
+            </button>
+            <button class="filter-btn" data-filter="rejected">
+                <i class="fas fa-times-circle"></i> Відхилені
+            </button>
+        </div>
+    </div>
+
+    <!-- Очікують на підтвердження -->
+    <div class="request-section pending-section">
     {% if pending_requests %}
-        <h2>📥 Отримані запити</h2>
+            <h2>📥 Очікують на підтвердження</h2>
         {% for request in pending_requests|dictsortreversed:"request_date" %}
-            <div class="request-card">
+                {% if request.request_status == 'Очікує' %}
+                <div class="request-card pending-request">
                 <div class="request-user">
                     {% if request.student_id.profile_picture %}
                         <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
@@ -71,6 +247,9 @@
 
                         <strong>Мотивація:</strong>
                         <p class="motivation">{{ request.motivation_text }}</p>
+                            
+                            <strong>Дата запиту:</strong>
+                            <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                     </div>
                 </div>
 
@@ -84,9 +263,142 @@
                     </button>
                 </div>
             </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="no-requests pending-no-requests">
+                <p>Немає запитів, що очікують на підтвердження.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Прийняті запити -->
+    <div class="request-section accepted-section">
+        {% if accepted_requests %}
+            <h2 class="mt-4">✅ Прийняті запити</h2>
+            {% for request in accepted_requests|dictsortreversed:"request_date" %}
+                {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
+                    <div class="request-card accepted-request">
+                        <div class="request-user">
+                            {% if request.student_id.profile_picture %}
+                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                            {% else %}
+                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                            {% endif %}
+                            <div class="user-info">
+                                <h3>{{ request.student_id.get_full_name }}</h3>
+                                <p class="role">{{ request.student_id.academic_group }}</p>
+
+                                {% if request.teacher_theme %}
+                                    <strong>Запропонована тема:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+
+                                <strong>Теми студента:</strong>
+                                {% if request.student_themes.all %}
+                                    <ul style="list-style-type: none">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+
+                                <strong>Мотивація:</strong>
+                                <p class="motivation">{{ request.motivation_text }}</p>
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                
+                                {% if request.completion_date %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-flag-checkered" style="margin-right: 5px;"></i> Робота завершена
+                                        </h4>
+                                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                            <strong style="color: #2563eb; min-width: 100px;">Дата завершення:</strong>
+                                            <p class="date" style="margin: 0;">{{ request.completion_date|date:"d.m.Y" }}</p>
+                                        </div>
+                                        {% if request.grade %}
+                                            <div style="display: flex; align-items: center;">
+                                                <strong style="color: #2563eb; min-width: 100px;">Оцінка:</strong>
+                                                <p style="font-size: 16px; font-weight: 600; color: #1e40af; margin: 0;">{{ request.grade }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <span class="status {% if request.request_status == 'Завершено' %}Завершено{% else %}Активний{% endif %}">
+                            {% if request.request_status == 'Завершено' %}Завершено{% else %}Прийнято{% endif %}
+                        </span>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="no-requests accepted-no-requests">
+                <p>Немає прийнятих запитів.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Відхилені запити -->
+    <div class="request-section rejected-section">
+        {% if pending_requests %}
+            <h2 class="mt-4">❌ Відхилені запити</h2>
+            {% for request in pending_requests|dictsortreversed:"request_date" %}
+                {% if request.request_status == 'Відхилено' %}
+                    <div class="request-card rejected-request">
+                        <div class="request-user">
+                            {% if request.student_id.profile_picture %}
+                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                            {% else %}
+                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                            {% endif %}
+                            <div class="user-info">
+                                <h3>{{ request.student_id.get_full_name }}</h3>
+                                <p class="role">{{ request.student_id.academic_group }}</p>
+
+                                {% if request.teacher_theme %}
+                                    <strong>Запропонована тема:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+
+                                <strong>Теми студента:</strong>
+                                {% if request.student_themes.all %}
+                                    <ul style="list-style-type: none">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+
+                                <strong>Мотивація:</strong>
+                                <p class="motivation">{{ request.motivation_text }}</p>
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Button to restore request -->
+                        <div class="request-actions">
+                            <button onclick="handleRequest('restore', {{ request.id }})" class="request-button restore">
+                                <i class="fas fa-undo"></i> Відновити
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
         {% endfor %}
     {% else %}
-        <p>У вас немає нових запитів.</p>
+            <div class="no-requests rejected-no-requests">
+                <p>Немає відхилених запитів.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if not pending_requests and not accepted_requests %}
+        <p>У вас немає запитів.</p>
     {% endif %}
 {% endif %}
 
@@ -103,4 +415,7 @@
         event.target.classList.add('active');
     }
 </script>
+
+<!-- Підключаємо зовнішній JavaScript файл для фільтрації запитів -->
+<script src="{% static 'js/request-filter.js' %}"></script>
 {% endblock %}

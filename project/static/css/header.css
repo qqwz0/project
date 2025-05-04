@@ -85,8 +85,8 @@
     background-color: #005A9E;
   }
 
-span {
+  .auth-buttons span {
     margin: 0 10px; /* Space around the "або" text */
     font-size: 16px;
     color: #555; /* Change to desired text color */
-  }
+}

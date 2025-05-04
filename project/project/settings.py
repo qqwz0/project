@@ -30,12 +30,15 @@ SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Allow all hosts during development
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,16 +48,19 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'apps.catalog',
     'apps.users',
+    'apps.notifications',
     'image_cropping',
     'easy_thumbnails',
     'django_extensions',
     'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -76,6 +82,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.users.context_processors.user_profile_picture',
+                'apps.notifications.context_processors.user_messages',
             ],
         },
     },
@@ -123,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE =  'Europe/Kiev'
 
 USE_I18N = True
 
@@ -146,6 +153,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # Replace with your email
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Replace with your email password 'NAME': os.getenv('DB_NAME')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+ACAUSE_EMAIL_SUBJECT_PREFIX = 'SciAvisor - '
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -158,12 +170,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
+# filepath: d:\Code\LNU\dir\project\project\settings.py
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
@@ -177,13 +190,18 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
         'django.utils.autoreload': {  # Suppress file modification logs
             'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
+        },
+        'apps.notifications': {  
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Set to DEBUG to see all logs
+            'propagate': True,
         },
     },
 }
@@ -202,6 +220,14 @@ MICROSOFT_AUTHORITY = f"https://login.microsoftonline.com/{MICROSOFT_TENANT_ID}"
 MICROSOFT_SCOPES = ["User.Read", "openid", "profile", "email"]
 MICROSOFT_GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
 MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI') 
+
+ASGI_APPLICATION = 'project.asgi.application' 
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Image cropping settings
 THUMBNAIL_PROCESSORS = (
@@ -240,3 +266,20 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+BASE_URL = 'http://localhost:8000'
+
+LOGIN_URL = '/users/login/'
+
+SESSION_COOKIE_AGE = 1209600  
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}

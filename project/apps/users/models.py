@@ -4,6 +4,45 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 import os
 import logging
+from django.contrib.auth.base_user import BaseUserManager
+
+
+logger = logging.getLogger(__name__)
+
+class CustomUserManager(BaseUserManager):
+    """
+    Менеджер для CustomUser, який використовує email як унікальний ідентифікатор.
+    """
+
+    def _create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError('Електронна пошта є обов’язковою для створення користувача.')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Суперкористувач має мати is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Суперкористувач має мати is_superuser=True.')
+
+        return self._create_user(email, password, **extra_fields)
+        
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+import os
+import logging
 
 
 logger = logging.getLogger(__name__)
@@ -32,8 +71,11 @@ class CustomUser(AbstractUser):
 
     username = None
 
+    objects = CustomUserManager()
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []  # Specify any additional fields required when creating a superuser
+    
 
     def __str__(self):
         return self.email
@@ -63,3 +105,4 @@ def auto_delete_old_file_on_change(sender, instance, **kwargs):
     if old_file and old_file != new_file and os.path.basename(old_file.name) != 'default-avatar.jpg':
         if os.path.exists(old_file.path):
             os.remove(old_file.path)
+

@@ -125,6 +125,19 @@
     document.getElementById('submit-btn').addEventListener('click', function(event) {
         event.preventDefault();
         var form = document.getElementById('request-form');
+        
+        // Get the main student_themes input field
+        var inputField = document.querySelector('input[name="student_themes"]:not([type="hidden"])');
+        var pendingTheme = '';
+        
+        if (inputField && inputField.value.trim()) {
+            // Save the value in case we need it for validation errors
+            pendingTheme = inputField.value.trim();
+            
+            // Temporarily clear the input field so it doesn't get submitted
+            inputField.value = '';
+        }
+        
         var formData = new FormData(form);
         var errorContainer = document.getElementById('form-errors');
         errorContainer.innerHTML = '';
@@ -139,23 +152,36 @@
         })
         .then(response => response.json())
         .then(data => {
+            // If there were errors and we had a pending theme, restore it
+            if (!data.success && pendingTheme) {
+                inputField.value = pendingTheme;
+            }
+            
             if (data.success) {
                 document.getElementById('details_request_modal').close();
                 location.reload();
             } else {
                 const errorElements = [];
                 for (var field in data.errors) {
-                    var fieldElement = document.querySelector(`[name="${field}"]`);
+                    var fieldElement = document.querySelector(`[name="${field}"]:not([type="hidden"])`);
                     var errorDiv = document.createElement('div');
                     errorDiv.className = 'error-message';
                     errorDiv.innerHTML = data.errors[field].join('<br>');
 
                     if (fieldElement) {
-                        fieldElement.insertAdjacentElement('afterend', errorDiv);
+                        // Look for an existing error message to replace first
+                        var existingError = fieldElement.parentNode.querySelector('.error-message');
+                        if (existingError) {
+                            existingError.innerHTML = errorDiv.innerHTML;
+                            errorElements.push(existingError);
+                        } else {
+                            fieldElement.insertAdjacentElement('afterend', errorDiv);
+                            errorElements.push(errorDiv);
+                        }
                     } else {
                         errorContainer.appendChild(errorDiv);
+                        errorElements.push(errorDiv);
                     }
-                    errorElements.push(errorDiv);
                 }
 
                 setTimeout(() => {
@@ -165,7 +191,13 @@
                 }, 5000);
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            // Restore the input value on any error
+            if (pendingTheme) {
+                inputField.value = pendingTheme;
+            }
+        });
     });
 
     // Toggle dropdown menu visibility
@@ -227,13 +259,17 @@
     function updateThemeCount() {
         var hiddenThemes = document.getElementById('hidden-themes');
         var themeCount = hiddenThemes.querySelectorAll('input[name="student_themes"]').length;
-        var inputField = document.getElementById('id_student_themes');
+        var themeInput = document.getElementById('id_student_themes');
         var addButton = document.getElementById('add-theme');
-    
+
         if (themeCount >= 3) {
-            inputField.setAttribute('disabled', true);
+            addButton.disabled = true;
+            themeInput.disabled = true;
+            themeInput.placeholder = 'Досягнуто ліміт тем';
         } else {
-            inputField.removeAttribute('disabled');
+            addButton.disabled = false;
+            themeInput.disabled = false;
+            themeInput.placeholder = 'Введи';
         }
     }
 </script>

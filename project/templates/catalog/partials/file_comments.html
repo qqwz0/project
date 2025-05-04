@@ -1,0 +1,134 @@
+<!-- Форма додавання коментаря -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form id="comment-form-{{ file.id }}" class="comment-form" data-file-id="{{ file.id }}">
+            {% csrf_token %}
+            <div class="form-group">
+                <textarea name="text" class="form-control" rows="3" placeholder="Додайте коментар..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                Додати коментар
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Список коментарів -->
+<div id="comments-container-{{ file.id }}" class="comments-container">
+    {% for comment in file.comments.all %}
+    <div class="comment card mb-2" id="comment-{{ comment.id }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <h6 class="card-subtitle mb-2 text-muted">{{ comment.author.get_full_name }}</h6>
+                <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+            </div>
+            <p class="card-text">{{ comment.text }}</p>
+            {% if user == comment.author %}
+            <button class="btn btn-sm btn-danger delete-comment" data-comment-id="{{ comment.id }}">
+                Видалити
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+$(document).ready(function() {
+    // Обробка форми додавання коментаря
+    $('.comment-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var fileId = form.data('file-id');
+        var textarea = form.find('textarea');
+        var commentText = textarea.val().trim();
+        var submitButton = form.find('button[type="submit"]');
+        var spinner = submitButton.find('.spinner-border');
+        
+        if (!commentText) {
+            alert('Будь ласка, введіть текст коментаря');
+            return;
+        }
+        
+        // Показуємо спіннер і деактивуємо кнопку
+        submitButton.prop('disabled', true);
+        spinner.removeClass('d-none');
+        
+        $.ajax({
+            url: '/catalog/file/' + fileId + '/comment/',
+            type: 'POST',
+            data: {
+                'text': commentText,
+                'csrfmiddlewaretoken': form.find('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Додаємо новий коментар до контейнера
+                    var commentHtml = `
+                        <div class="comment card mb-2" id="comment-${response.comment_id}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="card-subtitle mb-2 text-muted">${response.author}</h6>
+                                    <small class="text-muted">${response.created_at}</small>
+                                </div>
+                                <p class="card-text">${response.text}</p>
+                                <button class="btn btn-sm btn-danger delete-comment" data-comment-id="${response.comment_id}">
+                                    Видалити
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    $('#comments-container-' + fileId).prepend(commentHtml);
+                    textarea.val(''); // Очищаємо поле вводу
+                } else {
+                    alert('Помилка: ' + (response.error || 'Не вдалося додати коментар'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', xhr.responseText);
+                alert('Помилка при додаванні коментаря');
+            },
+            complete: function() {
+                // Ховаємо спіннер і активуємо кнопку
+                submitButton.prop('disabled', false);
+                spinner.addClass('d-none');
+            }
+        });
+    });
+
+    // Обробка видалення коментаря
+    $(document).on('click', '.delete-comment', function() {
+        var button = $(this);
+        var commentId = button.data('comment-id');
+        var commentElement = $('#comment-' + commentId);
+        
+        if (confirm('Ви впевнені, що хочете видалити цей коментар?')) {
+            button.prop('disabled', true);
+            
+            $.ajax({
+                url: '/catalog/comment/' + commentId + '/delete/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        commentElement.fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    } else {
+                        alert('Помилка: ' + (response.error || 'Не вдалося видалити коментар'));
+                        button.prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', xhr.responseText);
+                    alert('Помилка при видаленні коментаря');
+                    button.prop('disabled', false);
+                }
+            });
+        }
+    });
+});
+</script>

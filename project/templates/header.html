@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Header</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    {% load static %}
+    <link rel="stylesheet" href="{% static 'assets/css/notification.css' %}">
 </head>
-<body>
+<body hx-ext="ws" ws-connect="/ws/notifications/">
 
-    <div class="header">
+    <div class="header" >
         <div class="logo">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/5a/QR_Code_example.png" alt="Logo">
         </div>
@@ -18,9 +22,50 @@
             <div class="icons">
                 <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
                     <i class="fas fa-home"></i>
+                </a> 
+                <a href="#" id="dropdownMenuButton" role="button" style="position: relative;     
+                                                                         cursor: default;
+                                                                         color: #000;">
+                    <i class="fa-solid fa-circle" id="notification-indicator" style="color: #1570ef; display: none; position: absolute; font-size: 0.5em; z-index: 2; top: 15%; left: 80%; transform: translate(-50%, -50%);"></i>
+                    <i class="fas fa-bell" style="position: relative; z-index: 1;"></i>
+                    <ul class="notification-dropdown" id="notification-list">
+                        <div class="empty-notifications" id="no-notifications-message">
+                            <h3 class="notification-empty-title">Сповіщень немає</h3>
+                            <div class="notification-divider"></div>
+                            <p class="notification-empty-message">Тут з'являтимуться ваші сповіщення</p>
+                        </div>
+                    </ul>
                 </a>
-                <i class="fas fa-bell"></i>
-                <i class="fas fa-envelope"></i>
+
+                <a href="#" id="messageDropdownButton" role="button" style="position: relative; cursor: pointer; color: #000;">
+                    {%if unread%}
+                        <div class="message-badge" id="message-indicator">
+                            {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
+                        </div>
+                    {%endif%}
+                    <i class="fas fa-envelope"></i>
+                    <div class="message-popup" id="message-popup">
+                        {% if message_list%}
+                         <div class="message-header">
+                                <h3>Повідомлення</h3>
+                          </div>
+                        {% for item in message_list %}
+                            <div class="message-item message {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
+                                    <div class="profile-message-link" onclick="window.location='{% url 'profile' %}'">
+                                        <p>{{ item.message_text }} {%if item.status == 'відхилив' %}<span style="color: #3a3a3a; font-family: serif; font-size: 0.8rem; margin-left: 0.1rem;">Переглянь причину →</span>{%endif%} </p>
+                                        <span class="timestamp">{{ item.created_at |date:"d.m.Y H:i" }}</span>
+                                    </div>
+                            </div>
+                        {% endfor %}
+                         {%else%}
+                            <div class="no-messages">
+                                <p class="empty-state-title">Ваша скринька порожня</p>
+                                <p class="empty-state-message">Коли з'являться нові повідомлення, ви побачите їх тут.</p>
+                            </div>
+                        {%endif%}   
+                    </div>
+                </a>
+
                 {% if user.is_authenticated %}
                     <div class="header-pic">
                         <a href="{% url 'profile' %}">
@@ -39,4 +84,5 @@
     </div>
 
 </body>
+<script src="{% static 'assets\js\notification.js' %}"></script>
 </html>

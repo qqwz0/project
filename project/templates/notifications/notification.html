@@ -1,0 +1,15 @@
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'assets/css/notification.css' %}">
+</head>
+<div class="notification" role="alert" hx-swap-oob="afterbegin:#notification-list">
+    <a href="{% url 'profile' %}" style="text-decoration: none; display: block;" onclick="window.location='{% url 'profile' %}'; return false;">
+            <p class="notification-text">
+                <strong>Увага!</strong> {{notification}}
+            </p>
+    </a>
+    <!-- Timestamp at the bottom right -->
+    <div class="notification-time">
+        {{time}}
+    </div>
+</div>
