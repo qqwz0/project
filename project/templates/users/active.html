@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Активні замовлення{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="request-card">
+        <div class="request-user">
+            <div class="user-info">
+                <h2 class="request-title">{{ request.title }}</h2>
+                <p class="request-description">{{ request.description }}</p>
+                <div class="request-meta">
+                    <span class="request-date">Створено: {{ request.created_at|date:"d.m.Y H:i" }}</span>
+                    <span class="request-deadline">Дедлайн: {{ request.deadline|date:"d.m.Y H:i" }}</span>
+                </div>
+            </div>
+            <div class="files-section">
+                <h3 class="files-title">Файли</h3>
+                <div id="files-container" class="files-container">
+                    {% for file in request.files.all %}
+                    <div class="file-item" data-file-id="{{ file.id }}">
+                        <div class="file-info">
+                            <span class="file-name">{{ file.file.name }}</span>
+                            <span class="file-size">{{ file.file.size|filesizeformat }}</span>
+                        </div>
+                        <button class="delete-file-btn" onclick="showDeleteModal({{ file.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <form id="upload-form" class="upload-form" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file" name="file" id="file-input" class="file-input" multiple>
+                    <button type="submit" class="upload-btn">
+                        <i class="fas fa-upload"></i> Завантажити файл
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="complete-section">
+        <div class="complete-section-header">
+            <button id="completeBtn" class="complete-btn">
+                <i class="fas fa-check complete-button-icon"></i>
+                Завершити роботу
+            </button>
+        </div>
+        <p class="complete-section-message">
+            Після завершення роботи ви не зможете додавати нові файли або вносити зміни.
+        </p>
+    </div>
+</div>
+
+<!-- Модальне вікно завершення роботи -->
+<div id="completeModal" class="complete-modal">
+    <div class="complete-modal-content">
+        <h3 class="complete-modal-title">Завершення роботи</h3>
+        <textarea id="completionMessage" class="complete-modal-input" placeholder="Введіть повідомлення про завершення роботи"></textarea>
+        <div class="complete-modal-buttons">
+            <button class="complete-modal-cancel" onclick="closeCompleteModal()">Скасувати</button>
+            <button class="complete-modal-confirm" onclick="completeRequest()">Завершити</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальне вікно видалення файлу -->
+<div id="deleteModal" class="delete-modal" style="display: none;">
+    <div class="delete-modal-content">
+        <button class="delete-modal-close" onclick="closeDeleteModal()">&times;</button>
+        <div class="delete-modal-header">
+            <img src="{% static 'img/delete-icon.png' %}" alt="Delete" class="delete-modal-icon">
+            <h3 class="delete-modal-title">Видалення файлу</h3>
+        </div>
+        <p class="delete-modal-message">Ви впевнені, що хочете видалити цей файл?</p>
+        <div class="delete-modal-buttons">
+            <button class="delete-modal-cancel" onclick="closeDeleteModal()">Скасувати</button>
+            <button class="delete-modal-confirm" onclick="deleteFile()">Видалити</button>
+        </div>
+    </div>
+</div>
+
+<iframe id="upload-target" name="upload-target" style="display:none;"></iframe>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ... existing JavaScript code ...
+</script>
+{% endblock %} 

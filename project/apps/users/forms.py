@@ -103,7 +103,7 @@ class RegistrationForm(forms.Form):
             self.cleaned_data['group'] = group  # Save the updated value back into cleaned_data
             
             # Regular expression to match the correct format
-            pattern = r'^ФЕ[ЇСМЛ](?:-[1-4][1-9])?$|^ФЕП-[1-4][1-9](?:ВПК)?$'
+            pattern = r'^ФЕ[ЇСМЛ](?:-[1-4][1-9])?|^ФЕП-[1-4][1-9](?:ВПК)?$'
             if not re.match(pattern, group):
                 raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
         
@@ -125,6 +125,8 @@ class RegistrationForm(forms.Form):
         
         return department
 
+# --- ЗАКОМЕНТОВАНО: Форма для додавання/редагування тем викладача ---
+'''
 class TeacherThemeForm(forms.ModelForm):
     theme = forms.CharField(
         widget=forms.TextInput(attrs={
@@ -144,6 +146,7 @@ class TeacherThemeForm(forms.ModelForm):
     class Meta:
         model = TeacherTheme
         fields = ['theme', 'theme_description']
+'''
 
 class TeacherProfileForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -182,7 +185,7 @@ class TeacherProfileForm(forms.ModelForm):
             }),
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-input',
-                'placeholder': '68 450 65 46'
+                'placeholder': '123456789'
             })
         }
 
@@ -194,6 +197,15 @@ class TeacherProfileForm(forms.ModelForm):
             self.fields['last_name'].initial = user.last_name
             self.fields['department'].initial = user.department
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get('phone_number', '')
+        # Видаляємо все, крім цифр
+        phone = ''.join(filter(str.isdigit, phone))
+        # Якщо номер починається з '380', видаляємо
+        if phone.startswith('380'):
+            phone = phone[3:]
+        return phone
 
 class StudentProfileForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -240,7 +252,7 @@ class StudentProfileForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': '68 450 65 46'
+            'placeholder': '123456789'
         })
     )
 
@@ -298,6 +310,13 @@ class StudentProfileForm(forms.ModelForm):
             raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
         
         return group
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get('phone_number', '')
+        phone = ''.join(filter(str.isdigit, phone))
+        if phone.startswith('380'):
+            phone = phone[3:]
+        return phone
 
 class ProfilePictureUploadForm(forms.ModelForm):
     class Meta:

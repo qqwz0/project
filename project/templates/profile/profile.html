@@ -70,18 +70,22 @@
 
         <!-- Tabs Section -->
         <div class="tabs">
-            <div class="tab active" data-tab="info" onclick="loadTab('info')">Інформація</div>
+            {% if user_profile.role == 'Викладач' %}
+                <div class="tab active" data-tab="info" onclick="loadTab('info')">Інформація</div>
+            {% endif %}
             {% if is_own_profile %}
-                <div class="tab" data-tab="requests" onclick="loadTab('requests')">Запити</div>
+                <div class="tab{% if user_profile.role != 'Викладач' %} active{% endif %}" data-tab="requests" onclick="loadTab('requests')">Запити</div>
             {% endif %}
             <div class="tab" data-tab="active" onclick="loadTab('active')">Активні</div>
             <div class="tab" data-tab="archive" onclick="loadTab('archive')">Архів</div>
         </div>
     </div>
 
+    {% if user_profile.role == 'Викладач' %}
     <div id="info-section" class="tab-content">
         {% include 'profile/info.html' with themes=themes slots=slots %}
     </div>
+    {% endif %}
 
     <div id="requests-section" class="tab-content" style="display: none;">
         {% include 'profile/requests.html' with requests=pending_requests %}
@@ -140,82 +144,24 @@
         </div>
     </div>
 
-    <style>
-        /* Keep the entire modal full-screen, centered, with a dark overlay */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Modal content: max 90% of viewport width/height, scroll if needed */
-        #cropModal .modal-content {
-            width: 90vw;
-            max-height: 90vh;
-            overflow: auto;  /* <--- Important: allow scrolling if image is too tall */
-            position: relative;
-            margin: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Close button styles (unchanged from your example) */
-        .close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        /* Scale the image so it fits within the modal content */
-        #cropbox {
-            display: block;
-            max-width: 100%;
-            height: auto;
-            margin: 0 auto;
-        }
-
-        /* Ensure Cropper container also stays within bounds */
-        .cropper-container {
-            max-width: 100%;
-            max-height: 100%;
-            overflow: hidden;
-        }
-
-        /* "Обрізати" button style (unchanged from your example) */
-        .button {
-            text-align: center;
-            background-color: #1570ef;
-            color: white;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            height: 48px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            outline: none;
-            border: none;
-            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-            flex: 1;
-        }
-
-        .button:hover {
-            background-color: #005A9E;
-        }
-    </style>
+    <!-- Модальне вікно для завершення роботи -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCompleteModal()">&times;</span>
+            <h3>Завершити роботу студента</h3>
+            <form id="completeForm">
+                <input type="hidden" id="completeRequestId" name="requestId">
+                <div class="form-group">
+                    <label for="grade">Оцінка (0-100):</label>
+                    <input type="number" id="grade" name="grade" min="0" max="100" class="form-control" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeCompleteModal()">Скасувати</button>
+                    <button type="button" class="btn-submit" onclick="submitComplete()">Завершити</button>
+                </div>
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -517,23 +463,4 @@
             }, 500);
         }
     </script>
-
-    <!-- Модальне вікно для завершення роботи -->
-    <div id="completeModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeCompleteModal()">&times;</span>
-            <h3>Завершити роботу студента</h3>
-            <form id="completeForm">
-                <input type="hidden" id="completeRequestId" name="requestId">
-                <div class="form-group">
-                    <label for="grade">Оцінка (0-100):</label>
-                    <input type="number" id="grade" name="grade" min="0" max="100" class="form-control" required>
-                </div>
-                <div class="modal-buttons">
-                    <button type="button" class="btn-cancel" onclick="closeCompleteModal()">Скасувати</button>
-                    <button type="button" class="btn-submit" onclick="submitComplete()">Завершити</button>
-                </div>
-            </form>
-        </div>
-    </div>
 {% endblock %}
