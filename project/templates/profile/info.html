@@ -1,84 +1,9 @@
 {% load static %}
 
-<style>
-    .slots-wrapper {
-        margin-bottom: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .section-title {
-        font-weight: bold;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .slots-container {
-        display: flex;
-        gap: 3rem;
-    }
-
-    .slot-group {
-        text-align: center;
-    }
-
-    .stream-title {
-        font-weight: 600;
-    }
-
-    .slot-dot {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;  /* Makes it a circle */
-        margin: 2px;         /* Space between dots */
-    }
-    
-    .slot-dot.occupied {
-        background-color: orange;  /* Filled dot for occupied */
-    }
-    
-    .slot-dot.available {
-        background-color: transparent;
-        border: 2px solid orange;  /* Outlined dot for available */
-    }
-    
-
-    span {
-        margin: 0 0.1rem;
-    }
-
-    .slots-display {
-        display: flex;
-        justify-content: center;
-    }
-
-    .themes-list {
-        list-style: none;
-        padding-left: 0;
-    }
-
-    .theme-item {
-        margin-bottom: 0.7rem;
-    }
-
-    .theme-item a {
-        font-weight: 600;
-        font-size: 1.2rem;
-        color: #1a1a3d;
-        text-decoration: none;
-    }
-
-    .theme-item a:hover {
-        text-decoration: underline;
-    }
-</style>
-
 {% if user_profile.role == "Викладач" %}
     <div class="slots-wrapper">
         <h2 class="section-title">Кількість доступних місць</h2>
-        
+        {% if slots and slots|length > 0 %}
         <div class="slots-container">
             {% for slot in slots %}
                 <div class="slot-group" 
@@ -89,10 +14,14 @@
                 </div>
             {% endfor %}
         </div>
+        {% else %}
+            <div style="color: #888; font-style: italic;">Немає інформації.</div>
+        {% endif %}
     </div>
 
     <div>
         <h2 class="section-title mt-4">Теми курсових робіт</h2>
+        {% if themes and themes|length > 0 %}
         <ul class="themes-list">
             {% for theme in themes %}
                 <li class="theme-item mb-1">
@@ -101,6 +30,9 @@
                 </li>            
             {% endfor %}
         </ul>
+        {% else %}
+            <div style="color: #888; font-style: italic;">Немає інформації.</div>
+        {% endif %}
     </div>
 
     <script>

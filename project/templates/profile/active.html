@@ -28,7 +28,7 @@
                         {% endif %}
                             {% if request_obj.student_themes.all %}
                             <strong>Тематика студента:</strong>
-                            <ul style="list-style-type: none">
+                            <ul class="student-themes-list">
                                     {% for theme in request_obj.student_themes.all %}
                                     <li>{{ theme.theme }}</li>
                                 {% endfor %}
@@ -46,22 +46,19 @@
                         </h4>
                         {% with files=active_request_files|get_item:request_obj.id %}
                             <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" style="background-color: #F2F4F7; border-radius: 10px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #C0C0C0 #F0F0F0;">
+                            <div id="files-container" class="files-scroll-container">
                                 {% for file in files %}
-                                    <div class="file-block" style="margin-bottom: 15px; background-color: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                                        <div class="file-header" style="display: flex; justify-content: space-between; align-items: center; background-color: #E6F0FF; padding: 12px; border-radius: 6px 6px 0 0; margin-bottom: 0; position: relative;">
-                                            <span style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ file.get_filename }}</span>
-                                            <div style="display: flex; gap: 10px;">
-                                                <a href="{% url 'download_file' file.pk %}" class="download-button" style="color: #3B82F6; background-color: #EFF6FF; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; text-decoration: none;">
-                                                    <i class="fas fa-download" style="margin-right: 4px;"></i>
+                                    <div class="file-block">
+                                        <div class="file-header">
+                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-actions">
+                                                <a href="{% url 'download_file' file.pk %}" class="download-button">
+                                                    <i class="fas fa-download download-icon"></i>
                                                     <span>Завантажити</span>
                                                 </a>
                                                 {% if user == file.uploaded_by %}
-                                                    <button class="delete-file" 
-                                                            style="background-color: #FEE2E2; border: none; color: #EF4444; cursor: pointer; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center;"
-                                                            data-file-id="{{ file.pk }}"
-                                                            data-url="{% url 'delete_file' file.pk %}">
-                                                        <i class="fas fa-trash" style="margin-right: 4px;"></i>
+                                                    <button class="delete-file-btn" data-file-id="{{ file.pk }}" data-url="{% url 'delete_file' file.pk %}">
+                                                        <i class="fas fa-trash delete-icon"></i>
                                                         <span>Видалити</span>
                                                     </button>
                                                 {% endif %}
@@ -69,44 +66,35 @@
                                         </div>
                                         
                                         <!-- Секція опису файлу -->
-                                        {% if file.description %}
-                                        <div class="file-description" style="background-color: #E6F0FF; padding: 15px; border-radius: 0 0 6px 6px; margin-top: 1px;">
-                                            <p style="margin: 0; font-size: 14px;">
+                                        <div class="file-description-block">
+                                            <p class="file-description-text">
                                                 <strong>Опис:</strong><br>
                                                 {{ file.description }}
                                             </p>
                                         </div>
-                                        {% else %}
-                                        <div style="height: 1px; background-color: #E6F0FF; border-radius: 0 0 6px 6px;"></div>
-                                        {% endif %}
 
                                         <!-- Показуємо коментарі викладача для студента -->
                                         {% if file.comments.all %}
-                                        <div class="teacher-comments" style="padding: 15px; background-color: white; border-radius: 0 0 6px 6px; border-top: 1px solid #E5E7EB;">
-                                            <h6 style="margin-bottom: 10px; color: #2563EB;">Коментарі викладача:</h6>
-                                            <!-- Список коментарів -->
+                                        <div class="teacher-comments-block">
+                                            <h6 class="teacher-comments-title">Коментарі викладача:</h6>
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment" style="background-color: {% if comment.author.role == 'Викладач' %}#E6F0FF{% else %}#F3F4F6{% endif %}; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
-                                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                                            <span style="font-weight: 500; color: #2563EB;">{{ comment.author.get_full_name }}</span>
-                                                            <span style="color: #6B7280; font-size: 12px;">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                        <div class="comment-header">
+                                                            <span class="comment-author">{{ comment.author.get_full_name }}</span>
+                                                            <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
                                                         </div>
-                                                        <p style="margin: 0; font-size: 14px;">{{ comment.text }}</p>
+                                                        <p class="comment-text">{{ comment.text }}</p>
                                                         {% if comment.attachment %}
-                                                        <div class="attachment" style="margin-top: 8px; padding: 8px; background-color: rgba(255,255,255,0.6); border-radius: 4px;">
-                                                            <a href="{{ comment.attachment.url }}" download style="display: flex; align-items: center; color: #2563EB; text-decoration: none;">
-                                                                <i class="fas fa-paperclip" style="margin-right: 5px;"></i>
-                                                                <span style="font-size: 14px; overflow: hidden; text-overflow: ellipsis;">{{ comment.get_attachment_filename }}</span>
+                                                        <div class="attachment-block">
+                                                            <a href="{{ comment.attachment.url }}" download class="attachment-link">
+                                                                <i class="fas fa-paperclip attachment-icon"></i>
+                                                                <span class="attachment-filename">{{ comment.get_attachment_filename }}</span>
                                                             </a>
                                                         </div>
                                                         {% endif %}
                                                         {% if user == comment.author %}
-                                                            <button class="delete-comment" 
-                                                                    style="background: none; border: none; color: #EF4444; font-size: 12px; padding: 0; margin-top: 5px; cursor: pointer;"
-                                                                    data-comment-id="{{ comment.id }}">
-                                                                Видалити
-                                                            </button>
+                                                            <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
                                                         {% endif %}
                                                     </div>
                                                 {% endfor %}
@@ -115,84 +103,31 @@
                                         {% endif %}
                                     </div>
                                 {% empty %}
-                                    <p class="text-muted" style="text-align: center; padding: 10px;">Немає завантажених файлів</p>
+                                    <p class="no-files">Немає завантажених файлів</p>
                                 {% endfor %}
                             </div>
 
-                            <style>
-                                /* Додаємо стиль для збільшення ширини контейнера */
-                                .container {
-                                    max-width: 1400px !important; /* Збільшуємо максимальну ширину контейнера */
-                                    width: 95% !important;        /* Встановлюємо ширину як відсоток від екрану */
-                                }
-                                
-                                .request-card {
-                                    width: 100%;
-                                    max-width: 1350px; /* Збільшуємо максимальну ширину карток запитів */
-                                }
-                                
-                                /* Стилі для textarea опису файлу */
-                                textarea.form-control {
-                                    width: 100%;
-                                    padding: 12px;
-                                    border: 1px solid #E5E7EB;
-                                    border-radius: 8px;
-                                    font-size: 14px;
-                                    transition: all 0.3s ease;
-                                    resize: vertical;
-                                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                                }
-                                
-                                textarea.form-control:focus {
-                                    border-color: #2563EB;
-                                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-                                    outline: none;
-                                }
-                                
-                                textarea.form-control::placeholder {
-                                    color: #9CA3AF;
-                                }
-                                
-                                /* Стилі для скролбару */
-                                #files-container::-webkit-scrollbar {
-                                    width: 8px;
-                                    background-color: #F0F0F0;
-                                }
-                                
-                                #files-container::-webkit-scrollbar-thumb {
-                                    background-color: #C0C0C0;
-                                    border-radius: 4px;
-                                }
-                                
-                                #files-container::-webkit-scrollbar-thumb:hover {
-                                    background-color: #A0A0A0;
-                                }
-                            </style>
-                    
-                    <!-- Форма завантаження файлу -->
+                            <!-- Форма завантаження файлу -->
                             <form method="post" 
                                   enctype="multipart/form-data" 
                                   class="file-upload-form" 
                                   action="{% url 'upload_file' request_obj.id %}">
                         {% csrf_token %}
-                                <div class="input-group mb-2" style="position: relative;">
+                                <div class="input-group mb-2 file-upload-group">
                                     <input type="file" 
                                            name="file" 
                                            id="file-input-{{ request_obj.id }}" 
-                                           class="form-control" 
+                                           class="form-control file-input" 
                                            required 
-                                           style="display: none;"
                                            onchange="updateFileName(this)">
-                                    <label for="file-input-{{ request_obj.id }}" style="display: inline-block; background-color: #2563EB; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-                                        Вибрати файл
-                                    </label>
-                                    <span id="file-name-{{ request_obj.id }}" style="line-height: 40px; color: #6B7280;">Файл не вибрано</span>
+                                    <label for="file-input-{{ request_obj.id }}" class="file-input-label">Вибрати файл</label>
+                                    <span id="file-name-{{ request_obj.id }}" class="file-name-label">Файл не вибрано</span>
                                 </div>
                                 <div class="input-group mb-2">
-                                    <label for="file-description-{{ request_obj.id }}" style="display: block; margin-bottom: 6px; color: #4B5563; font-size: 14px; font-weight: 500;">Опис файлу (необов'язково):</label>
-                                    <textarea id="file-description-{{ request_obj.id }}" name="description" class="form-control" placeholder="Введіть короткий опис файлу..." rows="2"></textarea>
+                                    <label for="file-description-{{ request_obj.id }}" class="file-description-label">Опис файлу (необов'язково):</label>
+                                    <textarea id="file-description-{{ request_obj.id }}" name="description" class="form-control file-description-textarea" placeholder="Введіть короткий опис файлу..." rows="2"></textarea>
                                 </div>
-                                <button type="submit" style="background-color: #22C55E; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                                <button type="submit" class="file-upload-btn">
                                 <i class="fas fa-upload"></i> Завантажити
                             </button>
                     </form>
@@ -251,7 +186,7 @@
             </div>
         {% endfor %}
     {% else %}
-        <p>У вас немає активних робіт.</p>
+        <p class="no-active-works">У вас немає активних робіт.</p>
     {% endif %}
     {% elif user.role == "Викладач" %}
     {% csrf_token %}
@@ -278,7 +213,7 @@
                         {% endif %}
                         {% if request.student_themes.all %}
                             <strong>Тематика студента:</strong>
-                            <ul style="list-style-type: none">
+                            <ul class="student-themes-list">
                                 {% for theme in request.student_themes.all %}
                                     <li>{{ theme.theme }}</li>
                                 {% endfor %}
@@ -296,22 +231,19 @@
                         </h4>
                     {% with files=active_request_files|get_item:request.id %}
                             <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" style="background-color: #F2F4F7; border-radius: 10px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #C0C0C0 #F0F0F0;">
+                            <div id="files-container" class="files-scroll-container">
                                 {% for file in files %}
-                                    <div class="file-block" style="margin-bottom: 15px; background-color: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                                        <div class="file-header" style="display: flex; justify-content: space-between; align-items: center; background-color: #E6F0FF; padding: 12px; border-radius: 6px 6px 0 0; margin-bottom: 0; position: relative;">
-                                            <span style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ file.get_filename }}</span>
-                                            <div style="display: flex; gap: 10px;">
-                                                <a href="{% url 'download_file' file.pk %}" class="download-button" style="color: #3B82F6; background-color: #EFF6FF; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; text-decoration: none;">
-                                                    <i class="fas fa-download" style="margin-right: 4px;"></i>
+                                    <div class="file-block">
+                                        <div class="file-header">
+                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-actions">
+                                                <a href="{% url 'download_file' file.pk %}" class="download-button">
+                                                    <i class="fas fa-download download-icon"></i>
                                                     <span>Завантажити</span>
                                                 </a>
                                                 {% if user == file.uploaded_by %}
-                                                    <button class="delete-file" 
-                                                            style="background-color: #FEE2E2; border: none; color: #EF4444; cursor: pointer; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center;"
-                                                            data-file-id="{{ file.pk }}"
-                                                            data-url="{% url 'delete_file' file.pk %}">
-                                                        <i class="fas fa-trash" style="margin-right: 4px;"></i>
+                                                    <button class="delete-file-btn" data-file-id="{{ file.pk }}" data-url="{% url 'delete_file' file.pk %}">
+                                                        <i class="fas fa-trash delete-icon"></i>
                                                         <span>Видалити</span>
                                                     </button>
                                                 {% endif %}
@@ -319,26 +251,22 @@
                                         </div>
                                         
                                         <!-- Секція опису файлу -->
-                                        {% if file.description %}
-                                        <div class="file-description" style="background-color: #E6F0FF; padding: 15px; border-radius: 0 0 6px 6px; margin-top: 1px;">
-                                            <p style="margin: 0; font-size: 14px;">
+                                        <div class="file-description-block">
+                                            <p class="file-description-text">
                                                 <strong>Опис:</strong><br>
                                                 {{ file.description }}
                                             </p>
                                         </div>
-                                        {% else %}
-                                        <div style="height: 1px; background-color: #E6F0FF; border-radius: 0 0 6px 6px;"></div>
-                                        {% endif %}
 
                                         <!-- Секція коментарів -->
-                                        <div class="file-comments" style="padding: 15px; background-color: white; border-radius: 0 0 6px 6px; border-top: 1px solid #E5E7EB;">
-                                            <h6 style="margin-bottom: 10px; color: #2563EB;">Коментарі:</h6>
+                                        <div class="file-comments">
+                                            <h6 class="file-comments-title">Коментарі:</h6>
                                             
                                             <!-- Форма додавання коментаря -->
                                             <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mb-3" enctype="multipart/form-data">
                                                 {% csrf_token %}
                                                 <div class="form-group">
-                                                    <textarea name="text" class="form-control" rows="2" placeholder="Додайте коментар..." style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px;"></textarea>
+                                                    <textarea name="text" class="form-control comment-textarea" rows="2" placeholder="Додайте коментар..." style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px;"></textarea>
                                                     {% if user.role == "Викладач" %}
                                                     <div class="file-attachment-wrapper">
                                                         <div class="custom-file" style="margin-bottom: 8px;">
@@ -348,30 +276,28 @@
                                                                    id="comment-file-{{ file.pk }}" 
                                                                    style="display: none;"
                                                                    onchange="updateCommentFile(this)">
-                                                            <label for="comment-file-{{ file.pk }}" style="display: inline-block; background-color: #F8FAFC; color: #6B7280; padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 14px; margin-right: 10px;">
+                                                            <label for="comment-file-{{ file.pk }}" class="comment-file-label">
                                                                 <i class="fas fa-paperclip"></i> Вибрати файл
                                                             </label>
-                                                            <span id="file-label-{{ file.pk }}" style="line-height: 36px; color: #6B7280;">Файл не вибрано</span>
+                                                            <span id="file-label-{{ file.pk }}" class="file-label">Файл не вибрано</span>
                                                         </div>
-                                                        <div id="attachment-feedback-{{ file.pk }}" style="font-size: 13px; margin-top: 3px; margin-bottom: 8px; display: none;">
-                                                            <span class="attachment-message" style="color: #16A34A; display: flex; align-items: center;">
-                                                                <i class="fas fa-check-circle" style="margin-right: 5px;"></i> 
+                                                        <div id="attachment-feedback-{{ file.pk }}" class="attachment-feedback">
+                                                            <span class="attachment-message">
+                                                                <i class="fas fa-check-circle attachment-check"></i> 
                                                                 <span>Файл додано і буде завантажено при відправці коментаря</span>
                                                             </span>
                                                         </div>
                                                     </div>
                                                     {% endif %}
                                                 </div>
-                                                <button type="submit" style="background-color: #2563EB; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
-                                                    Додати коментар
-                                                </button>
-                                                <div class="comment-status" style="margin-top: 10px; display: none;">
-                                                    <div class="sending-status" style="color: #2563EB; display: flex; align-items: center;">
-                                                        <i class="fas fa-spinner fa-spin" style="margin-right: 5px;"></i>
+                                                <button type="submit" class="add-comment-btn">Додати коментар</button>
+                                                <div class="comment-status">
+                                                    <div class="sending-status">
+                                                        <i class="fas fa-spinner fa-spin"></i>
                                                         <span>Відправляємо коментар...</span>
                                                     </div>
-                                                    <div class="success-status" style="color: #16A34A; display: none; align-items: center;">
-                                                        <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                                                    <div class="success-status">
+                                                        <i class="fas fa-check-circle"></i>
                                                         <span>Коментар успішно додано</span>
                                                     </div>
                                                 </div>
@@ -380,26 +306,22 @@
                                             <!-- Список коментарів -->
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment" style="background-color: {% if comment.author.role == 'Викладач' %}#E6F0FF{% else %}#F3F4F6{% endif %}; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
-                                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                                            <span style="font-weight: 500; color: #2563EB;">{{ comment.author.get_full_name }}</span>
-                                                            <span style="color: #6B7280; font-size: 12px;">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                        <div class="comment-header">
+                                                            <span class="comment-author">{{ comment.author.get_full_name }}</span>
+                                                            <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
                                                         </div>
-                                                        <p style="margin: 0; font-size: 14px;">{{ comment.text }}</p>
+                                                        <p class="comment-text">{{ comment.text }}</p>
                                                         {% if comment.attachment %}
-                                                        <div class="attachment" style="margin-top: 8px; padding: 8px; background-color: rgba(255,255,255,0.6); border-radius: 4px;">
-                                                            <a href="{{ comment.attachment.url }}" download style="display: flex; align-items: center; color: #2563EB; text-decoration: none;">
-                                                                <i class="fas fa-paperclip" style="margin-right: 5px;"></i>
-                                                                <span style="font-size: 14px; overflow: hidden; text-overflow: ellipsis;">{{ comment.get_attachment_filename }}</span>
+                                                        <div class="attachment-block">
+                                                            <a href="{{ comment.attachment.url }}" download class="attachment-link">
+                                                                <i class="fas fa-paperclip attachment-icon"></i>
+                                                                <span class="attachment-filename">{{ comment.get_attachment_filename }}</span>
                                                             </a>
                                                         </div>
                                                         {% endif %}
                                                         {% if user == comment.author %}
-                                                            <button class="delete-comment" 
-                                                                    style="background: none; border: none; color: #EF4444; font-size: 12px; padding: 0; margin-top: 5px; cursor: pointer;"
-                                                                    data-comment-id="{{ comment.id }}">
-                                                                Видалити
-                                                            </button>
+                                                            <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
                                                         {% endif %}
                                                     </div>
                                                 {% endfor %}
@@ -407,7 +329,7 @@
                                         </div>
                                     </div>
                                 {% empty %}
-                                    <p class="text-muted" style="text-align: center; padding: 10px;">Немає завантажених файлів</p>
+                                    <p class="no-files">Немає завантажених файлів</p>
                                 {% endfor %}
                             </div>
 
@@ -417,24 +339,21 @@
                                   class="file-upload-form"
                                   action="{% url 'upload_file' request.id %}">
                         {% csrf_token %}
-                                <div class="input-group mb-2" style="position: relative;">
+                                <div class="input-group mb-2 file-upload-group">
                                     <input type="file" 
                                            name="file" 
                                            id="file-input-{{ request.id }}" 
-                                           class="form-control" 
+                                           class="form-control file-input" 
                                            required 
-                                           style="display: none;"
                                            onchange="updateFileName(this)">
-                                    <label for="file-input-{{ request.id }}" style="display: inline-block; background-color: #2563EB; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-                                        Вибрати файл
-                                    </label>
-                                    <span id="file-name-{{ request.id }}" style="line-height: 40px; color: #6B7280;">Файл не вибрано</span>
+                                    <label for="file-input-{{ request.id }}" class="file-input-label">Вибрати файл</label>
+                                    <span id="file-name-{{ request.id }}" class="file-name-label">Файл не вибрано</span>
                                 </div>
                                 <div class="input-group mb-2">
-                                    <label for="file-description-{{ request.id }}" style="display: block; margin-bottom: 6px; color: #4B5563; font-size: 14px; font-weight: 500;">Опис файлу (необов'язково):</label>
-                                    <textarea id="file-description-{{ request.id }}" name="description" class="form-control" placeholder="Введіть короткий опис файлу..." rows="2"></textarea>
+                                    <label for="file-description-{{ request.id }}" class="file-description-label">Опис файлу (необов'язково):</label>
+                                    <textarea id="file-description-{{ request.id }}" name="description" class="form-control file-description-textarea" placeholder="Введіть короткий опис файлу..." rows="2"></textarea>
                                 </div>
-                                <button type="submit" style="background-color: #22C55E; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                                <button type="submit" class="file-upload-btn">
                                 <i class="fas fa-upload"></i> Завантажити
                             </button>
                     </form>
@@ -453,7 +372,7 @@
             </div>
         {% endfor %}
     {% else %}
-        <p>У вас немає активних робіт.</p>
+        <p class="no-active-works">У вас немає активних робіт.</p>
     {% endif %}
 {% endif %}
 {% endblock %}
@@ -514,7 +433,7 @@ function updateCommentFile(input) {
 
 $(document).ready(function() {
     // Додаємо обробник на всі кнопки видалення
-    $(document).on('click', '.delete-file', function(e) {
+    $(document).on('click', '.delete-file-btn', function(e) {
         e.preventDefault();
         var button = $(this);
         var url = button.data('url');
@@ -753,197 +672,3 @@ function submitComplete() {
         </div>
     </div>
 </div>
-
-<style>
-    .files-section {
-        width: 100%;
-        max-width: 1350px;
-    }
-    
-    .file-block {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .file-header {
-        padding-right: 15px !important;
-    }
-    
-    .file-header span {
-        max-width: 90%;
-    }
-    
-    .file-comments {
-        width: 100%;
-    }
-    
-    .comment-form textarea {
-        width: 100%;
-        min-height: 80px;
-    }
-    
-    /* Адаптивні стилі для вкладки активних робіт */
-    @media (min-width: 992px) {
-        .request-user {
-            display: flex;
-            gap: 30px;
-        }
-        
-        .user-info {
-            flex: 1;
-        }
-        
-        .files-section {
-            padding-left: 20px;
-        }
-    }
-
-    .complete-button {
-        background-color: #0F766E; 
-        color: white; 
-        border: none; 
-        padding: 12px 24px; 
-        border-radius: 8px; 
-        font-size: 16px; 
-        font-weight: 500; 
-        cursor: pointer; 
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
-        transition: all 0.3s ease; 
-        display: inline-flex; 
-        align-items: center;
-    }
-
-    .complete-button:hover {
-        background-color: #0E6659;
-        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
-    }
-
-    .complete-button:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Стилі для секції заверешення роботи */
-    .complete-section {
-        padding: 0 0 15px 0;
-        margin-top: 20px;
-        border-top: 1px solid #E5E7EB;
-        padding-top: 15px;
-        text-align: right;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-    
-    .complete-section p {
-        max-width: 500px;
-    }
-
-    /* Стилі для скролбару */
-    #files-container::-webkit-scrollbar {
-        width: 8px;
-        background-color: #F0F0F0;
-    }
-    
-    #files-container::-webkit-scrollbar-thumb {
-        background-color: #C0C0C0;
-        border-radius: 4px;
-    }
-    
-    #files-container::-webkit-scrollbar-thumb:hover {
-        background-color: #A0A0A0;
-    }
-
-    /* Стилі для контейнера файлів */
-    #files-container {
-        background-color: #F2F4F7;
-        border-radius: 10px;
-        margin-bottom: 15px;
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-        scrollbar-width: thin;
-        scrollbar-color: #C0C0C0 #F0F0F0;
-    }
-
-    .file-block {
-        margin-bottom: 15px;
-        background-color: white;
-        border-radius: 6px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .file-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #E6F0FF;
-        padding: 12px;
-        border-radius: 6px 6px 0 0;
-        margin-bottom: 0;
-        position: relative;
-    }
-
-    .file-description {
-        background-color: #E6F0FF;
-        padding: 15px;
-        border-radius: 0 0 6px 6px;
-        margin-top: 1px;
-    }
-
-    .file-comments {
-        padding: 15px;
-        background-color: white;
-        border-radius: 0 0 6px 6px;
-        border-top: 1px solid #E5E7EB;
-    }
-
-    /* Стилі для форми завантаження файлів */
-    .file-upload-form {
-        margin-top: 15px;
-        padding: 15px;
-        background-color: #F8FAFC;
-        border-radius: 8px;
-    }
-
-    .file-upload-form label[for^="file-input"] {
-        display: inline-block;
-        background-color: #2563EB;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-right: 10px;
-        transition: background-color 0.3s ease;
-    }
-
-    .file-upload-form label[for^="file-input"]:hover {
-        background-color: #1D4ED8;
-    }
-
-    .file-upload-form textarea {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #E5E7EB;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        resize: vertical;
-    }
-
-    .file-upload-form button[type="submit"] {
-        background-color: #22C55E;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-
-    .file-upload-form button[type="submit"]:hover {
-        background-color: #16A34A;
-    }
-</style>

@@ -49,7 +49,7 @@
                                 {% endif %}
                                 {% if request.student_themes.all %}
                                     <strong>Тематика студента:</strong>
-                                    <ul style="list-style-type: none">
+                                    <ul class="student-themes-list">
                                         {% for theme in request.student_themes.all %}
                                             <li>{{ theme.theme }}</li>
                                         {% endfor %}
@@ -95,7 +95,7 @@
                         {% endif %}
                         {% if request.student_themes.all %}
                             <strong>Тематика студента:</strong>
-                            <ul style="list-style-type: none">
+                            <ul class="student-themes-list">
                                 {% for theme in request.student_themes.all %}
                                     <li>{{ theme.theme }}</li>
                                 {% endfor %}
@@ -165,7 +165,7 @@
                                 {% endif %}
                                 {% if request.student_themes.all %}
                                     <strong>Тематика студента:</strong>
-                                    <ul style="list-style-type: none">
+                                    <ul class="student-themes-list">
                                         {% for theme in request.student_themes.all %}
                                             <li>{{ theme.theme }}</li>
                                         {% endfor %}
@@ -188,7 +188,7 @@
         {% endfor %}
         </div>
     {% else %}
-        <p>Ви ще не надсилали запитів.</p>
+        <p class="no-requests">Ви ще не надсилали запитів.</p>
     {% endif %}
 
     {% elif user_profile.role == "Викладач" %}
@@ -238,7 +238,7 @@
 
                         <strong>Теми студента:</strong>
                         {% if request.student_themes.all %}
-                            <ul style="list-style-type: none">
+                            <ul class="student-themes-list">
                                 {% for theme in request.student_themes.all %}
                                     <li>{{ theme.theme }}</li>
                                 {% endfor %}
@@ -265,11 +265,7 @@
             </div>
                 {% endif %}
             {% endfor %}
-        {% else %}
-            <div class="no-requests pending-no-requests">
-                <p>Немає запитів, що очікують на підтвердження.</p>
-            </div>
-        {% endif %}
+    {% endif %}
     </div>
     
     <!-- Прийняті запити -->
@@ -296,7 +292,7 @@
 
                                 <strong>Теми студента:</strong>
                                 {% if request.student_themes.all %}
-                                    <ul style="list-style-type: none">
+                                    <ul class="student-themes-list">
                                         {% for theme in request.student_themes.all %}
                                             <li>{{ theme.theme }}</li>
                                         {% endfor %}
@@ -335,10 +331,6 @@
                     </div>
                 {% endif %}
             {% endfor %}
-        {% else %}
-            <div class="no-requests accepted-no-requests">
-                <p>Немає прийнятих запитів.</p>
-            </div>
         {% endif %}
     </div>
     
@@ -366,7 +358,7 @@
 
                                 <strong>Теми студента:</strong>
                                 {% if request.student_themes.all %}
-                                    <ul style="list-style-type: none">
+                                    <ul class="student-themes-list">
                                         {% for theme in request.student_themes.all %}
                                             <li>{{ theme.theme }}</li>
                                         {% endfor %}
@@ -389,16 +381,12 @@
                         </div>
                     </div>
                 {% endif %}
-        {% endfor %}
-    {% else %}
-            <div class="no-requests rejected-no-requests">
-                <p>Немає відхилених запитів.</p>
-            </div>
+            {% endfor %}
         {% endif %}
     </div>
     
     {% if not pending_requests and not accepted_requests %}
-        <p>У вас немає запитів.</p>
+        <p style="color: #888; font-style: italic; text-align: center; margin-top: 2rem;">У вас немає запитів.</p>
     {% endif %}
 {% endif %}
 

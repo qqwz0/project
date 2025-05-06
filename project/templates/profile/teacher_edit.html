@@ -139,13 +139,12 @@
                       </div>
                     </div>
                   </div>
-                  <div class="themes-section">
+                  <!-- <div class="themes-section">
                     <h3>Теми робіт</h3>
                     <div id="themes-container">
                         {% for theme in existing_themes %}
                         <div class="theme-item">
                             <input type="text" value="{{ theme.theme }}" readonly>
-                            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
                         </div>
                         {% endfor %}
                     </div>
@@ -153,7 +152,7 @@
                         <input type="text" id="new-theme" placeholder="Введіть тему">
                         <button type="button" class="add-theme" onclick="addTheme()">+</button>
                     </div>
-                  </div>
+                  </div> -->
                 </div>
             </div>
             
@@ -167,6 +166,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- ЗАКОМЕНТОВАНО: функціонал додавання/видалення тем викладача ---
+    /*
     let themes = [];
     
     // Load existing themes
@@ -230,6 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
             addTheme();
         }
     });
+    */
     
     const form = document.getElementById('teacherProfileForm');
 
@@ -260,7 +262,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const messageElement = document.createElement('div');
         messageElement.className = 'message success';
         messageElement.textContent = message;
-        messagesContainer.appendChild(messageElement);
+        
+        document.querySelector('.messages').innerHTML = '';
+        document.querySelector('.messages').appendChild(messageElement);
+        
+        setTimeout(() => {
+            messageElement.style.opacity = '0';
+            setTimeout(() => messageElement.remove(), 300);
+        }, 3000);
     }
 
     // Form submission handler for debugging
@@ -268,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault(); // Prevent default form submission
         
         // Make sure themes data is up to date
-        updateThemesData();
+        // updateThemesData(); // ЗАКОМЕНТОВАНО: оновлення тем
         
         // Create FormData object
         const formData = new FormData(form);

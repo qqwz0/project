@@ -147,14 +147,16 @@ body {
 }
 
 #cropbox {
-    max-width: 100%;
-    max-height: 400px; /* Adjust this based on your modal size */
     display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
 }
 
 .cropper-container {
     max-width: 100%;
-    max-height: 400px;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 .modal {
@@ -165,27 +167,82 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
 }
 
 .modal-content {
-    background-color: white;
+    background-color: #fefefe;
+    margin: 15% auto;
     padding: 20px;
+    border: 1px solid #888;
     border-radius: 8px;
-    width: 400px;
-    max-width: 90%;
+    width: 60%;
+    max-width: 500px;
     position: relative;
 }
 
-.close {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    font-size: 24px;
+.close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
     cursor: pointer;
-    color: #666;
+    position: absolute;
+    right: 20px;
+    top: 10px;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+    color: black;
+    text-decoration: none;
+}
+
+.quota-section {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.slot-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: flex-end;
+}
+
+.quota-input {
+    width: 80px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.stream-input {
+    width: 200px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #e9ecef;
+}
+
+.add-stream-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.add-stream-btn:hover {
+    background-color: #218838;
 }
 
 .form-group {
@@ -417,4 +474,704 @@ h2.mt-4 {
 .date {
     color: #64748b;
     font-size: 0.9em;
+}
+
+/* === Стилі для повідомлення про відсутність активних робіт === */
+.no-active-works {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+/* === Стилі для секцій файлів, карток, кнопок (з active.html) === */
+.files-section {
+    width: 100%;
+    max-width: 1350px;
+}
+.file-block {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.file-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #E6F0FF;
+    padding: 12px;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 0;
+    position: relative;
+    padding-right: 15px !important;
+}
+.file-header span {
+    max-width: 90%;
+}
+.file-description {
+    background-color: #E6F0FF;
+    padding: 15px;
+    border-radius: 0 0 6px 6px;
+    margin-top: 1px;
+}
+.file-comments {
+    width: 100%;
+    padding: 15px;
+    background-color: white;
+    border-radius: 0 0 6px 6px;
+    border-top: 1px solid #E5E7EB;
+}
+.comment-form textarea {
+    width: 100%;
+    min-height: 80px;
+}
+.complete-button {
+    background-color: #0F766E;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+.complete-button:hover {
+    background-color: #0E6659;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+.complete-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.complete-section {
+    padding: 0 0 15px 0;
+    margin-top: 20px;
+    border-top: 1px solid #E5E7EB;
+    padding-top: 15px;
+    text-align: right;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+.complete-section p {
+    max-width: 500px;
+}
+
+/* Стилі для скролбару файлів */
+#files-container::-webkit-scrollbar {
+    width: 8px;
+    background-color: #F0F0F0;
+}
+#files-container::-webkit-scrollbar-thumb {
+    background-color: #C0C0C0;
+    border-radius: 4px;
+}
+#files-container::-webkit-scrollbar-thumb:hover {
+    background-color: #A0A0A0;
+}
+#files-container {
+    background-color: #F2F4F7;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #C0C0C0 #F0F0F0;
+}
+
+/* === Стилі для секції інформації (з info.html) === */
+.slots-wrapper {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.section-title {
+    font-weight: bold;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+.slots-container {
+    display: flex;
+    gap: 3rem;
+}
+.slot-group {
+    text-align: center;
+}
+.stream-title {
+    font-weight: 600;
+}
+.slot-dot {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 2px;
+}
+.slot-dot.occupied {
+    background-color: orange;
+}
+.slot-dot.available {
+    background-color: transparent;
+    border: 2px solid orange;
+}
+.slots-display {
+    display: flex;
+    justify-content: center;
+}
+.themes-list {
+    list-style: none;
+    padding-left: 0;
+}
+.theme-item {
+    margin-bottom: 0.7rem;
+}
+.theme-item a {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: #1a1a3d;
+    text-decoration: none;
+}
+.theme-item a:hover {
+    text-decoration: underline;
+}
+
+/* === Стилі для модального вікна cropper та кнопок (з profile.html) === */
+.button {
+    text-align: center;
+    background-color: #1570ef;
+    color: white;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    flex: 1;
+}
+.button:hover {
+    background-color: #005A9E;
+}
+
+.profile-main {
+    display: flex;
+    justify-content: center;
+}
+
+.profile-content {
+    width: 78%;
+}
+
+.student-themes-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.files-scroll-container {
+    background-color: #F2F4F7;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #C0C0C0 #F0F0F0;
+}
+
+.file-block {
+    margin-bottom: 15px;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.file-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #E6F0FF;
+    padding: 12px;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 0;
+    position: relative;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.download-button {
+    color: #3B82F6;
+    background-color: #EFF6FF;
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+.download-button:hover {
+    background-color: #dbeafe;
+}
+.download-icon {
+    margin-right: 4px;
+}
+.delete-file-btn {
+    background-color: #FEE2E2;
+    border: none;
+    color: #EF4444;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.delete-file-btn:hover {
+    background-color: #fecaca;
+}
+.delete-icon {
+    margin-right: 4px;
+}
+.file-name-ellipsis {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.file-description-block {
+    background-color: #E6F0FF;
+    padding: 15px;
+    border-radius: 0 0 6px 6px;
+    margin-top: 1px;
+}
+.file-description-text {
+    margin: 0;
+    font-size: 14px;
+}
+.file-description-empty {
+    height: 1px;
+    background-color: #E6F0FF;
+    border-radius: 0 0 6px 6px;
+}
+.teacher-comments-block {
+    padding: 15px;
+    background-color: white;
+    border-radius: 0 0 6px 6px;
+    border-top: 1px solid #E5E7EB;
+}
+.teacher-comments-title {
+    margin-bottom: 10px;
+    color: #2563EB;
+}
+.comment-block {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+.teacher-bg {
+    background-color: #E6F0FF;
+}
+.student-bg {
+    background-color: #F3F4F6;
+}
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+.comment-author {
+    font-weight: 500;
+    color: #2563EB;
+}
+.comment-date {
+    color: #6B7280;
+    font-size: 12px;
+}
+.comment-text {
+    margin: 0;
+    font-size: 14px;
+}
+.attachment-block {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: rgba(255,255,255,0.6);
+    border-radius: 4px;
+}
+.attachment-link {
+    display: flex;
+    align-items: center;
+    color: #2563EB;
+    text-decoration: none;
+}
+.attachment-icon {
+    margin-right: 5px;
+}
+.attachment-filename {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.delete-comment-btn {
+    background: none;
+    border: none;
+    color: #EF4444;
+    font-size: 12px;
+    padding: 0;
+    margin-top: 5px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.delete-comment-btn:hover {
+    color: #b91c1c;
+}
+.no-files {
+    text-align: center;
+    padding: 10px;
+    color: #888;
+    font-style: italic;
+    margin-top: 2rem;
+}
+.file-upload-group {
+    position: relative;
+}
+.file-input {
+    display: none;
+}
+.file-input-label {
+    display: inline-block;
+    background-color: #2563EB;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+.file-input-label:hover {
+    background-color: #1D4ED8;
+}
+.file-name-label {
+    line-height: 40px;
+    color: #6B7280;
+}
+.file-description-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #4B5563;
+    font-size: 14px;
+    font-weight: 500;
+}
+.file-description-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    resize: vertical;
+}
+.file-upload-btn {
+    background-color: #22C55E;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.file-upload-btn:hover {
+    background-color: #16A34A;
+}
+.comment-file-label {
+    display: inline-block;
+    background-color: #F8FAFC;
+    color: #6B7280;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.file-label {
+    line-height: 36px;
+    color: #6B7280;
+}
+.attachment-feedback {
+    font-size: 13px;
+    margin-top: 3px;
+    margin-bottom: 8px;
+    display: none;
+}
+.attachment-message {
+    color: #16A34A;
+    display: flex;
+    align-items: center;
+}
+.attachment-check {
+    margin-right: 5px;
+}
+.add-comment-btn {
+    background-color: #2563EB;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.add-comment-btn:hover {
+    background-color: #1D4ED8;
+}
+.comment-status {
+    margin-top: 10px;
+    display: none;
+}
+.sending-status {
+    color: #2563EB;
+    display: flex;
+    align-items: center;
+}
+.success-status {
+    color: #16A34A;
+    display: none;
+    align-items: center;
+}
+
+/* === Стилі для модального вікна завершення роботи === */
+#completeModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.complete-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+}
+
+.complete-modal-title {
+    margin-bottom: 15px;
+}
+
+.complete-modal-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.complete-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.complete-modal-cancel {
+    padding: 8px 16px;
+    background-color: #f1f1f1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.complete-modal-confirm {
+    padding: 8px 16px;
+    background-color: #22C55E;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* === Стилі для модального вікна видалення файлу === */
+.delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 5%;
+}
+
+.delete-modal-content {
+    background: white;
+    border-radius: 0.75rem;
+    border: 2px solid #6FCF97;
+    padding: 1.25rem;
+    position: relative;
+    width: 400px;
+    max-width: 90%;
+}
+
+.delete-modal-close {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+}
+
+.delete-modal-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.delete-modal-icon {
+    width: 44px;
+    height: 44px;
+    margin-right: 15px;
+}
+
+.delete-modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.delete-modal-message {
+    margin-bottom: 1.5rem;
+}
+
+.delete-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.delete-modal-cancel {
+    padding: 8px 16px;
+    background: #FF4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.delete-modal-confirm {
+    padding: 8px 16px;
+    background: #6FCF97;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* === Стилі для секції завершення роботи === */
+.complete-section-header {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.complete-section-message {
+    margin-bottom: 15px;
+    color: #4B5563;
+    font-size: 14px;
+}
+
+.complete-button-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+/* === Стилі для контейнера файлів === */
+.container {
+    max-width: 1400px !important;
+    width: 95% !important;
+}
+
+.request-card {
+    width: 100%;
+    max-width: 1350px;
+}
+
+/* === Стилі для textarea === */
+textarea.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    resize: vertical;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+textarea.form-control:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+
+textarea.form-control::placeholder {
+    color: #9CA3AF;
+}
+
+/* === Стилі для скролбару === */
+#files-container::-webkit-scrollbar {
+    width: 8px;
+    background-color: #F0F0F0;
+}
+
+#files-container::-webkit-scrollbar-thumb {
+    background-color: #C0C0C0;
+    border-radius: 4px;
+}
+
+#files-container::-webkit-scrollbar-thumb:hover {
+    background-color: #A0A0A0;
+}
+
+/* === Стилі для адаптивності === */
+@media (min-width: 992px) {
+    .request-user {
+        display: flex;
+        gap: 30px;
+    }
+    
+    .user-info {
+        flex: 1;
+    }
+    
+    .files-section {
+        padding-left: 20px;
+    }
 }
