@@ -99,7 +99,8 @@ class RequestForm(forms.ModelForm):
         widget=forms.TextInput(attrs={
             'class': 'form-input',
             'placeholder': 'Обери',
-            'list': 'themes-list'
+            'list': 'themes-list',
+            'readonly': 'readonly',
         }),
         required=False
     )

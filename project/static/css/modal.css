@@ -80,9 +80,8 @@ text-align: center;
 
 .left-container img {
 display: block;
-width: 50%;         /* Adjust the base width as needed */
-height: auto;       /* Let the height scale naturally */
-max-width: 100%;    /* Prevent overflow in smaller containers */
+width: 16rem;
+height: 16rem;      
 border-radius: 50%;
 object-fit: cover;
 margin-bottom: 0.5rem; /* 8px */

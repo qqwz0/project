@@ -34,7 +34,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
     <div class="filter-section">
      <div class="filter-header">
       <h3>Фільтри</h3>
-      <img src="{% static 'assets/img/filters.svg' %}" alt="Filters">
+      <img src="{% static 'images/filters.svg' %}" alt="Filters">
      </div>
      <div class="filter-content">
       <hr class="devider">
@@ -74,7 +74,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
       <div class="search-container">
        {% render_field form.searching class="form-searching" autocomplete="off" x-model="searchQuery" @keydown.enter="applySearch()" %}
        <button class="search-button" @click="applySearch()">
-        <img src="{% static 'assets/img/search.svg' %}" alt="Search">
+        <img src="{% static 'images/search.svg' %}" alt="Search">
        </button>
       </div>
      </div>
@@ -132,7 +132,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
 {% endif %}
 
 <!-- External JavaScript Files -->
-<script src="{% static 'assets/js/teacher_modal.js' %}"></script>
-<script src="{% static 'assets/js/filtering.js' %}"></script>
+<script src="{% static 'js/teacher_modal.js' %}"></script>
+<script src="{% static 'js/filtering.js' %}"></script>
 
 {% endblock %}

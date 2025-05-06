@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.db.models import Max
 from django.utils import timezone
 from django.template.loader import render_to_string
-from .utils import HtmxLoginRequiredMixin, FileAccessMixin
+from .utils import HtmxModalFormAccessMixin, FileAccessMixin
 
 from django.shortcuts import render
 
@@ -112,6 +112,16 @@ class TeachersListView(ListView):
         slots = Slot.filter_by_available_slots()
         data = []
         is_matched = False
+        has_active = Request.objects.filter(student_id=request.user, request_status='Активний').exists()
+
+        
+        teacher_ids = [t.pk for t in teachers]
+        already_requested_qs = Request.objects.filter(
+            student_id=request.user,
+            teacher_id__in=teacher_ids,
+            request_status='Очікує'
+        ).values_list('teacher_id', flat=True)
+        already_requested_set = set(already_requested_qs)
 
         if request.user.is_authenticated and request.user.role == 'Студент':
             user = request.user
@@ -123,19 +133,19 @@ class TeachersListView(ListView):
 
         for teacher in teachers:
             free_slots = slots.filter(teacher_id=teacher)
-            already_requested = True if Request.objects.filter(student_id=request.user, teacher_id=teacher.pk).exists() else False
-    
+            already_requested = teacher.pk in already_requested_set
             if teacher.teacher_id.patronymic:
                 patronymic = teacher.teacher_id.patronymic
                 full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name} {patronymic}"
             else:
-                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}" 
-                   
+                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}"
+
             data.append({
+                'has_active': has_active,
                 'teacher': {
                     'id': teacher.pk,
                     'academic_level': teacher.academic_level,
-                    'photo': None,
+                    'photo': teacher.teacher_id.profile_picture.url,
                     'url': teacher.get_absolute_url(),
                     'already_requested': already_requested,
                     'teacher_id': {
@@ -144,7 +154,6 @@ class TeachersListView(ListView):
                         'department': teacher.teacher_id.department,
                         'full_name': full_name
                     }
-                    
                 },
                 'free_slots': [
                     {
@@ -160,7 +169,7 @@ class TeachersListView(ListView):
 
         return JsonResponse(data, safe=False)  
 
-class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, FormView):
+class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView, FormView):
     """
     Manages the teacher detail view, form submission, and saves student requests.
     """
@@ -223,7 +232,7 @@ class TeacherModalView(HtmxLoginRequiredMixin, SuccessMessageMixin, DetailView, 
         
         context['free_slots'] = slots
         context['is_matched'] = is_matched
-        context['photo'] = None
+        context['photo'] = teacher.teacher_id.profile_picture.url 
         return context
     
     def form_invalid(self, form):

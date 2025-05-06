@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from .models import Request
 
 
-class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
+class HtmxModalFormAccessMixin(LoginRequiredMixin, AccessMixin):
     """
     A mixin that checks if the user is authenticated and is a student.
     Returns a 403 response for HTMX requests or redirects otherwise.
@@ -27,13 +27,17 @@ class HtmxLoginRequiredMixin(LoginRequiredMixin, AccessMixin):
         Overridden dispatch method.
         Checks if the user is authenticated and not a teacher. Otherwise, calls `handle_no_permission`.
         """
-        # if 'pk' in self.kwargs:
-        #     already_requested = Request.objects.filter(student_id=request.user, teacher_id=self.kwargs['pk']).exists()
-        #     if already_requested:
-        #         return self.handle_no_permission()
-                
+        if 'pk' in self.kwargs:
+             already_requested = Request.objects.filter(student_id=request.user, teacher_id=self.kwargs['pk'], request_status='Очікує').exists()
+             if already_requested:
+               return self.handle_no_permission()
+           
+        if Request.objects.filter(student_id=request.user, request_status='Активний').exists():  
+            return self.handle_no_permission()  
+            
         if not request.user.is_authenticated:
             return self.handle_no_permission()
+        
         if request.user.role == 'Викладач':
             return self.handle_no_permission()
         

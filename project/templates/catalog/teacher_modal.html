@@ -9,12 +9,7 @@
        
     <div class="left-container">
         <!-- Display teacher's photo or a default image -->
-        {% if photo %}
-            <img src="{{ photo.url }}" alt="Teacher">
-        {% else %}
-            <img src="{% static 'assets/img/default.jpg' %}" alt="No photo">
-        {% endif %}
-        
+        <img src="{{photo}}" alt="Teacher">
         <!-- Display teacher's name -->
         <h2>
             {%if teacher.teacher_id.patronymic%}
@@ -67,7 +62,7 @@
                 <div class="dropdown-input">
                     {{ form.teacher_themes }}
                     <button type="button" id="dropdown-toggle" class="dropdown-toggle">
-                        <img src={% static "assets/img/arrow-up.svg" %} alt="Dropdown Icon" class="dropdown-icon">
+                        <img src={% static "images/arrow-up.svg" %} alt="Dropdown Icon" class="dropdown-icon">
                     </button>
                 </div>
                 <div class="error-message"></div>
@@ -90,7 +85,7 @@
                 <div class="input-add">
                     {{ form.student_themes }}
                     <button type="button" id="add-theme" class="add-theme">
-                        <img src="{% static 'assets/img/plus.svg' %}" alt="Add Icon" class="add-icon">
+                        <img src="{% static 'images/plus.svg' %}" alt="Add Icon" class="add-icon">
                     </button>
                 </div>
                 <div class="error-message"></div>
