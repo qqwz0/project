@@ -113,4 +113,82 @@ function logElementDetails(element) {
     console.log('Class list:', element.classList);
     console.log('Display style:', window.getComputedStyle(element).display);
     console.log('Visibility style:', window.getComputedStyle(element).visibility);
-} 
+}
+
+function closePopup(element) {
+    if (element) {
+        element.closest('.success-popup, .error-popup').style.display = 'none';
+    } else {
+        document.querySelectorAll('.success-popup, .error-popup').forEach(function(popup) {
+            popup.style.display = 'none';
+        });
+    }
+}
+
+function showToast(message, type='success') {
+    // Видаляємо попередній тост, якщо є
+    document.querySelectorAll('.success-popup, .error-popup').forEach(function(popup) {
+        popup.remove();
+    });
+    const toast = document.createElement('div');
+    toast.className = `success-popup ${type}`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.zIndex = 9999;
+    toast.innerHTML = `
+        <img src="/static/images/toastIcon.svg" alt="Success" class="success-icon" />
+        <div>
+            <div class="popup-content">
+                <p class="popup-title">${type === 'success' ? 'Успіх!' : 'Помилка!'}</p>
+                <p class="popup-text">${message}</p>
+            </div>
+            <i class="toast-close fas fa-times close" onclick="closePopup(this)"></i>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+window.handleRequest = function(action, requestId) {
+    let url;
+    if (action === 'approve') {
+        url = `/users/approve_request/${requestId}/`;
+    } else if (action === 'reject') {
+        url = `/users/reject_request/${requestId}/`;
+    } else if (action === 'restore') {
+        url = `/users/restore_request/${requestId}/`;
+    } else {
+        alert('Unknown action');
+        return;
+    }
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(
+                action === 'approve' ? 'Запит успішно підтверджено' :
+                action === 'reject' ? 'Запит успішно відхилено' :
+                action === 'restore' ? 'Запит успішно відновлено' : 'Операція виконана',
+                'success'
+            );
+            // Оновити DOM або перезавантажити частину сторінки, якщо потрібно
+            setTimeout(() => { location.reload(); }, 1200);
+        } else {
+            showToast(data.error || 'Сталася помилка', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Сталася помилка: ' + error, 'error');
+    });
+}; 

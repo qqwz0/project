@@ -98,7 +98,7 @@
         </div>
     {% endif %}
 
-    <div id="requests-section" class="tab-content" style="display: none;">
+    <div id="requests-section" class="tab-content" style="{% if user_profile.role != 'Викладач' %}display: block;{% else %}display: none;{% endif %}">
         {% include 'profile/requests.html' with requests=pending_requests %}
     </div>
 
@@ -174,7 +174,129 @@
 {% block scripts %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="{% static 'js/request-filter.js' %}"></script>
     <script>
-        // JavaScript code remains unchanged
+        function closePopup(element) {
+            if (element) {
+                element.closest('.success-popup, .error-popup').style.display = 'none';
+            } else {
+                document.querySelectorAll('.success-popup, .error-popup').forEach(function(popup) {
+                    popup.style.display = 'none';
+                });
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const tabs = document.querySelectorAll(".tab");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function () {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                });
+            });
+        });
+
+        let selectedFile = null;
+        let cropper = null;
+        const cropbox = document.getElementById("cropbox");
+
+        document.getElementById("profile-pic-input").addEventListener("change", function (event) {
+            event.preventDefault();
+            let file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    cropbox.src = e.target.result;
+                    openModal();
+
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    cropper = new Cropper(cropbox, {
+                        aspectRatio: 1,
+                        viewMode: 2,
+                        autoCropArea: 0.8,
+                        movable: true,
+                        zoomable: true,
+                        scalable: true,
+                        responsive: false,
+                        minContainerWidth: 300,
+                        minContainerHeight: 300,
+                        crop(event) {
+                            document.querySelector('input[name="x"]').value = event.detail.x;
+                            document.querySelector('input[name="y"]').value = event.detail.y;
+                            document.querySelector('input[name="width"]').value = event.detail.width;
+                            document.querySelector('input[name="height"]').value = event.detail.height;
+                        }
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function openModal() {
+            document.getElementById("cropModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("cropModal").style.display = "none";
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        function closePopup() {
+            const popup = event.target.closest('.success-popup');
+            if (popup) {
+              popup.remove();
+            }
+          }
+
+        document.querySelector(".close").addEventListener("click", closeModal);
+
+        document.getElementById("crop-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            if (!cropper) {
+                console.error("Cropper is not initialized.");
+                return;
+            }
+
+            let formData = new FormData(this);
+
+            if (selectedFile) {
+                formData.append("profile_picture", selectedFile);
+            } else {
+                console.error("No file selected.");
+                return;
+            }
+
+            let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'crop_profile_picture' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response data:", data);
+                if (data.success) {
+                    document.getElementById("profile-pic").src = data.new_profile_picture_url + '?t=' + new Date().getTime();
+                    closeModal();
+                    setTimeout(() => {
+                        window.location.href = "{% url 'profile' %}";
+                    }, 1000);
+                } else {
+                    alert("Error cropping image: " + (data.error || "Unknown error"));
+                }
+            })
+            .catch(error => console.error("Fetch error:", error));
+        });
     </script>
 {% endblock %}

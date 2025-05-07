@@ -472,6 +472,22 @@ def profile(request: HttpRequest, user_id=None):
             files = RequestFile.objects.filter(request=req).select_related('uploaded_by')
             active_request_files[str(req.id)] = list(files)
         
+        # Додаю accepted_requests
+        accepted_requests = Request.objects.select_related(
+            'student_id', 'teacher_id', 'teacher_theme', 'slot'
+        ).prefetch_related('student_themes', 'files').filter(
+            teacher_id__teacher_id=user_profile,
+            request_status__in=['Активний', 'Завершено']
+        )
+        
+        # Додаю rejected_requests
+        rejected_requests = Request.objects.select_related(
+            'student_id', 'teacher_id', 'teacher_theme', 'slot'
+        ).prefetch_related('student_themes', 'files').filter(
+            teacher_id__teacher_id=user_profile,
+            request_status='Відхилено'
+        )
+        
         context.update({
             'teacher_profile': teacher_profile,
             'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
@@ -489,21 +505,26 @@ def profile(request: HttpRequest, user_id=None):
             ).prefetch_related('student_themes', 'files').filter(
                 teacher_id__teacher_id=user_profile,
                 request_status='Завершено'
-            )
+            ),
+            'accepted_requests': accepted_requests,
+            'rejected_requests': rejected_requests,
         })
     else:  # Student
         # Get or create student profile
         student_profile = get_object_or_404(OnlyStudent, student_id=user_profile)
         
-        # Get all active requests with files
-        active_requests = Request.objects.select_related(
+        # Get all requests for the student
+        all_requests = Request.objects.select_related(
             'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes', 'files').filter(
-            student_id=user_profile,
-            request_status='Активний'
+        ).prefetch_related('student_themes').filter(
+            student_id=user_profile
         )
         
-        # Prepare files dictionary
+        # Активні та архівні запити для вкладок
+        active_requests = all_requests.filter(request_status='Активний')
+        archived_requests = all_requests.filter(request_status='Завершено')
+        
+        # Get all active requests with files
         active_request_files = {}
         for req in active_requests:
             files = RequestFile.objects.filter(request=req).select_related('uploaded_by')
@@ -511,20 +532,10 @@ def profile(request: HttpRequest, user_id=None):
         
         context.update({
             'student_profile': student_profile,
-            'sent_requests': Request.objects.select_related(
-                'student_id', 'teacher_id', 'teacher_theme', 'slot'
-            ).prefetch_related('student_themes').filter(
-                student_id=user_profile,
-                request_status='Очікує'
-            ),
+            'all_requests': all_requests,
             'active_requests': active_requests,
+            'archived_requests': archived_requests,
             'active_request_files': active_request_files,
-            'archived_requests': Request.objects.select_related(
-                'student_id', 'teacher_id', 'teacher_theme', 'slot'
-            ).prefetch_related('student_themes').filter(
-                student_id=user_profile,
-                request_status='Завершено'
-            )
         })
 
     return render(request, 'profile/profile.html', context)

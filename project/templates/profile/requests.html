@@ -25,11 +25,11 @@
         </div>
     </div>
 
-    {% if sent_requests %}
+    {% if all_requests %}
         <!-- Запити, що очікують -->
         <div class="request-section pending-section">
             <h2>⏳ Очікують відповіді</h2>
-            {% for request in sent_requests|dictsortreversed:"request_date" %}
+            {% for request in all_requests|dictsortreversed:"request_date" %}
                 {% if request.request_status == 'Очікує' %}
                     <div class="request-card pending-request">
                         <div class="request-user">
@@ -75,7 +75,7 @@
         <!-- Прийняті запити -->
         <div class="request-section accepted-section">
             <h2>✅ Прийняті запити</h2>
-        {% for request in sent_requests|dictsortreversed:"request_date" %}
+            {% for request in all_requests|dictsortreversed:"request_date" %}
                 {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
                     <div class="request-card accepted-request">
                 <div class="request-user">
@@ -145,7 +145,7 @@
         <!-- Відхилені запити -->
         <div class="request-section rejected-section">
             <h2>❌ Відхилені запити</h2>
-            {% for request in sent_requests|dictsortreversed:"request_date" %}
+            {% for request in all_requests|dictsortreversed:"request_date" %}
                 {% if request.request_status == 'Відхилено' %}
                     <div class="request-card rejected-request">
                         <div class="request-user">
@@ -336,51 +336,44 @@
     
     <!-- Відхилені запити -->
     <div class="request-section rejected-section">
-        {% if pending_requests %}
+        {% if rejected_requests %}
             <h2 class="mt-4">❌ Відхилені запити</h2>
-            {% for request in pending_requests|dictsortreversed:"request_date" %}
-                {% if request.request_status == 'Відхилено' %}
-                    <div class="request-card rejected-request">
-                        <div class="request-user">
-                            {% if request.student_id.profile_picture %}
-                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                            {% else %}
-                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+            {% for request in rejected_requests|dictsortreversed:"request_date" %}
+                <div class="request-card rejected-request">
+                    <div class="request-user">
+                        {% if request.student_id.profile_picture %}
+                            <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                        {% else %}
+                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                        {% endif %}
+                        <div class="user-info">
+                            <h3>{{ request.student_id.get_full_name }}</h3>
+                            <p class="role">{{ request.student_id.academic_group }}</p>
+                            {% if request.teacher_theme %}
+                                <strong>Запропонована тема:</strong>
+                                <p class="theme">{{ request.teacher_theme.theme }}</p>
                             {% endif %}
-                            <div class="user-info">
-                                <h3>{{ request.student_id.get_full_name }}</h3>
-                                <p class="role">{{ request.student_id.academic_group }}</p>
-
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
-                                {% endif %}
-
-                                <strong>Теми студента:</strong>
-                                {% if request.student_themes.all %}
-                                    <ul class="student-themes-list">
-                                        {% for theme in request.student_themes.all %}
-                                            <li>{{ theme.theme }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                {% endif %}
-
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
-                                
-                                <strong>Дата запиту:</strong>
-                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
-                            </div>
-                        </div>
-
-                        <!-- Button to restore request -->
-                        <div class="request-actions">
-                            <button onclick="handleRequest('restore', {{ request.id }})" class="request-button restore">
-                                <i class="fas fa-undo"></i> Відновити
-                            </button>
+                            <strong>Теми студента:</strong>
+                            {% if request.student_themes.all %}
+                                <ul class="student-themes-list">
+                                    {% for theme in request.student_themes.all %}
+                                        <li>{{ theme.theme }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                            <strong>Мотивація:</strong>
+                            <p class="motivation">{{ request.motivation_text }}</p>
+                            <strong>Дата запиту:</strong>
+                            <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                         </div>
                     </div>
-                {% endif %}
+                    <!-- Button to restore request -->
+                    <div class="request-actions">
+                        <button onclick="handleRequest('restore', {{ request.id }})" class="request-button restore">
+                            <i class="fas fa-undo"></i> Відновити
+                        </button>
+                    </div>
+                </div>
             {% endfor %}
         {% endif %}
     </div>

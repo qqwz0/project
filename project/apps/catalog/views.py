@@ -480,9 +480,13 @@ class UploadFileView(View):
             course_request = Request.objects.get(pk=request_id)
             
             if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'error', 'message': 'Немає прав доступу'}, status=403)
                 return HttpResponseForbidden('Немає прав доступу')
             
             if course_request.request_status != 'Активний':
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'error', 'message': 'Файли можна додавати тільки до активних запитів'}, status=400)
                 return HttpResponseBadRequest('Файли можна додавати тільки до активних запитів')
             
             form = RequestFileForm(request.POST, request.FILES)
@@ -495,14 +499,19 @@ class UploadFileView(View):
                 file.version = (latest_version or 0) + 1
                 
                 file.save()
-                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'success'})
                 return redirect('profile')
-            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': 'Помилка у формі'}, status=400)
             return HttpResponseBadRequest('Помилка у формі')
-            
         except Request.DoesNotExist:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': 'Запит не знайдено'}, status=404)
             return HttpResponseNotFound('Запит не знайдено')
         except Exception as e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             return HttpResponseServerError(str(e))
 
 

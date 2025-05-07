@@ -169,15 +169,28 @@
                                                 fileNameSpan.textContent = 'Файл не вибрано';
                                                 fileNameSpan.style.color = '#6B7280';
                                             }
-                                            // Оновлюємо сторінку
-                                            location.reload();
+                                            // Показуємо тост і оновлюємо сторінку
+                                            if (window.showToast) {
+                                                window.showToast('Файл успішно додано', 'success');
+                                                setTimeout(() => { location.reload(); }, 1200);
+                                            } else {
+                                                location.reload();
+                                            }
                                         } else {
-                                            alert('Помилка при завантаженні файлу: ' + data.message);
+                                            if (window.showToast) {
+                                                window.showToast('Помилка при завантаженні файлу: ' + data.message, 'error');
+                                            } else {
+                                                alert('Помилка при завантаженні файлу: ' + data.message);
+                                            }
                                         }
                                     })
                                     .catch(error => {
                                         console.error('Error:', error);
-                                        alert('Помилка при завантаженні файлу');
+                                        if (window.showToast) {
+                                            window.showToast('Помилка при завантаженні файлу', 'error');
+                                        } else {
+                                            alert('Помилка при завантаженні файлу');
+                                        }
                                     });
                                 });
                             </script>
@@ -584,11 +597,48 @@ $(document).ready(function() {
     });
 
     // Обробник видалення коментаря
-    $(document).on('click', '.delete-comment', function() {
+    $(document).on('click', '.delete-comment-btn', function() {
         var button = $(this);
         var commentId = button.data('comment-id');
         
-        if (confirm('Ви впевнені, що хочете видалити цей коментар?')) {
+        // Створюємо власне модальне вікно (аналогічно до видалення файлу)
+        var modal = $(
+            `<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding-top: 5%;">
+                <div style="background: white; border-radius: 0.75rem; border: 2px solid #EF4444; padding: 1.25rem; position: relative; width: 400px; max-width: 90%;">
+                    <button type="button" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #333;">×</button>
+                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                        <div style="width: 44px; height: 44px; margin-right: 15px;">
+                            <svg viewBox="0 0 44 44" style="width: 100%; height: 100%;">
+                                <circle cx="22" cy="22" r="22" fill="#EF4444"/>
+                                <path d="M18 24.5L14 20.5L12 22.5L18 28.5L32 14.5L30 12.5L18 24.5Z" fill="white"/>
+                            </svg>
+                        </div>
+                        <h3 style="margin: 0; font-size: 1.25rem; color: #EF4444;">Підтвердження</h3>
+                    </div>
+                    <p style="margin-bottom: 1.5rem;">Ви впевнені, що хочете видалити цей коментар?</p>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="cancel-button" style="padding: 8px 16px; background: #FF4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Скасувати</button>
+                        <button type="button" class="confirm-button" style="padding: 8px 16px; background: #6FCF97; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+                    </div>
+                </div>
+            </div>`
+        );
+        
+        // Додаємо модальне вікно до body
+        $('body').append(modal);
+        
+        // Обробник закриття по кнопці X
+        modal.find('button:first').click(function() {
+            modal.remove();
+        });
+        
+        // Обробник кнопки "Скасувати"
+        modal.find('.cancel-button').click(function() {
+            modal.remove();
+        });
+        
+        // Обробник кнопки "OK"
+        modal.find('.confirm-button').click(function() {
             $.ajax({
                 url: '/catalog/comment/' + commentId + '/delete/',
                 type: 'POST',
@@ -597,7 +647,7 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (response.success) {
-                        button.closest('.comment').fadeOut(300, function() {
+                        button.closest('.comment-block').fadeOut(300, function() {
                             $(this).remove();
                         });
                     }
@@ -606,7 +656,61 @@ $(document).ready(function() {
                     alert('Помилка при видаленні коментаря');
                 }
             });
-        }
+            modal.remove();
+        });
+        
+        // Закриття по кліку на фон
+        modal.click(function(e) {
+            if ($(e.target).is(modal)) {
+                modal.remove();
+            }
+        });
+    });
+
+    // Додаю обробку форми завантаження файлу для викладача
+    $('.file-upload-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var formData = new FormData(form);
+        var requestId = $(form).find('input[type="file"]').attr('id').split('-').pop();
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                form.reset();
+                var fileNameSpan = document.getElementById('file-name-' + requestId);
+                if (fileNameSpan) {
+                    fileNameSpan.textContent = 'Файл не вибрано';
+                    fileNameSpan.style.color = '#6B7280';
+                }
+                if (window.showToast) {
+                    window.showToast('Файл успішно додано', 'success');
+                    setTimeout(() => { location.reload(); }, 1200);
+                } else {
+                    location.reload();
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast('Помилка при завантаженні файлу: ' + data.message, 'error');
+                } else {
+                    alert('Помилка при завантаженні файлу: ' + data.message);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (window.showToast) {
+                window.showToast('Помилка при завантаженні файлу', 'error');
+            } else {
+                alert('Помилка при завантаженні файлу');
+            }
+        });
     });
 });
 
