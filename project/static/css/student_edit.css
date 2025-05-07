@@ -433,3 +433,127 @@ input:focus, select:focus {
 .modal-buttons button:hover {
     opacity: 0.9;
 }
+
+@media (max-width: 480px) {
+    .edit-profile-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .profile-image {
+        width: 80px;
+        height: 80px;
+    }
+
+    .profile-title h1 {
+        font-size: 20px;
+    }
+
+    .profile-title .email {
+        font-size: 12px;
+    }
+
+    .edit-title {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+
+    .form-content {
+        padding: 16px;
+    }
+
+    .form-row {
+        gap: 12px;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .save-button,
+    .back-button {
+        width: 100%;
+    }
+
+    .phone-input {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .country-code {
+        padding: 0;
+    }
+
+    /* Quota section adjustments */
+    .slot-row {
+        flex-direction: column;
+    }
+
+    .quota-input,
+    .stream-input {
+        width: 100%;
+    }
+
+    /* Modal adjustments */
+    .modal-content {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .modal-buttons {
+        flex-direction: column;
+    }
+
+    .modal-buttons button {
+        width: 100%;
+    }
+
+    /* Theme section adjustments */
+    .theme-input-container {
+        flex-direction: column;
+    }
+
+    #new-theme {
+        width: 100%;
+    }
+
+    .add-theme {
+        width: 100%;
+        height: 40px;
+        margin-top: 0;
+    }
+
+    .theme-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .theme-item input {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    .edit-profile-container {
+        padding: 12px;
+    }
+
+    .form-content {
+        padding: 12px;
+    }
+
+    h3 {
+        font-size: 15px;
+    }
+
+    label {
+        font-size: 13px;
+    }
+
+    input, select {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+}

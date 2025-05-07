@@ -66,7 +66,7 @@
                     </div>
                 {% endif %}
             {% empty %}
-                <div class="no-requests pending-no-requests">
+                <div class="no-active-works pending-no-requests">
                     <p>Немає запитів, що очікують відповіді.</p>
                 </div>
             {% endfor %}
@@ -136,7 +136,7 @@
                     </div>
                 {% endif %}
             {% empty %}
-                <div class="no-requests accepted-no-requests">
+                <div class="no-active-works accepted-no-requests">
                     <p>Немає прийнятих запитів.</p>
                 </div>
             {% endfor %}
@@ -182,13 +182,13 @@
                     </div>
                 {% endif %}
             {% empty %}
-                <div class="no-requests rejected-no-requests">
+                <div class="no-active-works rejected-no-requests">
                     <p>Немає відхилених запитів.</p>
-            </div>
+                </div>
         {% endfor %}
         </div>
     {% else %}
-        <p class="no-requests">Ви ще не надсилали запитів.</p>
+        <p class="no-active-works">Ви ще не надсилали запитів.</p>
     {% endif %}
 
     {% elif user_profile.role == "Викладач" %}

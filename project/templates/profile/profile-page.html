@@ -4,30 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ваш профіль</title>
+    
     {% load static %}
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" type="text/css" href="{% static 'css/profile.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/header.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/requests.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/messages.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/student_edit.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    {% csrf_token %}  <!-- Add CSRF token -->
-
-    {% include 'header.html' %}  <!-- Include header -->
-
+    {% csrf_token %}
+    
+    <!-- Header -->
+    {% include 'header.html' %}
+    
+    <!-- Main Content -->
     <main class="profile-main">
         <div class="profile-content">
-            {% block content %}{% endblock %}  <!-- Content to be filled by child templates -->
+            {% block content %}{% endblock %}
         </div>
     </main>
-
+    
+    <!-- Additional Scripts -->
     {% block scripts %}{% endblock %}
-
 </body>
 </html>

@@ -1,40 +1,47 @@
 {% load static %}
 
 {% if user_profile.role == "Викладач" %}
+    <!-- Section: Available Slots -->
     <div class="slots-wrapper">
         <h2 class="section-title">Кількість доступних місць</h2>
         {% if slots and slots|length > 0 %}
-        <div class="slots-container">
-            {% for slot in slots %}
-                <div class="slot-group" 
-                    data-available="{{ slot.get_available_slots|default:0 }}" 
-                    data-occupied="{{ slot.occupied|default:0 }}">
-                    <p class="stream-title">{{ slot.stream_id }}</p>
-                    <div class="slots-display"></div>
-                </div>
-            {% endfor %}
-        </div>
+            <div class="slots-container">
+                {% for slot in slots %}
+                    <!-- Slot Group -->
+                    <div class="slot-group" 
+                         data-available="{{ slot.get_available_slots|default:0 }}" 
+                         data-occupied="{{ slot.occupied|default:0 }}">
+                        <p class="stream-title">{{ slot.stream_id }}</p>
+                        <div class="slots-display"></div>
+                    </div>
+                {% endfor %}
+            </div>
         {% else %}
-            <div style="color: #888; font-style: italic;">Немає інформації.</div>
+            <!-- No Slots Information -->
+            <div class="no-info" style="color: #888; font-style: italic;">Немає інформації.</div>
         {% endif %}
     </div>
 
-    <div>
+    <!-- Section: Course Themes -->
+    <div class="themes-section">
         <h2 class="section-title mt-4">Теми курсових робіт</h2>
         {% if themes and themes|length > 0 %}
-        <ul class="themes-list">
-            {% for theme in themes %}
-                <li class="theme-item mb-1">
-                    <a href="#">{{ theme.theme }}</a><br>
-                    &emsp;{{ theme.theme_description }}
-                </li>            
-            {% endfor %}
-        </ul>
+            <ul class="themes-list">
+                {% for theme in themes %}
+                    <!-- Theme Item -->
+                    <li class="theme-item mb-1">
+                        <a href="#">{{ theme.theme }}</a><br>
+                        <span class="theme-description">&emsp;{{ theme.theme_description }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
         {% else %}
-            <div style="color: #888; font-style: italic;">Немає інформації.</div>
+            <!-- No Themes Information -->
+            <div class="no-info" style="color: #888; font-style: italic;">Немає інформації.</div>
         {% endif %}
     </div>
 
+    <!-- JavaScript: Handle Slot Display -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             console.log("DOM fully loaded and parsed.");
@@ -64,6 +71,5 @@
                 }
             });
         });
-        
     </script>
 {% endif %}

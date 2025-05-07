@@ -1,195 +1,266 @@
+/* === Enhanced Request Cards === */
 .request-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #F8FAFC;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
     border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .request-user {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
+    flex: 1;
+    min-width: 280px;
 }
 
 .request-avatar {
-    width: 80px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .user-info a {
-    font-size: 18px;
-    font-weight: bold;
-    color: #334155;
-    text-decoration: none;
+    font-size: 1.25rem;
+    margin-bottom: 2px; /* Зменшуємо відступ після імені */
+    display: block;
 }
 
-.user-info p.role {
-    font-size: 15px;
-    color: #64748B;
-    margin-bottom: 5px;
+.user-info .group {
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 2px; /* Зменшуємо відступ перед групою */
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.user-info p.theme {
-    font-size: medium;
-    margin-bottom: 5px;
+.user-info .group::before {
+    content: "🎓";
+    font-size: 0.9em;
+    opacity: 0.7;
+}
+
+.user-info a:hover {
+    color: #3b82f6;
+}
+
+.user-info p {
+    margin: 6px 0;
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.user-info strong {
+    color: #475569;
+    font-weight: 600;
+    display: block;
+    margin-top: 12px;
 }
 
 .status {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: bold;
-    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    align-self: center;
 }
 
-.status.pending {
-    background: #FACC15;
+.status.Відхилено {
+    background: linear-gradient(45deg, #fee2e2, #fecaca);
+    color: #dc2626;
+    border: 1px solid #fca5a5;
 }
 
-.status.accepted {
-    background: #22C55E;
+.status.Активний {
+    background: linear-gradient(45deg, #dcfce7, #bbf7d0);
+    color: #16a34a;
+    border: 1px solid #86efac;
 }
 
-.status.rejected {
-    background: #EF4444;
+.status.Завершено {
+    background: linear-gradient(45deg, #dbeafe, #bfdbfe);
+    color: #2563eb;
+    border: 1px solid #93c5fd;
 }
 
-.status.completed {
-    background: #3B82F6;
-}
-
-.tab-content h2 {
-    margin-bottom: 10px;
+.status.Очікує {
+    background: linear-gradient(45deg, #fef9c3, #fde68a);
+    color: #ca8a04;
+    border: 1px solid #fcd34d;
 }
 
 .request-actions {
     display: flex;
-    gap: 8px;
+    gap: 12px;
+    align-items: center;
+    min-width: 140px;
     flex-direction: column;
-    min-width: 120px;
+    justify-content: center;
 }
 
 .request-button {
-    text-align: center;
-    color: #FFFFFF;
-    padding: 8px 16px;
-    text-decoration: none;
+    padding: 10px 20px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 0.9rem;
     font-weight: 600;
-    height: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    outline: none;
     border: none;
-    transition: background-color 0.3s ease;
-    width: 100%;
-}
-
-.request-button.accept, 
-.request-button.complete {
-    background: #22C55E;
-}
-
-.request-button.accept:hover,
-.request-button.complete:hover {
-    background: #16A34A;
-}
-
-.request-button.reject {
-    background: #EF4444;
-}
-
-.request-button.reject:hover {
-    background: #DC2626;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .request-button i {
-    margin-right: 8px;
-}
-
-/* Modal styles */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    cursor: pointer;
-}
-
-.modal-content {
-    background-color: white;
-    padding: 25px;
-    border-radius: 10px;
-    width: 80%;
-    max-width: 500px;
-    margin: 10% auto;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    position: relative;
-    cursor: default;
-    text-align: center;
-}
-
-.modal-header {
-    margin-bottom: 1.5rem;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #333;
-}
-
-.grade-input {
-    margin-bottom: 1.5rem;
-}
-
-.grade-input label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #333;
-    font-size: 16px;
-}
-
-.grade-input input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
     font-size: 1rem;
-    background-color: #f9f9f9;
 }
 
-.grade-input input:focus {
-    outline: none;
-    border-color: #4a90e2;
+.request-button.accept {
+    background: linear-gradient(45deg, #22c55e, #16a34a);
+    color: white;
 }
 
-.modal-actions {
+.request-button.reject {
+    background: linear-gradient(45deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.request-button.complete {
+    background: linear-gradient(45deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.request-button.restore {
+    background: linear-gradient(45deg, #e2e8f0, #cbd5e1);
+    color: #475569;
+}
+
+.request-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Status Ribbon Effect */
+.request-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 12px 0 0 12px;
+}
+
+.request-card.pending-request::before {
+    background: #f59e0b;
+}
+
+.request-card.accepted-request::before {
+    background: #22c55e;
+}
+
+.request-card.completed-request::before {
+    background: #3b82f6;
+}
+
+.request-card.rejected-request::before {
+    background: #ef4444;
+}
+
+/* Theme List Styling */
+.student-themes-list {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.student-themes-list li {
+    position: relative;
+    padding-left: 12px;
+    margin: 4px 0;
+    color: #475569;
+}
+
+.student-themes-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #94a3b8;
+}
+
+/* Motivation Text Styling */
+.motivation {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    border: 1px solid #e2e8f0;
+    font-style: italic;
+    color: #64748b;
+}
+
+/* Date Styling */
+.date {
+    color: #94a3b8;
+    font-size: 0.85rem;
     display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
+    align-items: center;
+    gap: 6px;
 }
 
-/* Optional: Add space for larger screen sizes */
-@media (min-width: 768px) {
-    .modal-content {
-        width: 60%;
+.date::before {
+    content: '📅';
+    font-size: 0.9em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .request-card {
+        padding: 18px;
+        gap: 18px;
+    }
+    
+    .request-user {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .request-avatar {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .request-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .request-button {
+        width: 100%;
     }
 }
