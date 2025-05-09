@@ -7,6 +7,10 @@ import logging
 from django.utils import timezone
 import os
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from apps.users.models import CustomUser
+
 logger = logging.getLogger(__name__)
         
 class OnlyTeacher(models.Model):
@@ -29,7 +33,11 @@ class OnlyTeacher(models.Model):
     
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
-    
+
+@receiver(post_save, sender=CustomUser)
+def create_only_teacher(sender, instance, created, **kwargs):
+    if instance.role == "Викладач":
+        OnlyTeacher.objects.get_or_create(teacher_id=instance)
 
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)

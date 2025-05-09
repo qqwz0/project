@@ -22,48 +22,66 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      show_occupied: false,
      full_names: [], 
      searchQuery: '', 
+     showFilters: window.innerWidth > 780,
+    isMobile: window.innerWidth <= 780,
+    toggleFilters() {
+      this.showFilters = !this.showFilters;
+    },
+    updateScreenSize() {
+      this.isMobile = window.innerWidth <= 780;  // Ensure breakpoint matches CSS
+      if (!this.isMobile) this.showFilters = true;
+     },
      filteredData: [],  
      async initData() {
       this.data = await (await fetch('{% url 'teachers_list' %}')).json();
       this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));        
      }
   }" 
-  x-init="initData()">
+  x-init="initData(); updateScreenSize(); 
+    window.addEventListener('resize', updateScreenSize)">
+  
 
     <!-- Filter Section -->
-    <div class="filter-section">
-     <div class="filter-header">
-      <h3>Фільтри</h3>
-      <img src="{% static 'images/filters.svg' %}" alt="Filters">
-     </div>
-     <div class="filter-content">
-      <hr class="devider">
-      <h3 class="option-label">{{ form.departments.label }}</h3>
-      {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
-      
-      <hr class="devider">
-      <h3 class="option-label">{{ form.slots.label }}</h3>
-      <div class="range-container">
-       <template x-if="show_occupied">
-        {% render_field form.slots class="form-range" autocomplete="off" x-bind="{disabled: show_occupied}" @input="slots = $el.value" %}
-       </template>
-       <template x-if="!show_occupied">
-        {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" %}
-       </template>
-       <span class="range-value" x-text="slots || '0'"></span>
-      </div>
+    <div x-show="showFilters"
+        x-transition.opacity.duration.300ms
+        class="filter-wrapper"
+        {% comment %} style="display: none" {% endcomment %}
+        @click.away="isMobile && (showFilters = false)"
+    >
+        <div class="filter-section" @click.outside.window="isMobile && (showFilters = false)">
+        <div class="filter-header">
+        <h3>Фільтри</h3>
+        <img src="{% static 'images/filters.svg' %}" alt="Filters">
+        </div>
+        <div class="filter-content">
+        <hr class="devider">
+        <h3 class="option-label">{{ form.departments.label }}</h3>
+        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+        
+        <hr class="devider">
+        <h3 class="option-label">{{ form.slots.label }}</h3>
+        <div class="range-container">
+        <template x-if="show_occupied">
+            {% render_field form.slots class="form-range" autocomplete="off" x-bind="{disabled: show_occupied}" @input="slots = $el.value" %}
+        </template>
+        <template x-if="!show_occupied">
+            {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" %}
+        </template>
+        <span class="range-value" x-text="slots || '0'"></span>
+        </div>
 
-      <hr class="devider">
-      <h3 class="option-label">Науковий ступінь</h3>
-      {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
-      
-      <hr class="devider">
-      <div class="checkbox-wrapper">
-       <span class="checkbox-text">Викладачі без вільних місць</span>
-       {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
-      </div>
-      <button class="filter-button" @click="applyFilters()">Фільтрувати</button>
-     </div>
+        <hr class="devider">
+        <h3 class="option-label">Науковий ступінь</h3>
+        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
+        
+        <hr class="devider">
+        <div class="checkbox-wrapper">
+        <span class="checkbox-text">Викладачі без вільних місць</span>
+        {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
+        </div>
+        <button class="filter-button" @click="applyFilters(); isMobile && (showFilters = false)">Фільтрувати</button>
+        </div>
+        </div>
     </div>
 
     <!-- Content Section -->
@@ -77,6 +95,13 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         <img src="{% static 'images/search.svg' %}" alt="Search">
        </button>
       </div>
+      <!-- Toggle button for small screens -->
+        <button class="mobile-filter-toggle" 
+        @click="toggleFilters()" 
+        x-show="isMobile"
+        >
+            Фільтри
+        </button>
      </div>
 
      <!-- No Results Message -->

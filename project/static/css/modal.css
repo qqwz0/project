@@ -440,3 +440,122 @@ background-color: #fff8f8;
 .error-message {
 animation: shake 0.5s ease-in-out;
 }  
+
+/* Mobile Responsive Styles */
+/* Mobile Responsive Overhaul */
+@media screen and (max-width: 768px) {
+    .modal {
+      width: 100vw;
+      min-height: min-content;
+      margin: 0;
+      border-radius: 0;
+      overflow: hidden;
+      padding: 5px;
+      align-self: center;
+      margin-left: auto;
+      margin-right: auto;
+      max-height: 100vh;
+    }
+  
+    .modal .info-request-section {
+      flex-direction: column;
+      height: auto;
+      min-height: auto;
+      margin: 0;
+    }
+  
+    .modal .left-container,
+    .modal .right-container {
+      width: 100%;
+      padding: 1rem 0.5rem;
+      box-sizing: border-box;
+    }
+  
+    .left-container img {
+      width: 20vw;
+      height: 20vw;
+      min-width: 80px;
+      min-height: 80px;
+      margin: 0.5rem auto;
+    }
+  
+    .left-container h2 {
+      font-size: clamp(1.1rem, 4vw, 1.3rem);
+      margin: 0.2rem 0;
+    }
+  
+    p.position {
+      font-size: clamp(0.8rem, 3.5vw, 1rem);
+      margin: 0.2rem 0;
+    }
+  
+    .left-container h3 {
+      font-size: clamp(0.9rem, 3.8vw, 1.1rem);
+      margin: 0.3rem 0;
+    }
+  
+    .modal .multiple-slots {
+      width: 90%;
+      margin: 0.5rem auto;
+    }
+  
+    .modal .multiple-slots ul {
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+      padding: 0 0.5rem;
+    }
+  
+    .modal .multiple-slots li {
+      width: 100%;
+      padding: 0.3rem;
+      font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+    }
+  
+    .submit-btn {
+      width: 90%;
+      padding: 0.6rem;
+      font-size: clamp(0.8rem, 4vw, 1rem);
+      margin: 0.5rem auto;
+    }
+  
+    .form-input,
+    .textera-container textarea {
+      width: 95%;
+      padding: 0.5rem;
+      font-size: clamp(0.8rem, 3.8vw, 0.95rem);
+    }
+  
+    .close-modal {
+      top: 0.3rem;
+      left: 0.3rem;
+      font-size: 1.2rem;
+      padding: 0.2rem;
+    }
+  
+    .theme-item {
+      width: 95%;
+      font-size: clamp(0.75rem, 3.5vw, 0.85rem);
+      padding: 0.4rem;
+    }
+  
+    .dropdown-menu {
+      width: 95%;
+      left: 2.5%;
+    }
+  
+    .textera-container textarea {
+      height: 6rem;
+      width: 95%;
+      margin: 0 auto;
+    }
+  
+    .right-container p {
+      font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+      margin: 0.3rem 0;
+      padding: 0 0.5rem;
+    }
+
+    .right-container h1 {
+        margin-top: 0;
+    }
+  }

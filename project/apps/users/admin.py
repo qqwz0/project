@@ -135,6 +135,10 @@ class StreamAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
+class OnlyTeacherAdmin(admin.ModelAdmin):
+    list_display = ('teacher', 'teacher__department')
+    search_fields = ('teacher__email','teacher__first_name')
+
 # І нарешті реєструємо модель:
 admin.site.register(Stream, StreamAdmin)
 
