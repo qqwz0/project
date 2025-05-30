@@ -1,0 +1,14 @@
+Django>=5.1.4
+mysql-connector-python>=8.0.0
+daphne
+channels
+django-widget-tweaks
+Pillow
+django-image-cropping
+easy-thumbnails
+django-extensions
+django-cors-headers
+djangorestframework
+python-dotenv
+pymysql
+requests 
