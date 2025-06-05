@@ -81,7 +81,7 @@
         <!-- Tabs Section -->
         <div class="tabs">
             {% if user_profile.role == 'Викладач' %}
-                <div class="tab active" data-tab="info" onclick="loadTab('info')">Інформація</div>
+            <div class="tab active" data-tab="info" onclick="loadTab('info')">Інформація</div>
             {% endif %}
             {% if is_own_profile %}
                 <div class="tab{% if user_profile.role != 'Викладач' %} active{% endif %}" data-tab="requests" onclick="loadTab('requests')">Запити</div>
@@ -93,9 +93,9 @@
 
     <!-- Tab Contents -->
     {% if user_profile.role == 'Викладач' %}
-        <div id="info-section" class="tab-content">
-            {% include 'profile/info.html' with themes=themes slots=slots %}
-        </div>
+    <div id="info-section" class="tab-content">
+        {% include 'profile/info.html' with themes=themes slots=slots %}
+    </div>
     {% endif %}
 
     <div id="requests-section" class="tab-content" style="{% if user_profile.role != 'Викладач' %}display: block;{% else %}display: none;{% endif %}">

@@ -106,8 +106,8 @@
                                     <p class="no-files">Немає завантажених файлів</p>
                                 {% endfor %}
                             </div>
-
-                            <!-- Форма завантаження файлу -->
+                    
+                    <!-- Форма завантаження файлу -->
                             <form method="post" 
                                   enctype="multipart/form-data" 
                                   class="file-upload-form" 
@@ -174,13 +174,13 @@
                                                 window.showToast('Файл успішно додано', 'success');
                                                 setTimeout(() => { location.reload(); }, 1200);
                                             } else {
-                                                location.reload();
+                                            location.reload();
                                             }
                                         } else {
                                             if (window.showToast) {
                                                 window.showToast('Помилка при завантаженні файлу: ' + data.message, 'error');
-                                            } else {
-                                                alert('Помилка при завантаженні файлу: ' + data.message);
+                                        } else {
+                                            alert('Помилка при завантаженні файлу: ' + data.message);
                                             }
                                         }
                                     })
@@ -189,7 +189,7 @@
                                         if (window.showToast) {
                                             window.showToast('Помилка при завантаженні файлу', 'error');
                                         } else {
-                                            alert('Помилка при завантаженні файлу');
+                                        alert('Помилка при завантаженні файлу');
                                         }
                                     });
                                 });

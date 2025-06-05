@@ -184,7 +184,7 @@
             {% empty %}
                 <div class="no-active-works rejected-no-requests">
                     <p>Немає відхилених запитів.</p>
-                </div>
+            </div>
         {% endfor %}
         </div>
     {% else %}
@@ -265,7 +265,7 @@
             </div>
                 {% endif %}
             {% endfor %}
-    {% endif %}
+        {% endif %}
     </div>
     
     <!-- Прийняті запити -->
@@ -339,42 +339,42 @@
         {% if rejected_requests %}
             <h2 class="mt-4">❌ Відхилені запити</h2>
             {% for request in rejected_requests|dictsortreversed:"request_date" %}
-                <div class="request-card rejected-request">
-                    <div class="request-user">
-                        {% if request.student_id.profile_picture %}
-                            <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                        {% else %}
-                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
-                        {% endif %}
-                        <div class="user-info">
-                            <h3>{{ request.student_id.get_full_name }}</h3>
-                            <p class="role">{{ request.student_id.academic_group }}</p>
-                            {% if request.teacher_theme %}
-                                <strong>Запропонована тема:</strong>
-                                <p class="theme">{{ request.teacher_theme.theme }}</p>
+                    <div class="request-card rejected-request">
+                        <div class="request-user">
+                            {% if request.student_id.profile_picture %}
+                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                            {% else %}
+                                <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                             {% endif %}
-                            <strong>Теми студента:</strong>
-                            {% if request.student_themes.all %}
+                            <div class="user-info">
+                                <h3>{{ request.student_id.get_full_name }}</h3>
+                                <p class="role">{{ request.student_id.academic_group }}</p>
+                                {% if request.teacher_theme %}
+                                    <strong>Запропонована тема:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+                                <strong>Теми студента:</strong>
+                                {% if request.student_themes.all %}
                                 <ul class="student-themes-list">
-                                    {% for theme in request.student_themes.all %}
-                                        <li>{{ theme.theme }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-                            <strong>Мотивація:</strong>
-                            <p class="motivation">{{ request.motivation_text }}</p>
-                            <strong>Дата запиту:</strong>
-                            <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <strong>Мотивація:</strong>
+                                <p class="motivation">{{ request.motivation_text }}</p>
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                            </div>
+                        </div>
+                        <!-- Button to restore request -->
+                        <div class="request-actions">
+                            <button onclick="handleRequest('restore', {{ request.id }})" class="request-button restore">
+                                <i class="fas fa-undo"></i> Відновити
+                            </button>
                         </div>
                     </div>
-                    <!-- Button to restore request -->
-                    <div class="request-actions">
-                        <button onclick="handleRequest('restore', {{ request.id }})" class="request-button restore">
-                            <i class="fas fa-undo"></i> Відновити
-                        </button>
-                    </div>
-                </div>
-            {% endfor %}
+        {% endfor %}
         {% endif %}
     </div>
     
