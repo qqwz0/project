@@ -277,3 +277,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://project-mddj.onrender.com',
+]
