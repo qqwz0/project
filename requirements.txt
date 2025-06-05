@@ -12,3 +12,4 @@ djangorestframework
 python-dotenv
 pymysql
 requests 
+dj-database-url
