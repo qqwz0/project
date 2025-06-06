@@ -235,6 +235,7 @@ IMAGE_CROPPING_BACKEND_PARAMS = {}
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
+    "https://project-mddj.onrender.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
@@ -260,7 +261,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-BASE_URL = 'http://localhost:8000'
+BASE_URL = 'https://project-mddj.onrender.com'
 
 LOGIN_URL = '/users/login/'
 

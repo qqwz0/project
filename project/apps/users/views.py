@@ -420,21 +420,15 @@ def fake_login(request):
             is_active=True,
             password=make_password("fake_password")
         )
-        
-        teacher_profile = OnlyTeacher.objects.create(
-            teacher_id=user,
-            academic_level="Доцент",
-            additional_email="teacher.test@lnu.edu.ua",
-            phone_number="+380991234567"
-        )
-        
-        # Slot.objects.create(
-        #     teacher_id=teacher_profile,
-        #     stream_id=1,
-        #     quota=5,
-        #     occupied=0
-        # )
-        
+    # Використовуємо get_or_create для OnlyTeacher
+    OnlyTeacher.objects.get_or_create(
+        teacher_id=user,
+        defaults={
+            "academic_level": "Доцент",
+            "additional_email": "teacher.test@lnu.edu.ua",
+            "phone_number": "+380991234567"
+        }
+    )
     auth_login(request, user)
     return redirect("profile")
 

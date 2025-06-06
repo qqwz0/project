@@ -38,30 +38,17 @@ class FilteringSearchingForm(forms.Form):
             - Placeholder: 'Пошук викладача...'
             - CSS class: 'form-searching'
     """
-    DEPARTMENT_CHOICES = [
-        (department, (department[:25] + '...' if len(department) > 25 else department))
-        for department in filter(None, CustomUser.objects.values_list('department', flat=True).distinct())
-    ]
-    ACADEMIC_LEVELS = [
-        (level, level) for level in filter(None, OnlyTeacher.objects.values_list('academic_level', flat=True).distinct())
-
-    ]
-    
-    slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
-    min_slots = min(slot_values) if slot_values else 1
-    max_slots = max(slot_values) if slot_values else 10
-    
     label_suffix = ''
-    
+
     departments = forms.MultipleChoiceField(
         label='Кафедра',
-        choices=DEPARTMENT_CHOICES,
+        choices=[],
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
     academic_levels = forms.MultipleChoiceField(
         label='Науковий ступінь',
-        choices=ACADEMIC_LEVELS,
+        choices=[],
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
@@ -70,10 +57,6 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.NumberInput(attrs={
             'type': 'range',
             'class': 'form-range',
-            'min': min_slots,
-            'max': max_slots,
-            'step': 1,
-            'value': min_slots
         }),
         required=False
     )
@@ -87,6 +70,25 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-searching', 'placeholder': 'Пошук викладача...'}),
         required=False
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        departments = CustomUser.objects.values_list('department', flat=True).distinct()
+        self.fields['departments'].choices = [
+            (department, (department[:25] + '...' if len(department) > 25 else department))
+            for department in departments if department
+        ]
+        academic_levels = OnlyTeacher.objects.values_list('academic_level', flat=True).distinct()
+        self.fields['academic_levels'].choices = [
+            (level, level) for level in academic_levels if level
+        ]
+        slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
+        min_slots = min(slot_values) if slot_values else 1
+        max_slots = max(slot_values) if slot_values else 10
+        self.fields['slots'].widget.attrs['min'] = min_slots
+        self.fields['slots'].widget.attrs['max'] = max_slots
+        self.fields['slots'].widget.attrs['step'] = 1
+        self.fields['slots'].widget.attrs['value'] = min_slots
 
 class RequestForm(forms.ModelForm):
     """

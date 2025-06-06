@@ -3,7 +3,6 @@ class FilteringSearchingForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Move the database query here
         departments = CustomUser.objects.values_list('department', flat=True).distinct()
         self.fields['department'].choices = [(d, d) for d in departments if d]
     
