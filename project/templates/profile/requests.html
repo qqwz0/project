@@ -258,7 +258,7 @@
                     <button onclick="handleRequest('approve', {{ request.id }})" class="request-button accept">
                         <i class="fas fa-check"></i> Прийняти
                     </button>
-                    <button onclick="handleRequest('reject', {{ request.id }})" class="request-button reject">
+                    <button onclick="showRejectModal({{ request.id }})" class="request-button reject">
                         <i class="fas fa-times"></i> Відхилити
                     </button>
                 </div>
@@ -383,11 +383,48 @@
     {% endif %}
 {% endif %}
 
-
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeRejectModal()">&times;</span>
+        <h3>Відхилити запит студента</h3>
+        <form id="rejectForm" onsubmit="handleRejectSubmit(event)">
+            <input type="hidden" id="rejectRequestId" name="requestId">
+            <div class="form-group">
+                <label for="rejectReason">Причина відмови:</label>
+                <textarea id="rejectReason" name="rejectReason" rows="4" cols="30"></textarea>
+            </div>
+            <button type="submit" class="request-button reject modal-reject-btn">Відхилити</button>
+        </form>
+    </div>
+</div>
 
 
 {% block scripts %}
 <script>
+    function showRejectModal(requestId) {
+        document.getElementById('rejectModal').style.display = 'block';
+        document.getElementById('rejectRequestId').value = requestId;
+        document.getElementById('rejectReason').value = '';
+        document.getElementById('rejectReason').focus();
+    }
+
+    function closeRejectModal() {
+        document.getElementById('rejectModal').style.display = 'none';
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeRejectModal();
+        }
+    });
+
+    function handleRejectSubmit(event) {
+        event.preventDefault();
+        const requestId = document.getElementById('rejectRequestId').value;
+        window.handleRequest('reject', requestId);
+        closeRejectModal();
+    }
+
     function loadTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tabName + '-section').style.display = 'block';

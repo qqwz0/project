@@ -33,19 +33,26 @@
             <div>
                 <p class="single-slot"><strong>Місця:</strong> {{ free_slots.first.get_available_slots }}</p>
             </div>
-        {% elif free_slots.count < 1 %}
-            <div class="slots-info no-slots">
-                <p><strong>Місць немає</strong></p>
-            </div>
+            {% if free_slots.count < 1 %}
+                <div class="slots-info no-slots">
+                    <p><strong>Місць немає</strong></p>
+                </div>
+            {% endif %}
         {% else %}
-            <div class="slots-info multiple-slots">
-                <p><strong>Загальна кількість місць:</strong></p>
-                <ul>
-                    {% for slot in free_slots %}
-                        <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
+            {% if free_slots.count < 1 %}
+                <div class="slots-info no-slots">
+                    <p><strong>Місць немає</strong></p>
+                </div>
+            {%else%}
+                <div class="slots-info multiple-slots">
+                    <p><strong>Загальна кількість місць:</strong></p>
+                    <ul>
+                        {% for slot in free_slots %}
+                            <li><strong>{{ slot.stream_id.stream_code }}:</strong> {{ slot.get_available_slots }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {%endif%}
         {% endif %}
     </div>
 

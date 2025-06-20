@@ -112,24 +112,30 @@ class TeachersListView(ListView):
         slots = Slot.filter_by_available_slots()
         data = []
         is_matched = False
-        has_active = Request.objects.filter(student_id=request.user, request_status='Активний').exists()
-
-        
-        teacher_ids = [t.pk for t in teachers]
-        already_requested_qs = Request.objects.filter(
-            student_id=request.user,
-            teacher_id__in=teacher_ids,
-            request_status='Очікує'
-        ).values_list('teacher_id', flat=True)
-        already_requested_set = set(already_requested_qs)
+        has_active = False
+        already_requested_set = set()
 
         if request.user.is_authenticated and request.user.role == 'Студент':
             user = request.user
+            has_active = True if Request.objects.filter(
+                student_id=user,
+                request_status='Активний'
+            ).exists() else False
+            
+            teacher_ids = [t.pk for t in teachers]
+            already_requested_qs = Request.objects.filter(
+                student_id=user,
+                teacher_id__in=teacher_ids,
+                request_status='Очікує'
+            ).values_list('teacher_id', flat=True)
+            already_requested_set = set(already_requested_qs)
             match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
             if match:
                 user_stream = match.group(1) + '-' + match.group(2)
                 slots = slots.filter(stream_id__stream_code__iexact=user_stream)
                 is_matched = True
+                
+    
 
         for teacher in teachers:
             free_slots = slots.filter(teacher_id=teacher)
