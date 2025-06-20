@@ -13,3 +13,4 @@ python-dotenv
 pymysql
 requests 
 dj-database-url
+whitenoise>=6.0
