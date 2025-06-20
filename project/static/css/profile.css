@@ -348,7 +348,7 @@ body {
 }
 
 .slot-dot.occupied {
-    background: linear-gradient(145deg, #1570EF, #044db3);
+    background: #f6ad55;
     box-shadow: 0 2px 4px rgba(246, 173, 85, 0.2);
 }
 
@@ -1568,10 +1568,10 @@ textarea.form-control::placeholder {
 }
 
 #cropModal .cropper-container {
-    max-width: 320px !important;
-    max-height: 320px !important;
-    width: 100% !important;
-    height: auto !important;
+    max-width: 320px;
+    max-height: 320px;
+    width: 100% ;
+    height: auto ;
     margin: 0 auto;
     border-radius: 8px;
     background: #f3f3f3;
@@ -1593,7 +1593,7 @@ textarea.form-control::placeholder {
     }
     #cropModal .cropper-container,
     #cropbox {
-        max-width: 90vw !important;
-        max-height: 60vw !important;
+        max-width: 90vw;
+        max-height: 60vw;
     }
 }
