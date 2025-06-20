@@ -422,7 +422,7 @@ def fake_login(request):
         )
     # Використовуємо get_or_create для OnlyTeacher
     OnlyTeacher.objects.get_or_create(
-        teacher_id=user,
+            teacher_id=user,
         defaults={
             "academic_level": "Доцент",
             "additional_email": "teacher.test@lnu.edu.ua",
@@ -1049,3 +1049,7 @@ def restore_request(request, request_id):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Помилка при обробці запиту'})
     return redirect('profile')
+
+def custom_404(request, exception):
+    from django.shortcuts import render
+    return render(request, "404.html", status=404)
