@@ -595,7 +595,10 @@ def reject_request(request, request_id):
             # Check if the user is the teacher who received the request
             if req.teacher_id.teacher_id == request.user:
                 # Update request status
+                    
+                reason = request.POST.get('rejectReason')
                 req.request_status = 'Відхилено'
+                req.rejected_reason = reason if reason else 'Викладач не вказав причину відхилення'
                 req.save()
                 
                 # If there was a teacher theme, mark it as unoccupied
