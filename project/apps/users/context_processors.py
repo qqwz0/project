@@ -7,16 +7,17 @@ def user_profile_picture(request):
         # Check if a profile picture value (a file name) exists in the database.
         if request.user.profile_picture and request.user.profile_picture.name:
             try:
-                # Manually create a storage instance and get the URL.
-                # This bypasses the potentially broken .url property.
                 storage = MediaCloudinaryStorage()
-                picture_url = storage.url(request.user.profile_picture.name)
-                return {'profile_picture_url': picture_url}
+                # First, check if the file actually exists in Cloudinary.
+                if storage.exists(request.user.profile_picture.name):
+                    # If it exists, get the URL.
+                    picture_url = storage.url(request.user.profile_picture.name)
+                    return {'profile_picture_url': picture_url}
             except Exception:
-                # If there's any error getting the URL (e.g., file not found in cloudinary), fall back.
+                # If there's any error communicating with storage, fall back to default.
                 pass
 
-        # If there's no picture or an error occurred, return the static default avatar.
+        # If there's no picture, or the file doesn't exist in Cloudinary, return the static default avatar.
         return {'profile_picture_url': static('images/default-avatar.jpg')}
 
     return {}
