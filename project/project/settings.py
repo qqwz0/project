@@ -29,9 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# This was the root cause of all file upload issues.
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']  # Allow all hosts during development
+ALLOWED_HOSTS = [
+    'project-mddj.onrender.com',
+    'localhost',
+    '127.0.0.1'
+]
 
 
 
