@@ -16,10 +16,11 @@ Including another URLconf
 """
 # project/urls.py
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.views.defaults import page_not_found
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,6 +33,12 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += staticfiles_urlpatterns()
+else:
+    # This is a fallback for old, broken media URLs that might still be in the database.
+    # It ensures that they correctly return a 404 error instead of a 500 server error.
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', page_not_found, {'exception': Exception()}),
+    ]
 
 handler404 = "apps.users.views.custom_404"
 
