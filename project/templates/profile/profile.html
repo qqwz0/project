@@ -20,11 +20,7 @@
                             {% csrf_token %}
                             <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
                             <label for="profile-pic-input" id="avatar-label">
-                                {% if user_profile.profile_picture %}
-                                    <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
-                                {% else %}
-                                    <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
-                                {% endif %}
+                                <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                             </label>
                             {{ form.cropping }}
                         </form>
