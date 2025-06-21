@@ -26,6 +26,8 @@ from django.urls import reverse
 from django.template.loader import render_to_string
 from django.views import View
 
+from cloudinary_storage.storage import MediaCloudinaryStorage
+
 from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
 from .models import CustomUser
 from apps.catalog.models import (
@@ -655,26 +657,13 @@ def crop_profile_picture(request):
             width = crop_form.cleaned_data['width']
             height = crop_form.cleaned_data['height']
             try:
-                # Use the uploaded file if available; otherwise, use the user's current profile picture
+                # Use the uploaded file if available
                 if 'profile_picture' in request.FILES:
                     image_file = request.FILES['profile_picture']
                     image = Image.open(image_file).convert('RGB')
                 else:
-                    image_path = request.user.profile_picture.path
-                    if not os.path.exists(image_path):
-                        logger.error(f"Profile picture file does not exist for user {request.user.id} at path: {image_path}")
-                        return JsonResponse({'success': False, 'error': 'Profile picture file does not exist.'})
-                    image = Image.open(image_path).convert('RGB')
-                
-                # Log image dimensions and cropping coordinates
-                img_width, img_height = image.size
-                logger.debug(f"User {request.user.id} image size: {img_width}x{img_height}; crop coordinates: ({x}, {y}, {x+width}, {y+height})")
+                    return JsonResponse({'success': False, 'error': 'No image file provided.'})
 
-                # Validate that cropping coordinates are within the image bounds
-                if x < 0 or y < 0 or (x + width) > img_width or (y + height) > img_height:
-                    logger.error(f"Cropping coordinates out of bounds for user {request.user.id}.")
-                    return JsonResponse({'success': False, 'error': 'Cropping coordinates out of bounds.'})
-                    
                 # Crop and resize the image
                 cropped_image = image.crop((x, y, x + width, y + height))
                 cropped_image = cropped_image.resize((240, 240), Image.LANCZOS)
@@ -684,20 +673,33 @@ def crop_profile_picture(request):
                 cropped_image.save(img_io, format='JPEG', quality=90)
                 img_content = ContentFile(img_io.getvalue())
 
-                # Save to the user model:
-                # Instead of passing save=True in the field's save() method,
-                # update the field and then save the model explicitly.
+                # --- FORCE CLOUDINARY UPLOAD (DIAGNOSTIC STEP) ---
                 user = request.user
-                user.profile_picture.save(f"profile_{user.id}.jpg", img_content, save=False)
+                storage = MediaCloudinaryStorage()
+                file_name = f"profile_pics/profile_{user.id}.jpg"
+                
+                # Delete the old file from Cloudinary if it exists, to prevent duplicates
+                if storage.exists(file_name):
+                    storage.delete(file_name)
+                
+                # Save the new file directly to Cloudinary
+                saved_file_name = storage.save(file_name, img_content)
+                
+                # Manually update the user's model field with the path returned by Cloudinary
+                user.profile_picture.name = saved_file_name
                 user.save(update_fields=['profile_picture'])
                 
-                logger.debug(f"Cropped image saved successfully for user {user.id}.")
+                # Get the final URL directly from the storage
+                new_url = storage.url(saved_file_name)
+                # --- END OF DIAGNOSTIC STEP ---
+
+                logger.debug(f"Forced Cloudinary upload successful for user {user.id}. URL: {new_url}")
                 return JsonResponse({
                     'success': True, 
-                    'new_profile_picture_url': user.profile_picture.url,
+                    'new_profile_picture_url': new_url,
                 })
             except Exception as e:
-                logger.exception(f"Error cropping or saving image for user {request.user.id}: {str(e)}")
+                logger.exception(f"Error during forced Cloudinary upload for user {request.user.id}: {str(e)}")
                 return JsonResponse({'success': False, 'error': 'Error processing the image.'})
         else:
             logger.warning(f"Crop form is invalid for user {request.user.id}: {crop_form.errors}")
