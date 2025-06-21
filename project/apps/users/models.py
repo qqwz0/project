@@ -16,7 +16,7 @@ class CustomUserManager(BaseUserManager):
 
     def _create_user(self, email, password, **extra_fields):
         if not email:
-            raise ValueError('Електронна пошта є обов’язковою для створення користувача.')
+            raise ValueError('Електронна пошта є обов\'язковою для створення користувача.')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -66,7 +66,7 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
     academic_group = models.CharField(max_length=6, blank=False, null=True)  # For students
     department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, null=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', default='profile_pics/default-avatar.jpg', null=True, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     patronymic = models.CharField("По-батькові", max_length=150, blank=True, null=True)
 
     username = None
