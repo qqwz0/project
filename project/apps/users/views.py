@@ -689,7 +689,7 @@ def crop_profile_picture(request):
                 # update the field and then save the model explicitly.
                 user = request.user
                 user.profile_picture.save(f"profile_{user.id}.jpg", img_content, save=False)
-                user.save()
+                user.save(update_fields=['profile_picture'])
                 
                 logger.debug(f"Cropped image saved successfully for user {user.id}.")
                 return JsonResponse({
