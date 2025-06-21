@@ -140,11 +140,16 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
+    os.path.join(BASE_DIR, 'static'),
 ]
 
-# Cloudinary settings for media files.
-# The library will automatically use the CLOUDINARY_URL environment variable.
+# Hardcoded Cloudinary settings for diagnostics.
+# TODO: REMOVE THIS AND USE ENVIRONMENT VARIABLES ONCE CONFIRMED WORKING.
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dywfn602x',
+    'API_KEY': '558472924364481',
+    'API_SECRET': 'xZB3-TB5nwJ0KqW1MZo8gCNb7q4',
+}
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
