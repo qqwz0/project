@@ -390,6 +390,66 @@ class CompleteRequestView(View):
             return JsonResponse({'success': True})
         return JsonResponse({'success': False}, status=403)
 
+@login_required
+def archived_request_details(request, request_id):
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+    try:
+        req = Request.objects.select_related(
+            'student_id', 'teacher_id__teacher_id', 'teacher_theme'
+        ).prefetch_related(
+            'files__comments__author'  # Оптимізуємо запит до коментарів
+        ).get(id=request_id, request_status='Завершено')
+
+        # Перевірка доступу
+        if request.user.role == 'Студент' and req.student_id != request.user:
+            return JsonResponse({'error': 'Forbidden'}, status=403)
+        if request.user.role == 'Викладач' and req.teacher_id.teacher_id != request.user:
+            return JsonResponse({'error': 'Forbidden'}, status=403)
+
+        files_data = []
+        for file in req.files.all():
+            comments_data = []
+            for comment in file.comments.all():
+                comments_data.append({
+                    'author': comment.author.get_full_name(),
+                    'text': comment.text,
+                    'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+                })
+            
+            files_data.append({
+                'id': file.id,
+                'file_url': file.file.url,
+                'file_name': file.file.name.split('/')[-1],
+                'description': file.description,
+                'uploaded_at': file.uploaded_at.strftime('%d.%m.%Y %H:%M'),
+                'uploaded_by': file.uploaded_by.get_full_name(),
+                'comments': comments_data,
+            })
+        
+        response_data = {
+            'student': {
+                'name': req.student_id.get_full_name(),
+                'group': req.student_id.academic_group,
+            },
+            'teacher': {
+                'name': req.teacher_id.teacher_id.get_full_name(),
+            },
+            'theme': req.teacher_theme.theme if req.teacher_theme else 'Тема не вказана',
+            'grade': req.grade,
+            'completion_date': req.completion_date.strftime('%d.%m.%Y'),
+            'files': files_data
+        }
+        
+        return JsonResponse(response_data)
+
+    except Request.DoesNotExist:
+        return JsonResponse({'error': 'Request not found'}, status=404)
+    except Exception as e:
+        # Log the error e
+        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
 def get_requests_data(request):
     if request.user.role == 'Викладач':
         pending_requests = Request.objects.select_related(
