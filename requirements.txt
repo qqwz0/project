@@ -16,3 +16,4 @@ dj-database-url
 whitenoise>=6.0
 django-cloudinary-storage
 cloudinary
+mysqlclient>=2.2
