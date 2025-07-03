@@ -18,7 +18,7 @@ from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, HttpResponseNotAllowed
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
 from django.utils import timezone
@@ -145,6 +145,7 @@ def microsoft_login(request):
         authorization_url = f"{MICROSOFT_AUTH_URL}?{urlencode(params)}"
         logger.info("Authorization URL: %s", authorization_url)
         return redirect(authorization_url)
+    return HttpResponseNotAllowed(['GET'])
 
 def microsoft_callback(request):
     """
@@ -162,8 +163,12 @@ def microsoft_callback(request):
     Raises:
         Exception: If an unexpected error occurs during the processing of the callback.
     """
+    if request.method != "GET":
+        return HttpResponseNotAllowed(['GET'])
     code = request.GET.get("code")
     state = request.GET.get("state")
+
+    logger.error(f"[CSRF DEBUG] session.csrf_state={request.session.get('csrf_state')}, state={state}")
 
     if not code or not state:
         logger.error("Authorization code or state parameter is missing.")
