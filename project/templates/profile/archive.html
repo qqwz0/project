@@ -1,7 +1,5 @@
 {% load static %}
 
-<link rel="stylesheet" href="{% static 'css/modal.css' %}">
-
 {% if user_profile.role == "Студент" %}
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
@@ -65,8 +63,8 @@
 
 <!-- Modal for Archived Request Details -->
 <div id="archivedRequestModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
+    <div class="modal-content" style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative;">
+        <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
         <div id="archivedRequestDetails">
             <!-- Content will be injected by JavaScript -->
         </div>
@@ -97,21 +95,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 let filesHtml = '<h4>Файли роботи</h4>';
                 if (data.files && data.files.length > 0) {
-                    filesHtml += '<ul class="archived-files-list">';
+                    filesHtml += '<ul style="list-style-type: none; padding-left: 0;">';
                     data.files.forEach(file => {
-                        filesHtml += `<li class="archived-file-card">
-                            <p><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></p>
-                            <div class="archived-file-meta">Завантажив: ${file.uploaded_by} (${file.uploaded_at})</div>
-                            <div class="archived-file-description">Опис: ${file.description || 'немає'}</div>`;
+                        filesHtml += `<li style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                            <p><strong><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></strong></p>
+                            <p style="font-size: 0.9em; color: #555;">Опис: ${file.description || 'немає'}</p>
+                            <p style="font-size: 0.8em; color: #777;">Завантажив: ${file.uploaded_by} (${file.uploaded_at})</p>`;
+                        
                         if(file.comments && file.comments.length > 0) {
-                            filesHtml += '<div><strong>Коментарі:</strong><ul class="archived-comments-list">';
+                            filesHtml += '<h5>Коментарі:</h5><ul style="list-style-type: none; padding-left: 15px;">';
                             file.comments.forEach(comment => {
-                                filesHtml += `<li class="archived-comment">
-                                    <strong>${comment.author}:</strong> ${comment.text}
-                                    <span class="comment-date">${comment.created_at}</span>
+                                filesHtml += `<li style="font-size: 0.9em; margin-bottom: 5px; background: #f9f9f9; padding: 5px; border-radius: 3px;">
+                                    <strong>${comment.author}:</strong> ${comment.text} 
+                                    <span style="font-size: 0.8em; color: #888; float: right;">${comment.created_at}</span>
                                 </li>`;
                             });
-                            filesHtml += '</ul></div>';
+                            filesHtml += '</ul>';
                         }
                         filesHtml += '</li>';
                     });
