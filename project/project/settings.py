@@ -35,12 +35,13 @@ SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # This was the root cause of all file upload issues.
-DEBUG = False
+DEBUG = True  # Temporarily enable for debugging
 
 ALLOWED_HOSTS = [
     'project-mddj.onrender.com',
     'localhost',
-    '127.0.0.1'
+    '127.0.0.1',
+    '*',  # Temporarily add wildcard for testing
 ]
 
 
@@ -188,8 +189,8 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'simple': {
-            'format': '{levelname} {asctime} {message}',
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
     },
@@ -197,24 +198,24 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
             'propagate': True,
         },
-        'django.utils.autoreload': {  # Suppress file modification logs
+        'django.request': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'propagate': False,
         },
-        'apps.notifications': {  
+        'django.server': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Set to DEBUG to see all logs
-            'propagate': True,
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
 }
