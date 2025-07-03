@@ -35,7 +35,7 @@ SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # This was the root cause of all file upload issues.
-DEBUG = True  # Temporarily enable for debugging
+DEBUG = False # Temporarily enable for debugging
 
 ALLOWED_HOSTS = [
     'project-mddj.onrender.com',

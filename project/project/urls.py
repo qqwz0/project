@@ -16,29 +16,20 @@ Including another URLconf
 """
 # project/urls.py
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.views.defaults import page_not_found
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('users/', include('apps.users.urls')),  # This includes paths from users/urls.py
-    path('catalog/', include('apps.catalog.urls')),
+    path('', include('apps.catalog.urls')),
+    path('users/', include('apps.users.urls')),
     path('notifications/', include('apps.notifications.urls')),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += staticfiles_urlpatterns()
-else:
-    # This is a fallback for old, broken media URLs that might still be in the database.
-    # It ensures that they correctly return a 404 error instead of a 500 server error.
-    urlpatterns += [
-        re_path(r'^media/(?P<path>.*)$', page_not_found, {'exception': Exception()}),
-    ]
 
-handler404 = "apps.users.views.custom_404"
+handler404 = 'apps.users.views.custom_404'
+handler500 = 'apps.users.views.custom_500'  # Add this for 500 errors too
 

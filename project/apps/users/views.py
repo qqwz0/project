@@ -1061,5 +1061,13 @@ def restore_request(request, request_id):
     return redirect('profile')
 
 def custom_404(request, exception):
-    from django.shortcuts import render
-    return render(request, "404.html", status=404)
+    """
+    Custom handler for 404 errors
+    """
+    return render(request, '404.html', status=404)
+
+def custom_500(request):
+    """
+    Custom handler for 500 errors
+    """
+    return render(request, '500.html', status=500)

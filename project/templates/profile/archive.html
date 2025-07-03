@@ -63,89 +63,93 @@
 
 <!-- Modal for Archived Request Details -->
 <div id="archivedRequestModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-    <div class="modal-content" style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative;">
+    <div class="modal-content files-section" style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative;">
         <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-        <div id="archivedRequestDetails">
-            <!-- Content will be injected by JavaScript -->
+        <div id="archivedRequestDetails" class="file-block">
+            <h3>Деталі завершеної роботи</h3>
+            <div class="request-details mt-4">
+                <p><strong>Студент:</strong> <span id="studentName"></span></p>
+                <p><strong>Викладач:</strong> <span id="teacherName"></span></p>
+                <p><strong>Тема:</strong> <span id="theme"></span></p>
+                <p><strong>Підсумкова оцінка:</strong> <span id="grade"></span>/100</p>
+                <p><strong>Дата завершення:</strong> <span id="completionDate"></span></p>
+            </div>
+            
+            <div class="files-section mt-4">
+                <h4 class="d-flex align-items-center">Файли роботи</h4>
+                <div id="requestFiles" class="files-scroll-container">
+                    <!-- Files will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<style>
+.modal-content {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.request-details {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.request-details p {
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.request-details strong {
+    color: #2c3e50;
+}
+
+.files-scroll-container {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background-color: white;
+}
+
+.close-modal:hover {
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#archivedRequestDetails h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.files-section h4 {
+    color: #2c3e50;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
-    const closeBtn = modal.querySelector('.close-modal');
-    const detailsContainer = document.getElementById('archivedRequestDetails');
-
-    document.querySelectorAll('.archived-request-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const requestId = this.dataset.requestId;
-            fetch(`/catalog/archived-request-details/${requestId}/`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error('Error fetching archived request details:', data.error);
-                    alert('Не вдалося завантажити деталі роботи.');
-                    return;
-                }
-
-                let filesHtml = '<h4>Файли роботи</h4>';
-                if (data.files && data.files.length > 0) {
-                    filesHtml += '<ul style="list-style-type: none; padding-left: 0;">';
-                    data.files.forEach(file => {
-                        filesHtml += `<li style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                            <p><strong><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></strong></p>
-                            <p style="font-size: 0.9em; color: #555;">Опис: ${file.description || 'немає'}</p>
-                            <p style="font-size: 0.8em; color: #777;">Завантажив: ${file.uploaded_by} (${file.uploaded_at})</p>`;
-                        
-                        if(file.comments && file.comments.length > 0) {
-                            filesHtml += '<h5>Коментарі:</h5><ul style="list-style-type: none; padding-left: 15px;">';
-                            file.comments.forEach(comment => {
-                                filesHtml += `<li style="font-size: 0.9em; margin-bottom: 5px; background: #f9f9f9; padding: 5px; border-radius: 3px;">
-                                    <strong>${comment.author}:</strong> ${comment.text} 
-                                    <span style="font-size: 0.8em; color: #888; float: right;">${comment.created_at}</span>
-                                </li>`;
-                            });
-                            filesHtml += '</ul>';
-                        }
-                        filesHtml += '</li>';
-                    });
-                    filesHtml += '</ul>';
-                } else {
-                    filesHtml += '<p>Файлів не було додано.</p>';
-                }
-
-                detailsContainer.innerHTML = `
-                    <h3>Деталі завершеної роботи</h3>
-                    <p><strong>Студент:</strong> ${data.student.name} (${data.student.group})</p>
-                    <p><strong>Викладач:</strong> ${data.teacher.name}</p>
-                    <p><strong>Тема:</strong> ${data.theme}</p>
-                    <p><strong>Підсумкова оцінка:</strong> ${data.grade}/100</p>
-                    <p><strong>Дата завершення:</strong> ${data.completion_date}</p>
-                    <hr>
-                    ${filesHtml}
-                `;
-
-                modal.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                alert('Сталася помилка. Спробуйте ще раз.');
-            });
-        });
-    });
-
+    const closeBtn = document.querySelector('.close-modal');
+    
+    // Close modal when clicking the close button
     closeBtn.onclick = function() {
-        modal.style.display = 'none';
+        modal.style.display = "none";
     }
-
+    
+    // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target == modal) {
-            modal.style.display = 'none';
+            modal.style.display = "none";
         }
     }
 });
