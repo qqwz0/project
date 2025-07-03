@@ -1062,12 +1062,28 @@ def restore_request(request, request_id):
 
 def custom_404(request, exception):
     """
-    Custom handler for 404 errors
+    Custom handler for 404 errors that renders a standalone error page
     """
-    return render(request, '404.html', status=404)
+    from django.template.loader import render_to_string
+    from django.http import HttpResponseNotFound
+    
+    try:
+        html = render_to_string('404.html', {}, request=request)
+        return HttpResponseNotFound(html)
+    except Exception as e:
+        # Fallback to simple text response if template fails
+        return HttpResponseNotFound('<h1>404 Page Not Found</h1>')
 
 def custom_500(request):
     """
-    Custom handler for 500 errors
+    Custom handler for 500 errors that renders a standalone error page
     """
-    return render(request, '500.html', status=500)
+    from django.template.loader import render_to_string
+    from django.http import HttpResponseServerError
+    
+    try:
+        html = render_to_string('500.html', {}, request=request)
+        return HttpResponseServerError(html)
+    except Exception as e:
+        # Fallback to simple text response if template fails
+        return HttpResponseServerError('<h1>500 Internal Server Error</h1>')

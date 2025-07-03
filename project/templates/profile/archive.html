@@ -6,11 +6,10 @@
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
-                    {% if request.teacher_id.teacher_id.profile_picture %}
-                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                    {% else %}
-                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
-                    {% endif %}
+                    <img src="{% if request.teacher_id.teacher_id.profile_picture %}{{ request.teacher_id.teacher_id.profile_picture.url }}{% else %}{% static 'images/default-avatar.jpg' %}{% endif %}" 
+                         alt="Фото профілю" 
+                         class="request-avatar"
+                         onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
                     <div class="user-info">
                         <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
                         <p class="role">{{ request.teacher_id.academic_level }}</p>
@@ -36,11 +35,10 @@
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
-                    {% if request.student_id.profile_picture %}
-                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
-                    {% else %}
-                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
-                    {% endif %}
+                    <img src="{% if request.student_id.profile_picture %}{{ request.student_id.profile_picture.url }}{% else %}{% static 'images/default-avatar.jpg' %}{% endif %}" 
+                         alt="Фото профілю" 
+                         class="request-avatar"
+                         onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
                     <div class="user-info">
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
@@ -140,6 +138,74 @@
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
     const closeBtn = document.querySelector('.close-modal');
+    const detailsContainer = document.getElementById('archivedRequestDetails');
+    
+    document.querySelectorAll('.archived-request-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const requestId = this.dataset.requestId;
+            fetch(`/catalog/archived-request-details/${requestId}/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error fetching archived request details:', data.error);
+                    alert('Не вдалося завантажити деталі роботи.');
+                    return;
+                }
+
+                // Update modal content
+                document.getElementById('studentName').textContent = `${data.student.name} (${data.student.group})`;
+                document.getElementById('teacherName').textContent = data.teacher.name;
+                document.getElementById('theme').textContent = data.theme;
+                document.getElementById('grade').textContent = data.grade;
+                document.getElementById('completionDate').textContent = data.completion_date;
+
+                // Update files section
+                const filesContainer = document.getElementById('requestFiles');
+                if (data.files && data.files.length > 0) {
+                    filesContainer.innerHTML = data.files.map(file => `
+                        <div class="file-item mb-3 p-3 border rounded">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1">
+                                        <a href="${file.file_url}" target="_blank" download class="text-decoration-none">
+                                            ${file.file_name}
+                                        </a>
+                                    </h5>
+                                    <p class="text-muted mb-1">Опис: ${file.description || 'немає'}</p>
+                                    <small class="text-muted">
+                                        Завантажив: ${file.uploaded_by} (${file.uploaded_at})
+                                    </small>
+                                </div>
+                            </div>
+                            ${file.comments && file.comments.length > 0 ? `
+                                <div class="comments-section mt-3">
+                                    <h6>Коментарі:</h6>
+                                    ${file.comments.map(comment => `
+                                        <div class="comment p-2 bg-light rounded mb-2">
+                                            <strong>${comment.author}:</strong> ${comment.text}
+                                            <small class="text-muted d-block">${comment.created_at}</small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    filesContainer.innerHTML = '<p>Файлів не було додано.</p>';
+                }
+
+                modal.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                alert('Сталася помилка. Спробуйте ще раз.');
+            });
+        });
+    });
     
     // Close modal when clicking the close button
     closeBtn.onclick = function() {
