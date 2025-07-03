@@ -148,7 +148,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     console.error('Error fetching archived request details:', data.error);
@@ -167,27 +172,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 const filesContainer = document.getElementById('requestFiles');
                 if (data.files && data.files.length > 0) {
                     filesContainer.innerHTML = data.files.map(file => `
-                        <div class="file-item mb-3 p-3 border rounded">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5 class="mb-1">
-                                        <a href="${file.file_url}" target="_blank" download class="text-decoration-none">
-                                            ${file.file_name}
-                                        </a>
-                                    </h5>
-                                    <p class="text-muted mb-1">Опис: ${file.description || 'немає'}</p>
-                                    <small class="text-muted">
-                                        Завантажив: ${file.uploaded_by} (${file.uploaded_at})
-                                    </small>
+                        <div class="file-block">
+                            <div class="file-header">
+                                <span class="file-name-ellipsis">${file.file_name}</span>
+                                <div class="file-actions">
+                                    <a href="/catalog/file/${file.id}/download/" class="download-button">
+                                        <i class="fas fa-download download-icon"></i>
+                                        <span>Завантажити</span>
+                                    </a>
                                 </div>
                             </div>
+                            ${file.description ? `<p class="file-description">${file.description}</p>` : ''}
                             ${file.comments && file.comments.length > 0 ? `
-                                <div class="comments-section mt-3">
-                                    <h6>Коментарі:</h6>
+                                <div class="comments-section">
+                                    <h5>Коментарі:</h5>
                                     ${file.comments.map(comment => `
-                                        <div class="comment p-2 bg-light rounded mb-2">
+                                        <div class="comment">
                                             <strong>${comment.author}:</strong> ${comment.text}
-                                            <small class="text-muted d-block">${comment.created_at}</small>
+                                            <small class="text-muted">${comment.created_at}</small>
                                         </div>
                                     `).join('')}
                                 </div>

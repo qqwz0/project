@@ -1,17 +1,19 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/error_pages.css' %}">
-{% endblock %}
-
-{% block content %}
-<div class="error-page">
-    <div class="error-container">
-        <h1>500</h1>
-        <h2>Внутрішня помилка сервера :(</h2>
-        <p>Щось пішло не так. Будь ласка, спробуйте пізніше.</p>
-        <a href="/">На головну</a>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Внутрішня помилка сервера</title>
+    <link rel="stylesheet" href="/static/css/error_pages.css">
+</head>
+<body>
+    <div class="error-page">
+        <div class="error-container">
+            <h1>500</h1>
+            <h2>Внутрішня помилка сервера :(</h2>
+            <p>Щось пішло не так. Будь ласка, спробуйте пізніше.</p>
+            <a href="/">На головну</a>
+        </div>
     </div>
-</div>
-{% endblock %} 
+</body>
+</html> 

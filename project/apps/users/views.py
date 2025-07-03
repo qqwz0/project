@@ -18,7 +18,7 @@ from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.http import HttpRequest, JsonResponse, HttpResponseNotAllowed
+from django.http import HttpRequest, JsonResponse, HttpResponseNotAllowed, HttpResponseNotFound, HttpResponseServerError
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils.crypto import get_random_string
 from django.utils import timezone
@@ -1064,26 +1064,20 @@ def custom_404(request, exception):
     """
     Custom handler for 404 errors that renders a standalone error page
     """
-    from django.template.loader import render_to_string
-    from django.http import HttpResponseNotFound
-    
     try:
         html = render_to_string('404.html', {}, request=request)
-        return HttpResponseNotFound(html)
+        return HttpResponseNotFound(html, content_type='text/html')
     except Exception as e:
-        # Fallback to simple text response if template fails
-        return HttpResponseNotFound('<h1>404 Page Not Found</h1>')
+        logger.error(f"Error rendering 404 page: {str(e)}")
+        return HttpResponseNotFound('<h1>404 - Сторінку не знайдено</h1>')
 
 def custom_500(request):
     """
     Custom handler for 500 errors that renders a standalone error page
     """
-    from django.template.loader import render_to_string
-    from django.http import HttpResponseServerError
-    
     try:
         html = render_to_string('500.html', {}, request=request)
-        return HttpResponseServerError(html)
+        return HttpResponseServerError(html, content_type='text/html')
     except Exception as e:
-        # Fallback to simple text response if template fails
-        return HttpResponseServerError('<h1>500 Internal Server Error</h1>')
+        logger.error(f"Error rendering 500 page: {str(e)}")
+        return HttpResponseServerError('<h1>500 - Внутрішня помилка сервера</h1>')
