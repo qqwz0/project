@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.style.display = 'block';
             document.getElementById('archivedRequestDetails').innerHTML = '<div class="text-center"><p>Завантаження...</p></div>';
             
-            fetch(`/catalog/archived-request-details/${requestId}/`, {
+            fetch(`/users/archived-request-details/${requestId}/`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value

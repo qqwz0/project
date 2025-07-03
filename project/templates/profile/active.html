@@ -796,7 +796,7 @@ function submitComplete() {
     submitBtn.textContent = 'Збереження...';
 
     // Send request to server
-    fetch(`/catalog/complete-request/${requestId}/`, {
+    fetch(`/users/complete_request/${requestId}/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
