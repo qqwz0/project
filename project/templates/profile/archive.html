@@ -1,15 +1,18 @@
 {% load static %}
 
+<link rel="stylesheet" href="{% static 'css/modal.css' %}">
+
 {% if user_profile.role == "Студент" %}
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
-                    <img src="{% if request.teacher_id.teacher_id.profile_picture %}{{ request.teacher_id.teacher_id.profile_picture.url }}{% else %}{% static 'images/default-avatar.jpg' %}{% endif %}" 
-                         alt="Фото профілю" 
-                         class="request-avatar"
-                         onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
+                    {% if request.teacher_id.teacher_id.profile_picture %}
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
                     <div class="user-info">
                         <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
                         <p class="role">{{ request.teacher_id.academic_level }}</p>
@@ -35,10 +38,11 @@
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
-                    <img src="{% if request.student_id.profile_picture %}{{ request.student_id.profile_picture.url }}{% else %}{% static 'images/default-avatar.jpg' %}{% endif %}" 
-                         alt="Фото профілю" 
-                         class="request-avatar"
-                         onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
+                    {% if request.student_id.profile_picture %}
+                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                    {% else %}
+                        <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
+                    {% endif %}
                     <div class="user-info">
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
@@ -61,226 +65,89 @@
 
 <!-- Modal for Archived Request Details -->
 <div id="archivedRequestModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-    <div class="modal-content files-section" style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative;">
-        <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-        <div id="archivedRequestDetails" class="file-block">
-            <h3>Деталі завершеної роботи</h3>
-            <div class="request-details mt-4">
-                <p><strong>Студент:</strong> <span id="studentName"></span></p>
-                <p><strong>Викладач:</strong> <span id="teacherName"></span></p>
-                <p><strong>Тема:</strong> <span id="theme"></span></p>
-                <p><strong>Підсумкова оцінка:</strong> <span id="grade"></span>/100</p>
-                <p><strong>Дата завершення:</strong> <span id="completionDate"></span></p>
-            </div>
-            
-            <div class="files-section mt-4">
-                <h4 class="d-flex align-items-center">Файли роботи</h4>
-                <div id="requestFiles" class="files-scroll-container">
-                    <!-- Files will be populated here -->
-                </div>
-            </div>
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="archivedRequestDetails">
+            <!-- Content will be injected by JavaScript -->
         </div>
     </div>
 </div>
 
-<style>
-.modal-content {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.request-details {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.request-details p {
-    margin-bottom: 10px;
-    color: #495057;
-}
-
-.request-details strong {
-    color: #2c3e50;
-}
-
-.files-scroll-container {
-    max-height: 300px;
-    overflow-y: auto;
-    padding: 10px;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    background-color: white;
-}
-
-.close-modal:hover {
-    color: #333;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-#archivedRequestDetails h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #e9ecef;
-}
-
-.files-section h4 {
-    color: #2c3e50;
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-}
-
-.file-item {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.file-item h5 {
-    margin: 0 0 8px 0;
-    color: #2c3e50;
-}
-
-.file-meta {
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-
-.file-comments {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #e9ecef;
-}
-
-.comment {
-    padding: 8px;
-    background-color: #fff;
-    border-radius: 4px;
-    margin-bottom: 8px;
-}
-
-.comment-meta {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
-    const closeBtn = document.querySelector('.close-modal');
-    
-    // Close modal when clicking the close button
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-    }
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-    
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && modal.style.display === 'block') {
-            modal.style.display = 'none';
-        }
-    });
+    const closeBtn = modal.querySelector('.close-modal');
+    const detailsContainer = document.getElementById('archivedRequestDetails');
 
-    // Add click event listeners to all archived request cards
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
-            
-            // Show loading state
-            modal.style.display = 'block';
-            document.getElementById('archivedRequestDetails').innerHTML = '<div class="text-center"><p>Завантаження...</p></div>';
-            
-            fetch(`/users/archived-request-details/${requestId}/`, {
+            fetch(`/catalog/archived-request-details/${requestId}/`, {
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    throw new Error(data.error);
+                    console.error('Error fetching archived request details:', data.error);
+                    alert('Не вдалося завантажити деталі роботи.');
+                    return;
                 }
 
-                // Update modal content
-                document.getElementById('studentName').textContent = `${data.student.name} (${data.student.group})`;
-                document.getElementById('teacherName').textContent = data.teacher.name;
-                document.getElementById('theme').textContent = data.theme;
-                document.getElementById('grade').textContent = data.grade;
-                document.getElementById('completionDate').textContent = data.completion_date;
-
-                // Update files section
-                const filesContainer = document.getElementById('requestFiles');
-                filesContainer.innerHTML = ''; // Clear existing content
-                
+                let filesHtml = '<h4>Файли роботи</h4>';
                 if (data.files && data.files.length > 0) {
+                    filesHtml += '<ul class="archived-files-list">';
                     data.files.forEach(file => {
-                        const fileElement = document.createElement('div');
-                        fileElement.className = 'file-item';
-                        
-                        let fileHtml = `
-                            <h5>${file.file_name}</h5>
-                            <div class="file-meta">
-                                <p>Завантажив: ${file.uploaded_by}</p>
-                                <p>Дата: ${file.uploaded_at}</p>
-                                ${file.description ? `<p>Опис: ${file.description}</p>` : ''}
-                            </div>
-                            <a href="${file.file_url}" class="btn btn-primary btn-sm mt-2" download>
-                                Завантажити файл
-                            </a>
-                        `;
-                        
-                        if (file.comments && file.comments.length > 0) {
-                            fileHtml += '<div class="file-comments"><h6>Коментарі:</h6>';
+                        filesHtml += `<li class="archived-file-card">
+                            <p><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></p>
+                            <div class="archived-file-meta">Завантажив: ${file.uploaded_by} (${file.uploaded_at})</div>
+                            <div class="archived-file-description">Опис: ${file.description || 'немає'}</div>`;
+                        if(file.comments && file.comments.length > 0) {
+                            filesHtml += '<div><strong>Коментарі:</strong><ul class="archived-comments-list">';
                             file.comments.forEach(comment => {
-                                fileHtml += `
-                                    <div class="comment">
-                                        <p>${comment.text}</p>
-                                        <div class="comment-meta">
-                                            ${comment.author} - ${comment.created_at}
-                                        </div>
-                                    </div>
-                                `;
+                                filesHtml += `<li class="archived-comment">
+                                    <strong>${comment.author}:</strong> ${comment.text}
+                                    <span class="comment-date">${comment.created_at}</span>
+                                </li>`;
                             });
-                            fileHtml += '</div>';
+                            filesHtml += '</ul></div>';
                         }
-                        
-                        fileElement.innerHTML = fileHtml;
-                        filesContainer.appendChild(fileElement);
+                        filesHtml += '</li>';
                     });
+                    filesHtml += '</ul>';
                 } else {
-                    filesContainer.innerHTML = '<p>Немає завантажених файлів</p>';
+                    filesHtml += '<p>Файлів не було додано.</p>';
                 }
+
+                detailsContainer.innerHTML = `
+                    <h3>Деталі завершеної роботи</h3>
+                    <p><strong>Студент:</strong> ${data.student.name} (${data.student.group})</p>
+                    <p><strong>Викладач:</strong> ${data.teacher.name}</p>
+                    <p><strong>Тема:</strong> ${data.theme}</p>
+                    <p><strong>Підсумкова оцінка:</strong> ${data.grade}/100</p>
+                    <p><strong>Дата завершення:</strong> ${data.completion_date}</p>
+                    <hr>
+                    ${filesHtml}
+                `;
+
+                modal.style.display = 'block';
             })
             .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('archivedRequestDetails').innerHTML = `
-                    <div class="alert alert-danger">
-                        Помилка при завантаженні даних: ${error.message}
-                    </div>
-                `;
+                console.error('Fetch error:', error);
+                alert('Сталася помилка. Спробуйте ще раз.');
             });
         });
     });
+
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
 });
 </script> 
