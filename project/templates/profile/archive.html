@@ -132,33 +132,94 @@
     font-size: 1.1rem;
     margin-bottom: 15px;
 }
+
+.file-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.file-item h5 {
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+}
+
+.file-meta {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.file-comments {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+}
+
+.comment {
+    padding: 8px;
+    background-color: #fff;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.comment-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
     const closeBtn = document.querySelector('.close-modal');
-    const detailsContainer = document.getElementById('archivedRequestDetails');
+    
+    // Close modal when clicking the close button
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modal.style.display === 'block') {
+            modal.style.display = 'none';
+        }
+    });
 
+    // Add click event listeners to all archived request cards
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
+            
+            // Show loading state
+            modal.style.display = 'block';
+            document.getElementById('archivedRequestDetails').innerHTML = '<div class="text-center"><p>Завантаження...</p></div>';
+            
             fetch(`/catalog/archived-request-details/${requestId}/`, {
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 }
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
                 if (data.error) {
-                    console.error('Error fetching archived request details:', data.error);
-                    alert('Не вдалося завантажити деталі роботи.');
-                    return;
+                    throw new Error(data.error);
                 }
 
                 // Update modal content
@@ -170,55 +231,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Update files section
                 const filesContainer = document.getElementById('requestFiles');
+                filesContainer.innerHTML = ''; // Clear existing content
+                
                 if (data.files && data.files.length > 0) {
-                    filesContainer.innerHTML = data.files.map(file => `
-                        <div class="file-block">
-                            <div class="file-header">
-                                <span class="file-name-ellipsis">${file.file_name}</span>
-                                <div class="file-actions">
-                                    <a href="/catalog/file/${file.id}/download/" class="download-button">
-                                        <i class="fas fa-download download-icon"></i>
-                                        <span>Завантажити</span>
-                                    </a>
-                                </div>
+                    data.files.forEach(file => {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'file-item';
+                        
+                        let fileHtml = `
+                            <h5>${file.file_name}</h5>
+                            <div class="file-meta">
+                                <p>Завантажив: ${file.uploaded_by}</p>
+                                <p>Дата: ${file.uploaded_at}</p>
+                                ${file.description ? `<p>Опис: ${file.description}</p>` : ''}
                             </div>
-                            ${file.description ? `<p class="file-description">${file.description}</p>` : ''}
-                            ${file.comments && file.comments.length > 0 ? `
-                                <div class="comments-section">
-                                    <h5>Коментарі:</h5>
-                                    ${file.comments.map(comment => `
-                                        <div class="comment">
-                                    <strong>${comment.author}:</strong> ${comment.text} 
-                                            <small class="text-muted">${comment.created_at}</small>
+                            <a href="${file.file_url}" class="btn btn-primary btn-sm mt-2" download>
+                                Завантажити файл
+                            </a>
+                        `;
+                        
+                        if (file.comments && file.comments.length > 0) {
+                            fileHtml += '<div class="file-comments"><h6>Коментарі:</h6>';
+                            file.comments.forEach(comment => {
+                                fileHtml += `
+                                    <div class="comment">
+                                        <p>${comment.text}</p>
+                                        <div class="comment-meta">
+                                            ${comment.author} - ${comment.created_at}
                                         </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('');
+                                    </div>
+                                `;
+                            });
+                            fileHtml += '</div>';
+                        }
+                        
+                        fileElement.innerHTML = fileHtml;
+                        filesContainer.appendChild(fileElement);
+                    });
                 } else {
-                    filesContainer.innerHTML = '<p>Файлів не було додано.</p>';
+                    filesContainer.innerHTML = '<p>Немає завантажених файлів</p>';
                 }
-
-                modal.style.display = 'block';
             })
             .catch(error => {
-                console.error('Fetch error:', error);
-                alert('Сталася помилка. Спробуйте ще раз.');
+                console.error('Error:', error);
+                document.getElementById('archivedRequestDetails').innerHTML = `
+                    <div class="alert alert-danger">
+                        Помилка при завантаженні даних: ${error.message}
+                    </div>
+                `;
             });
         });
     });
-
-    // Close modal when clicking the close button
-    closeBtn.onclick = function() {
-        modal.style.display = "none";
-    }
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
-    }
 });
 </script> 

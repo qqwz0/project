@@ -717,75 +717,154 @@ $(document).ready(function() {
 // Функції для роботи з модальним вікном завершення роботи
 function showCompleteModal(requestId) {
     const modal = document.getElementById('completeModal');
+    const gradeInput = document.getElementById('grade');
+    
+    // Reset form
     document.getElementById('completeRequestId').value = requestId;
+    gradeInput.value = '';
+    
+    // Clear any previous error messages
+    const errorDiv = document.querySelector('.grade-error');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+    
     modal.style.display = "flex";
+    gradeInput.focus();
 }
 
 function closeCompleteModal() {
-    document.getElementById('completeModal').style.display = "none";
+    const modal = document.getElementById('completeModal');
+    modal.style.display = "none";
+    
+    // Clear form and errors
+    document.getElementById('completeRequestId').value = '';
+    document.getElementById('grade').value = '';
+    const errorDiv = document.querySelector('.grade-error');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+function validateGrade(grade) {
+    // Convert to number and check if it's a valid integer between 0 and 100
+    const numGrade = parseInt(grade);
+    if (isNaN(numGrade) || numGrade < 0 || numGrade > 100 || !Number.isInteger(numGrade)) {
+        return false;
+    }
+    return true;
+}
+
+function showError(message) {
+    // Remove any existing error message
+    const existingError = document.querySelector('.grade-error');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Create and show new error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'grade-error alert alert-danger mt-2';
+    errorDiv.textContent = message;
+    
+    const gradeInput = document.getElementById('grade');
+    gradeInput.parentNode.insertBefore(errorDiv, gradeInput.nextSibling);
 }
 
 function submitComplete() {
     const requestId = document.getElementById('completeRequestId').value;
-    const gradeInput = document.getElementById('grade');
-    const grade = parseInt(gradeInput.value);
+    const grade = document.getElementById('grade').value.trim();
     
-    if (isNaN(grade) || grade < 0 || grade > 100) {
-        alert('Будь ласка, введіть оцінку від 0 до 100');
-        gradeInput.focus();
+    // Validate grade
+    if (!grade) {
+        showError('Будь ласка, введіть оцінку');
+        return;
+    }
+    
+    if (!validateGrade(grade)) {
+        showError('Будь ласка, введіть ціле число від 0 до 100');
         return;
     }
 
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
     // Show loading state
-    const submitButton = document.querySelector('#completeModal button[onclick="submitComplete()"]');
-    const originalText = submitButton.textContent;
-    submitButton.disabled = true;
-    submitButton.textContent = 'Завершення...';
+    const submitBtn = document.querySelector('#completeModal .btn-submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Збереження...';
 
-    // Відправляємо запит на сервер
-    $.ajax({
-        url: '/catalog/complete-request/' + requestId + '/',
-        type: 'POST',
+    // Send request to server
+    fetch(`/catalog/complete-request/${requestId}/`, {
+        method: 'POST',
         headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest'
         },
-        data: {
-            'grade': grade
-        },
-        success: function(response) {
-            if (response.success) {
-                if (window.showToast) {
-                    window.showToast('Роботу успішно завершено', 'success');
-                    setTimeout(() => { window.location.reload(); }, 1500);
-                } else {
-                    window.location.reload();
-                }
-            } else {
-                alert('Помилка: ' + (response.error || 'Не вдалося завершити роботу'));
-                submitButton.disabled = false;
-                submitButton.textContent = originalText;
-            }
-        },
-        error: function(xhr) {
-            let errorMessage = 'Помилка при завершенні роботи';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.error) {
-                    errorMessage = response.error;
-                }
-            } catch (e) {
-                console.error('Error parsing response:', e);
-            }
-            alert(errorMessage);
-            submitButton.disabled = false;
-            submitButton.textContent = originalText;
-        },
-        complete: function() {
+        body: `grade=${encodeURIComponent(grade)}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Close modal and reload page
+            closeCompleteModal();
+            window.location.reload();
+        } else {
+            throw new Error(data.error || 'Не вдалося завершити роботу');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError(error.message);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
+
+// Add event listeners when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
             closeCompleteModal();
         }
     });
-}
+    
+    // Handle grade input validation
+    const gradeInput = document.getElementById('grade');
+    if (gradeInput) {
+        gradeInput.addEventListener('input', function() {
+            const errorDiv = document.querySelector('.grade-error');
+            if (errorDiv) {
+                errorDiv.remove();
+            }
+            
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            // Validate as user types
+            if (this.value && !validateGrade(this.value)) {
+                showError('Будь ласка, введіть ціле число від 0 до 100');
+            }
+        });
+        
+        // Handle form submission with Enter key
+        gradeInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitComplete();
+            }
+        });
+    }
+});
 </script>
-
 
