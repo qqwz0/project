@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
     const closeBtn = document.querySelector('.close-modal');
     const detailsContainer = document.getElementById('archivedRequestDetails');
-    
+
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <h5>Коментарі:</h5>
                                     ${file.comments.map(comment => `
                                         <div class="comment">
-                                            <strong>${comment.author}:</strong> ${comment.text}
+                                    <strong>${comment.author}:</strong> ${comment.text} 
                                             <small class="text-muted">${comment.created_at}</small>
                                         </div>
                                     `).join('')}
@@ -208,12 +208,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     // Close modal when clicking the close button
     closeBtn.onclick = function() {
         modal.style.display = "none";
     }
-    
+
     // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target == modal) {

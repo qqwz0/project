@@ -727,37 +727,65 @@ function closeCompleteModal() {
 
 function submitComplete() {
     const requestId = document.getElementById('completeRequestId').value;
-    const grade = document.getElementById('grade').value;
+    const gradeInput = document.getElementById('grade');
+    const grade = parseInt(gradeInput.value);
     
-    if (!grade || grade < 0 || grade > 100) {
+    if (isNaN(grade) || grade < 0 || grade > 100) {
         alert('Будь ласка, введіть оцінку від 0 до 100');
+        gradeInput.focus();
         return;
     }
+
+    // Show loading state
+    const submitButton = document.querySelector('#completeModal button[onclick="submitComplete()"]');
+    const originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.textContent = 'Завершення...';
 
     // Відправляємо запит на сервер
     $.ajax({
         url: '/catalog/complete-request/' + requestId + '/',
         type: 'POST',
         headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'X-Requested-With': 'XMLHttpRequest'
         },
         data: {
             'grade': grade
         },
         success: function(response) {
             if (response.success) {
-                window.location.reload();
+                if (window.showToast) {
+                    window.showToast('Роботу успішно завершено', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } else {
+                    window.location.reload();
+                }
             } else {
                 alert('Помилка: ' + (response.error || 'Не вдалося завершити роботу'));
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             }
         },
-        error: function(xhr, status, error) {
-            console.error('Error:', xhr.responseText);
-            alert('Помилка при завершенні роботи');
+        error: function(xhr) {
+            let errorMessage = 'Помилка при завершенні роботи';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.error) {
+                    errorMessage = response.error;
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
+            alert(errorMessage);
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        },
+        complete: function() {
+            closeCompleteModal();
         }
     });
-    
-    closeCompleteModal();
 }
 </script>
+
 
