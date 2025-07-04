@@ -10,73 +10,62 @@ When a user triggers the HX request (via button click), the modal is swapped in 
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
-{% block extra_js %}
-<script src="{% static 'js/filtering.js' %}"></script>
-<script src="{% static 'js/teacher_modal.js' %}"></script>
-<script>
-// Initialize Alpine.js data after filtering.js is loaded
-document.addEventListener('alpine:init', () => {
-  Alpine.data('teachersCatalog', () => ({
-    data: [], 
-    departments: [], 
-    academic_levels: [], 
-    slots: null,
-    show_occupied: false,
-    full_names: [], 
-    searchQuery: '', 
-    showFilters: window.innerWidth > 780,
-    isMobile: window.innerWidth <= 780,
-    filteredData: [],
-    
-    toggleFilters() {
-      this.showFilters = !this.showFilters;
-    },
-    
-    updateScreenSize() {
-      this.isMobile = window.innerWidth <= 780;
-      if (!this.isMobile) this.showFilters = true;
-    },
-    
-    async initData() {
-      try {
-        const response = await fetch('{% url 'teachers_list' %}');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const jsonData = await response.json();
-        this.data = jsonData;
-        this.filteredData = jsonData.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
-        
-        // Extract unique departments and academic levels
-        this.departments = [...new Set(jsonData.map(item => item.teacher.teacher_id.department))];
-        this.academic_levels = [...new Set(jsonData.map(item => item.teacher.academic_level))];
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    },
-    
-    applyFilters() {
-      window.applyFilters();
-    },
-    
-    applySearch() {
-      window.applySearch();
-    }
-  }));
-});
-</script>
-{% endblock %}
-
 {% block content %}
 
 <!-- Main container with Alpine.js state management -->
-<div class="main-container" x-data="teachersCatalog" x-init="initData(); updateScreenSize(); window.addEventListener('resize', updateScreenSize)">
+<div class="main-container" 
+  x-data="{ 
+     data: [], 
+     departments: [], 
+     academic_levels: [], 
+     slots: null,
+     show_occupied: false,
+     full_names: [], 
+     searchQuery: '', 
+     showFilters: window.innerWidth > 780,
+    isMobile: window.innerWidth <= 780,
+    toggleFilters() {
+      this.showFilters = !this.showFilters;
+    },
+    updateScreenSize() {
+      this.isMobile = window.innerWidth <= 780;  // Ensure breakpoint matches CSS
+      if (!this.isMobile) this.showFilters = true;
+     },
+     filteredData: [],  
+     async initData() {
+      try {
+        const response = await fetch('/catalog/teachers/');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        if (data.error) {
+          console.error('Server error:', data.error);
+          this.data = [];
+          this.filteredData = [];
+          return;
+        }
+        this.data = data;
+        this.filteredData = data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        this.data = [];
+        this.filteredData = [];
+      }
+     }
+  }" 
+  x-init="initData(); updateScreenSize(); 
+    window.addEventListener('resize', updateScreenSize)">
+  
 
     <!-- Filter Section -->
     <div x-show="showFilters"
         x-transition.opacity.duration.300ms
         class="filter-wrapper"
+        {% comment %} style="display: none" {% endcomment %}
         @click.away="isMobile && (showFilters = false)"
     >
-        <div class="filter-section">
+        <div class="filter-section" @click.outside.window="isMobile && (showFilters = false)">
         <div class="filter-header">
         <h3>Фільтри</h3>
         <img src="{% static 'images/filters.svg' %}" alt="Filters">
@@ -84,7 +73,7 @@ document.addEventListener('alpine:init', () => {
         <div class="filter-content">
         <hr class="devider">
         <h3 class="option-label">{{ form.departments.label }}</h3>
-        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = window.changeDepartments($el, departments)" %}
+        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
         
         <hr class="devider">
         <h3 class="option-label">{{ form.slots.label }}</h3>
@@ -100,12 +89,12 @@ document.addEventListener('alpine:init', () => {
 
         <hr class="devider">
         <h3 class="option-label">Науковий ступінь</h3>
-        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = window.changeAcademicLevels($el, academic_levels)" %}
+        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
         
         <hr class="devider">
         <div class="checkbox-wrapper">
         <span class="checkbox-text">Викладачі без вільних місць</span>
-        {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="window.handleShowOccupied($el)" %}
+        {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
         </div>
         <button class="filter-button" @click="applyFilters(); isMobile && (showFilters = false)">Фільтрувати</button>
         </div>
@@ -183,5 +172,9 @@ document.addEventListener('alpine:init', () => {
     {% endfor %}
 </div>
 {% endif %}
+
+<!-- External JavaScript Files -->
+<script src="{% static 'js/teacher_modal.js' %}"></script>
+<script src="{% static 'js/filtering.js' %}"></script>
 
 {% endblock %}

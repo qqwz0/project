@@ -13,6 +13,8 @@ from django.db.models import Max
 from django.utils import timezone
 from django.template.loader import render_to_string
 from .utils import HtmxModalFormAccessMixin, FileAccessMixin
+from django.templatetags.static import static
+from .templatetags.catalog_extras import get_profile_picture_url
 
 from django.shortcuts import render
 
@@ -109,72 +111,82 @@ class TeachersListView(ListView):
                     }
                 ]
         """
-        teachers = OnlyTeacher.objects.select_related('teacher_id').all()
-        slots = Slot.filter_by_available_slots()
-        data = []
-        is_matched = False
-        has_active = False
-        already_requested_set = set()
+        try:
+            teachers = OnlyTeacher.objects.select_related('teacher_id').all()
+            slots = Slot.filter_by_available_slots()
+            data = []
+            is_matched = False
+            has_active = False
+            already_requested_set = set()
 
-        if request.user.is_authenticated and request.user.role == 'Студент':
-            user = request.user
-            has_active = True if Request.objects.filter(
-                student_id=user,
-                request_status='Активний'
-            ).exists() else False
-            
-            teacher_ids = [t.pk for t in teachers]
-            already_requested_qs = Request.objects.filter(
-                student_id=user,
-                teacher_id__in=teacher_ids,
-                request_status='Очікує'
-            ).values_list('teacher_id', flat=True)
-            already_requested_set = set(already_requested_qs)
-            match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
-            if match:
-                user_stream = match.group(1) + '-' + match.group(2)
-                slots = slots.filter(stream_id__stream_code__iexact=user_stream)
-                is_matched = True
+            if request.user.is_authenticated and request.user.role == 'Студент':
+                user = request.user
+                has_active = True if Request.objects.filter(
+                    student_id=user,
+                    request_status='Активний'
+                ).exists() else False
                 
-    
+                teacher_ids = [t.pk for t in teachers]
+                already_requested_qs = Request.objects.filter(
+                    student_id=user,
+                    teacher_id__in=teacher_ids,
+                    request_status='Очікує'
+                ).values_list('teacher_id', flat=True)
+                already_requested_set = set(already_requested_qs)
+                match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
+                if match:
+                    user_stream = match.group(1) + '-' + match.group(2)
+                    slots = slots.filter(stream_id__stream_code__iexact=user_stream)
+                    is_matched = True
 
-        for teacher in teachers:
-            free_slots = slots.filter(teacher_id=teacher)
-            already_requested = teacher.pk in already_requested_set
-            if teacher.teacher_id.patronymic:
-                patronymic = teacher.teacher_id.patronymic
-                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name} {patronymic}"
-            else:
-                full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}"
+            for teacher in teachers:
+                free_slots = slots.filter(teacher_id=teacher)
+                already_requested = teacher.pk in already_requested_set
+                if teacher.teacher_id.patronymic:
+                    patronymic = teacher.teacher_id.patronymic
+                    full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name} {patronymic}"
+                else:
+                    full_name = f"{teacher.teacher_id.last_name} {teacher.teacher_id.first_name}"
 
-            data.append({
-                'has_active': has_active,
-                'teacher': {
-                    'id': teacher.pk,
-                    'academic_level': teacher.academic_level,
-                    'photo': teacher.teacher_id.profile_picture.url,
-                    'url': teacher.get_absolute_url(),
-                    'already_requested': already_requested,
-                    'teacher_id': {
-                        'first_name': teacher.teacher_id.first_name,
-                        'last_name': teacher.teacher_id.last_name,
-                        'department': teacher.teacher_id.department,
-                        'full_name': full_name
-                    }
-                },
-                'free_slots': [
-                    {
-                        'stream_id': {
-                            'stream_code': slot.stream_id.stream_code
-                        },
-                        'get_available_slots': slot.get_available_slots()
-                    }
-                    for slot in free_slots
-                ],
-                'is_matched': is_matched
-            })
+                # Handle profile picture URL safely
+                try:
+                    photo_url = teacher.teacher_id.profile_picture.url if teacher.teacher_id.profile_picture else static('images/default-avatar.jpg')
+                except (ValueError, AttributeError):
+                    photo_url = static('images/default-avatar.jpg')
 
-        return JsonResponse(data, safe=False)  
+                data.append({
+                    'has_active': has_active,
+                    'teacher': {
+                        'id': teacher.pk,
+                        'academic_level': teacher.academic_level,
+                        'photo': photo_url,
+                        'url': teacher.get_absolute_url(),
+                        'already_requested': already_requested,
+                        'teacher_id': {
+                            'first_name': teacher.teacher_id.first_name,
+                            'last_name': teacher.teacher_id.last_name,
+                            'department': teacher.teacher_id.department,
+                            'full_name': full_name
+                        }
+                    },
+                    'free_slots': [
+                        {
+                            'stream_id': {
+                                'stream_code': slot.stream_id.stream_code
+                            },
+                            'get_available_slots': slot.get_available_slots()
+                        }
+                        for slot in free_slots
+                    ],
+                    'is_matched': is_matched
+                })
+
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            import traceback
+            print("Error in TeachersListView:", str(e))
+            print(traceback.format_exc())
+            return JsonResponse({'error': str(e)}, status=500)
 
 class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView, FormView):
     """
@@ -239,7 +251,13 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         
         context['free_slots'] = slots
         context['is_matched'] = is_matched
-        context['photo'] = teacher.teacher_id.profile_picture.url 
+        
+        # Handle profile picture URL safely
+        try:
+            context['photo'] = teacher.teacher_id.profile_picture.url if teacher.teacher_id.profile_picture else static('images/default-avatar.jpg')
+        except (ValueError, AttributeError):
+            context['photo'] = static('images/default-avatar.jpg')
+            
         return context
     
     def form_invalid(self, form):

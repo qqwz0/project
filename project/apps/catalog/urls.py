@@ -19,7 +19,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('', TeachersCatalogView.as_view(), name='teachers_catalog'),
-    path('teachers/', TeachersListView.as_view(), name='teachers_list'),
+    path('catalog/teachers/', TeachersListView.as_view(), name='teachers_list'),
     path('teacher/<int:pk>/', TeacherModalView.as_view(), name='modal'),
     path('accept-request/<int:pk>/', AcceptRequestView.as_view(), name='accept_request'),
     path('complete-request/<int:pk>/', CompleteRequestView.as_view(), name='complete_request'),
