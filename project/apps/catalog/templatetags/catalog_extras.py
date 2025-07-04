@@ -2,6 +2,8 @@ from django import template
 from django.db.models import Model
 from django.utils.safestring import mark_safe
 import json
+from django.templatetags.static import static
+from cloudinary_storage.storage import MediaCloudinaryStorage
 
 register = template.Library()
 
@@ -61,3 +63,17 @@ def filter_status(requests, status):
     Використання: {{ requests|filter_status:'Активний' }}
     """
     return [req for req in requests if req.request_status == status]
+
+@register.simple_tag
+def get_profile_picture_url(user):
+    """
+    Returns the appropriate URL for a user's profile picture, either from Cloudinary or the default avatar.
+    """
+    if user and user.profile_picture and user.profile_picture.name:
+        try:
+            storage = MediaCloudinaryStorage()
+            if storage.exists(user.profile_picture.name):
+                return storage.url(user.profile_picture.name)
+        except Exception:
+            pass
+    return static('images/default-avatar.jpg')
