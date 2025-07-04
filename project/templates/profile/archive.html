@@ -4,6 +4,7 @@
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
+            {% if request.student_id.id == user_profile.id %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
                     {% if request.teacher_id.teacher_id.profile_picture %}
@@ -25,6 +26,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         {% endfor %}
     {% else %}
         <p class="no-active-works">У вас немає завершених робіт.</p>
@@ -34,6 +36,7 @@
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
         {% for request in archived_requests|dictsortreversed:"completion_date" %}
+            {% if request.teacher_id.teacher_id.id == user_profile.id %}
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
                     {% if request.student_id.profile_picture %}
@@ -55,6 +58,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         {% endfor %}
     {% else %}
         <p class="no-active-works">У вас немає завершених робіт.</p>
