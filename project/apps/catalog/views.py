@@ -17,6 +17,7 @@ from .utils import HtmxModalFormAccessMixin, FileAccessMixin
 from django.shortcuts import render
 
 import re
+import logging
 
 class TeachersCatalogView(TemplateView, FormView):
     """
@@ -392,22 +393,22 @@ class CompleteRequestView(View):
 
 @login_required
 def archived_request_details(request, request_id):
-    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'error': 'Invalid request'}, status=400)
-
+    logger = logging.getLogger('django')
+    logger.error(f'[ARCHIVE DEBUG] request.user.id={request.user.id}, request.user.role={getattr(request.user, "role", None)}')
     try:
         req = Request.objects.select_related(
             'student_id', 'teacher_id__teacher_id', 'teacher_theme'
         ).prefetch_related(
-            'files__comments__author'  # Оптимізуємо запит до коментарів
+            'files__comments__author'
         ).get(id=request_id, request_status='Завершено')
-
-        # Перевірка доступу
+        logger.error(f'[ARCHIVE DEBUG] req.student_id.id={getattr(req.student_id, "id", None)}, req.teacher_id.teacher_id.id={getattr(req.teacher_id.teacher_id, "id", None)}')
+        # Check access permissions
         if request.user.role == 'Студент' and req.student_id != request.user:
+            logger.error(f'[ARCHIVE DEBUG] 403: student_id mismatch (req.student_id={req.student_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
         if request.user.role == 'Викладач' and req.teacher_id.teacher_id != request.user:
+            logger.error(f'[ARCHIVE DEBUG] 403: teacher_id mismatch (req.teacher_id.teacher_id={req.teacher_id.teacher_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
-
         files_data = []
         for file in req.files.all():
             comments_data = []
@@ -421,7 +422,7 @@ def archived_request_details(request, request_id):
             files_data.append({
                 'id': file.id,
                 'file_url': file.file.url,
-                'file_name': file.file.name.split('/')[-1],
+                'file_name': file.get_filename(),
                 'description': file.description,
                 'uploaded_at': file.uploaded_at.strftime('%d.%m.%Y %H:%M'),
                 'uploaded_by': file.uploaded_by.get_full_name(),
@@ -445,9 +446,10 @@ def archived_request_details(request, request_id):
         return JsonResponse(response_data)
 
     except Request.DoesNotExist:
+        logger.error(f'[ARCHIVE DEBUG] 404: Request.DoesNotExist for id={request_id}')
         return JsonResponse({'error': 'Request not found'}, status=404)
     except Exception as e:
-        # Log the error e
+        logger.error(f'[ARCHIVE DEBUG] 500: {str(e)}')
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
 def get_requests_data(request):
