@@ -34,7 +34,7 @@
                     <div class="request-card pending-request">
                         <div class="request-user">
                             {% if request.teacher_id.teacher_id.profile_picture %}
-                                <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                                <img src="{{ request.teacher_id.teacher_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                             {% else %}
                                 <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                             {% endif %}
@@ -80,7 +80,7 @@
                     <div class="request-card accepted-request">
                 <div class="request-user">
                     {% if request.teacher_id.teacher_id.profile_picture %}
-                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                     {% else %}
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}
@@ -150,7 +150,7 @@
                     <div class="request-card rejected-request">
                         <div class="request-user">
                             {% if request.teacher_id.teacher_id.profile_picture %}
-                                <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                                <img src="{{ request.teacher_id.teacher_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                             {% else %}
                                 <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                             {% endif %}
@@ -223,7 +223,7 @@
                 <div class="request-card pending-request">
                 <div class="request-user">
                     {% if request.student_id.profile_picture %}
-                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                        <img src="{{ request.student_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                     {% else %}
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}
@@ -277,7 +277,7 @@
                     <div class="request-card accepted-request">
                         <div class="request-user">
                             {% if request.student_id.profile_picture %}
-                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                                <img src="{{ request.student_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                             {% else %}
                                 <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                             {% endif %}
@@ -342,7 +342,7 @@
                     <div class="request-card rejected-request">
                         <div class="request-user">
                             {% if request.student_id.profile_picture %}
-                                <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
+                                <img src="{{ request.student_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
                             {% else %}
                                 <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                             {% endif %}
