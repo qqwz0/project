@@ -524,7 +524,6 @@ def profile(request: HttpRequest, user_id=None):
         # Активні та архівні запити для вкладок
         active_requests = all_requests.filter(request_status='Активний')
         archived_requests = all_requests.filter(request_status='Завершено')
-        pending_requests = all_requests.filter(request_status='Очікує')
         
         # Get all active requests with files
         active_request_files = {}
@@ -538,7 +537,6 @@ def profile(request: HttpRequest, user_id=None):
             'active_requests': active_requests,
             'archived_requests': archived_requests,
             'active_request_files': active_request_files,
-            'pending_requests': pending_requests,
         })
 
     return render(request, 'profile/profile.html', context)

@@ -1,23 +1,13 @@
 {% load static %}
-{% load catalog_extras %}
 
 <!-- Font Awesome stylesheet for icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
-<div class="modal-content">
-    <div class="modal-header">
-        <div class="teacher-info">
-            <img src="{% get_profile_picture_url teacher.teacher_id %}" alt="Фото профілю" class="teacher-avatar">
-            <div class="teacher-details">
-                <h3>{{ teacher.teacher_id.get_full_name }}</h3>
-                <p class="academic-level">{{ teacher.academic_level }}</p>
-                <p class="department">{{ teacher.teacher_id.department }}</p>
-            </div>
-        </div>
-        <button class="close-modal" onclick="closeModal()">&times;</button>
-    </div>
-    
-    <section class="info-request-section">
+<section class="info-request-section">
+    <!-- Close modal button -->
+    <a class="close-modal fas fa-times" href="#" onclick="document.getElementById('details_request_modal').close();"></a>
+       
+    <div class="left-container">
         <!-- Display teacher's photo or a default image -->
         <img src="{{photo}}" alt="Teacher">
         <!-- Display teacher's name -->
@@ -64,7 +54,7 @@
                 </div>
             {%endif%}
         {% endif %}
-    </section>
+    </div>
 
     <div class="right-container">
         <!-- Form for submitting a request -->
@@ -130,7 +120,7 @@
             {% endif %}
         </form>
     </div>
-</div>
+</section>
 
 <script>
     // Handle form submission via AJAX
