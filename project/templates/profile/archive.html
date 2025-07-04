@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
+            console.log('Clicked archived request id:', requestId);
             fetch(`/catalog/archived-request-details/${requestId}/`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
@@ -89,7 +90,13 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.error) {
                     console.error('Error fetching archived request details:', data.error);
-                    alert('Не вдалося завантажити деталі роботи.');
+                    if (data.error === 'Forbidden') {
+                        alert('У вас немає прав для перегляду цієї роботи.');
+                    } else if (data.error === 'Request not found') {
+                        alert('Роботу не знайдено. Можливо, її вже видалено або вона не завершена.');
+                    } else {
+                        alert('Не вдалося завантажити деталі роботи.');
+                    }
                     return;
                 }
 
