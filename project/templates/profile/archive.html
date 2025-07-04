@@ -1,6 +1,8 @@
 {% load static %}
 {% load catalog_extras %}
 
+{% csrf_token %}
+
 {% if user_profile.role == "Студент" %}
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
@@ -73,14 +75,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('archivedRequestModal');
     const closeBtn = modal.querySelector('.close-modal');
     const detailsContainer = document.getElementById('archivedRequestDetails');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
             console.log('Clicked archived request id:', requestId);
-            fetch(`/catalog/archived-request-details/${requestId}/`, {
+            fetch(`/users/archived-request-details/${requestId}/`, {
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
                 }
             })
             .then(response => response.json())
