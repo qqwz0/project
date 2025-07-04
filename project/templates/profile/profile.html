@@ -22,7 +22,7 @@
                             {% csrf_token %}
                             <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
                             <label for="profile-pic-input" id="avatar-label">
-                                <img src="{{ request.user.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                                <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                             </label>
                             {{ form.cropping }}
                         </form>

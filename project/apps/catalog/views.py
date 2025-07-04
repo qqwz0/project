@@ -393,7 +393,10 @@ class CompleteRequestView(View):
 
 @login_required
 def archived_request_details(request, pk):
+    import logging
+    logger = logging.getLogger('django')
     if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        logger.error(f'[ARCHIVE MODAL] Not AJAX request for pk={pk}')
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
         req = Request.objects.select_related(
@@ -403,8 +406,10 @@ def archived_request_details(request, pk):
         ).get(pk=pk, request_status='Завершено')
         # Check access permissions
         if request.user.role == 'Студент' and req.student_id != request.user:
+            logger.error(f'[ARCHIVE MODAL] Forbidden: student_id mismatch (req.student_id={req.student_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
         if request.user.role == 'Викладач' and req.teacher_id.teacher_id != request.user:
+            logger.error(f'[ARCHIVE MODAL] Forbidden: teacher_id mismatch (req.teacher_id.teacher_id={req.teacher_id.teacher_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
         files_data = []
         for file in req.files.all():
@@ -439,7 +444,11 @@ def archived_request_details(request, pk):
         }
         return JsonResponse(data)
     except Request.DoesNotExist:
+        logger.error(f'[ARCHIVE MODAL] Request not found for pk={pk}')
         return JsonResponse({'error': 'Request not found'}, status=404)
+    except Exception as e:
+        logger.error(f'[ARCHIVE MODAL] Unexpected error for pk={pk}: {str(e)}')
+        return JsonResponse({'error': 'An unexpected error occurred', 'details': str(e)}, status=500)
 
 def get_requests_data(request):
     if request.user.role == 'Викладач':
