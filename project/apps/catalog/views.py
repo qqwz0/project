@@ -392,65 +392,54 @@ class CompleteRequestView(View):
         return JsonResponse({'success': False}, status=403)
 
 @login_required
-def archived_request_details(request, request_id):
-    logger = logging.getLogger('django')
-    logger.error(f'[ARCHIVE DEBUG] request.user.id={request.user.id}, request.user.role={getattr(request.user, "role", None)}')
+def archived_request_details(request, pk):
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
         req = Request.objects.select_related(
             'student_id', 'teacher_id__teacher_id', 'teacher_theme'
         ).prefetch_related(
             'files__comments__author'
-        ).get(id=request_id, request_status='Завершено')
-        logger.error(f'[ARCHIVE DEBUG] req.student_id.id={getattr(req.student_id, "id", None)}, req.teacher_id.teacher_id.id={getattr(req.teacher_id.teacher_id, "id", None)}')
+        ).get(pk=pk, request_status='Завершено')
         # Check access permissions
         if request.user.role == 'Студент' and req.student_id != request.user:
-            logger.error(f'[ARCHIVE DEBUG] 403: student_id mismatch (req.student_id={req.student_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
         if request.user.role == 'Викладач' and req.teacher_id.teacher_id != request.user:
-            logger.error(f'[ARCHIVE DEBUG] 403: teacher_id mismatch (req.teacher_id.teacher_id={req.teacher_id.teacher_id.id}, user={request.user.id})')
             return JsonResponse({'error': 'Forbidden'}, status=403)
         files_data = []
         for file in req.files.all():
-            comments_data = []
-            for comment in file.comments.all():
-                comments_data.append({
-                    'author': comment.author.get_full_name(),
-                    'text': comment.text,
-                    'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
-                })
-            
-            files_data.append({
-                'id': file.id,
-                'file_url': file.file.url,
+            file_data = {
                 'file_name': file.get_filename(),
+                'file_url': file.file.url,
                 'description': file.description,
-                'uploaded_at': file.uploaded_at.strftime('%d.%m.%Y %H:%M'),
                 'uploaded_by': file.uploaded_by.get_full_name(),
-                'comments': comments_data,
-            })
-        
-        response_data = {
+                'uploaded_at': file.uploaded_at.strftime('%d.%m.%Y %H:%M'),
+                'comments': [
+                    {
+                        'author': comment.author.get_full_name(),
+                        'text': comment.text,
+                        'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+                    }
+                    for comment in file.comments.all()
+                ]
+            }
+            files_data.append(file_data)
+        data = {
             'student': {
                 'name': req.student_id.get_full_name(),
-                'group': req.student_id.academic_group,
+                'group': req.student_id.academic_group
             },
             'teacher': {
-                'name': req.teacher_id.teacher_id.get_full_name(),
+                'name': req.teacher_id.teacher_id.get_full_name()
             },
-            'theme': req.teacher_theme.theme if req.teacher_theme else 'Тема не вказана',
+            'theme': req.teacher_theme.theme if req.teacher_theme else "Без теми",
             'grade': req.grade,
-            'completion_date': req.completion_date.strftime('%d.%m.%Y'),
+            'completion_date': req.completion_date.strftime("%d.%m.%Y"),
             'files': files_data
         }
-        
-        return JsonResponse(response_data)
-
+        return JsonResponse(data)
     except Request.DoesNotExist:
-        logger.error(f'[ARCHIVE DEBUG] 404: Request.DoesNotExist for id={request_id}')
         return JsonResponse({'error': 'Request not found'}, status=404)
-    except Exception as e:
-        logger.error(f'[ARCHIVE DEBUG] 500: {str(e)}')
-        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
 def get_requests_data(request):
     if request.user.role == 'Викладач':
