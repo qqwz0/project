@@ -1,6 +1,5 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
-{% load catalog_extras %}
 
 {% block title %}Профіль користувача{% endblock %}
 
@@ -17,7 +16,6 @@
                 <!-- Profile Picture -->
                 <div class="profile-pic">
                     {% if is_own_profile %}
-                        {% if form %}
                         <form id="profile-pic-form" action="{% url 'update_profile_picture' %}" method="post" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
@@ -26,15 +24,14 @@
                             </label>
                             {{ form.cropping }}
                         </form>
-                        {{ form.media }}
-                        {% endif %}
                     {% else %}
                         {% if user_profile.profile_picture %}
-                            <img src="{{ user_profile.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                            <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                         {% else %}
                             <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
                         {% endif %}
                     {% endif %}
+                    {{ form.media }}
                 </div>
 
                 <!-- Profile Text -->

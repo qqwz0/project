@@ -1,5 +1,4 @@
 {% load static %}
-{% load catalog_extras %}
 
 {% if user_profile.role == "Студент" %}
     {% if archived_requests %}
@@ -9,7 +8,7 @@
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
                     {% if request.teacher_id.teacher_id.profile_picture %}
-                        <img src="{{ request.teacher_id.teacher_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
+                        <img src="{{ request.teacher_id.teacher_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
                     {% else %}
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}
@@ -41,7 +40,7 @@
             <div class="request-card archived-request-card" data-request-id="{{ request.id }}" style="cursor: pointer;">
                 <div class="request-user">
                     {% if request.student_id.profile_picture %}
-                        <img src="{{ request.student_id.profile_picture|cloudinary_avatar }}" alt="Фото профілю" class="request-avatar">
+                        <img src="{{ request.student_id.profile_picture.url }}" alt="Фото профілю" class="request-avatar">
                     {% else %}
                         <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю" class="request-avatar">
                     {% endif %}
