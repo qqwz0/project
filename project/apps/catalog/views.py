@@ -252,11 +252,8 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         context['free_slots'] = slots
         context['is_matched'] = is_matched
         
-        # Handle profile picture URL safely
-        try:
-            context['photo'] = teacher.teacher_id.profile_picture.url if teacher.teacher_id.profile_picture else static('images/default-avatar.jpg')
-        except (ValueError, AttributeError):
-            context['photo'] = static('images/default-avatar.jpg')
+        # Use the template tag to get profile picture URL
+        context['photo'] = get_profile_picture_url(teacher.teacher_id)
             
         return context
     
