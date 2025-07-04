@@ -1,0 +1,140 @@
+/* Archive Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 25px;
+    border: 1px solid #6FCF97;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.close-modal {
+    color: #6B7280;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: #1F2937;
+}
+
+#archivedRequestDetails h3 {
+    color: #374151;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    border-bottom: 2px solid #6FCF97;
+    padding-bottom: 0.5rem;
+}
+
+#archivedRequestDetails p {
+    margin: 0.75rem 0;
+    color: #4B5563;
+    line-height: 1.5;
+}
+
+#archivedRequestDetails strong {
+    color: #374151;
+    font-weight: 600;
+}
+
+#archivedRequestDetails h4 {
+    color: #374151;
+    font-size: 1.25rem;
+    margin: 1.5rem 0 1rem;
+    font-weight: 600;
+}
+
+#archivedRequestDetails ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#archivedRequestDetails li {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#archivedRequestDetails li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#archivedRequestDetails a {
+    color: #2563EB;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+#archivedRequestDetails a:hover {
+    color: #1D4ED8;
+    text-decoration: underline;
+}
+
+#archivedRequestDetails hr {
+    border: none;
+    border-top: 1px solid #E5E7EB;
+    margin: 1.5rem 0;
+}
+
+/* Comments section styling */
+#archivedRequestDetails h5 {
+    color: #374151;
+    font-size: 1rem;
+    margin: 1rem 0 0.5rem;
+    font-weight: 600;
+}
+
+#archivedRequestDetails .comments-list li {
+    background: #F3F4F6;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 0;
+    font-size: 0.9rem;
+}
+
+/* File info styling */
+#archivedRequestDetails .file-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+#archivedRequestDetails .file-meta {
+    color: #6B7280;
+    font-size: 0.875rem;
+}
+
+/* Grade and completion date highlight */
+#archivedRequestDetails .highlight {
+    background-color: #F0FDF4;
+    border-left: 4px solid #6FCF97;
+    padding: 12px;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+} 

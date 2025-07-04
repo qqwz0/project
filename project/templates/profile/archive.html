@@ -3,6 +3,9 @@
 
 {% csrf_token %}
 
+<!-- Add CSS link -->
+<link rel="stylesheet" href="{% static 'css/archive-modal.css' %}">
+
 {% if user_profile.role == "Студент" %}
     {% if archived_requests %}
         <h2>📂 Архів робіт</h2>
@@ -61,9 +64,9 @@
 {% endif %} 
 
 <!-- Modal for Archived Request Details -->
-<div id="archivedRequestModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-    <div class="modal-content" style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px; position: relative;">
-        <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+<div id="archivedRequestModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
         <div id="archivedRequestDetails">
             <!-- Content will be injected by JavaScript -->
         </div>
@@ -103,22 +106,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 let filesHtml = '<h4>Файли роботи</h4>';
                 if (data.files && data.files.length > 0) {
-                    filesHtml += '<ul style="list-style-type: none; padding-left: 0;">';
+                    filesHtml += '<ul>';
                     data.files.forEach(file => {
-                        filesHtml += `<li style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                            <p><strong><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></strong></p>
-                            <p style="font-size: 0.9em; color: #555;">Опис: ${file.description || 'немає'}</p>
-                            <p style="font-size: 0.8em; color: #777;">Завантажив: ${file.uploaded_by} (${file.uploaded_at})</p>`;
+                        filesHtml += `<li>
+                            <div class="file-info">
+                                <p><strong><a href="${file.file_url}" target="_blank" download>${file.file_name}</a></strong></p>
+                                <div class="file-meta">
+                                    <p>Завантажив: ${file.uploaded_by}</p>
+                                    <p>${file.uploaded_at}</p>
+                                </div>
+                            </div>
+                            <p class="file-description">Опис: ${file.description || 'немає'}</p>`;
                         
                         if(file.comments && file.comments.length > 0) {
-                            filesHtml += '<h5>Коментарі:</h5><ul style="list-style-type: none; padding-left: 15px;">';
+                            filesHtml += '<h5>Коментарі:</h5><div class="comments-list">';
                             file.comments.forEach(comment => {
-                                filesHtml += `<li style="font-size: 0.9em; margin-bottom: 5px; background: #f9f9f9; padding: 5px; border-radius: 3px;">
+                                filesHtml += `<li>
                                     <strong>${comment.author}:</strong> ${comment.text} 
-                                    <span style="font-size: 0.8em; color: #888; float: right;">${comment.created_at}</span>
+                                    <span style="float: right;">${comment.created_at}</span>
                                 </li>`;
                             });
-                            filesHtml += '</ul>';
+                            filesHtml += '</div>';
                         }
                         filesHtml += '</li>';
                     });
@@ -129,11 +137,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 detailsContainer.innerHTML = `
                     <h3>Деталі завершеної роботи</h3>
+                    <div class="highlight">
+                        <p><strong>Підсумкова оцінка:</strong> ${data.grade}/100</p>
+                        <p><strong>Дата завершення:</strong> ${data.completion_date}</p>
+                    </div>
                     <p><strong>Студент:</strong> ${data.student.name} (${data.student.group})</p>
                     <p><strong>Викладач:</strong> ${data.teacher.name}</p>
                     <p><strong>Тема:</strong> ${data.theme}</p>
-                    <p><strong>Підсумкова оцінка:</strong> ${data.grade}/100</p>
-                    <p><strong>Дата завершення:</strong> ${data.completion_date}</p>
                     <hr>
                     ${filesHtml}
                 `;
