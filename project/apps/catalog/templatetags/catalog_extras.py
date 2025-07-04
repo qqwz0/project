@@ -69,11 +69,11 @@ def get_profile_picture_url(user):
     """
     Returns the appropriate URL for a user's profile picture, either from Cloudinary or the default avatar.
     """
-    if user and user.profile_picture and user.profile_picture.name:
+    if user and hasattr(user, 'profile_picture') and user.profile_picture:
         try:
             storage = MediaCloudinaryStorage()
             if storage.exists(user.profile_picture.name):
                 return storage.url(user.profile_picture.name)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error getting profile picture URL for user {user.id}: {str(e)}")
     return static('images/default-avatar.jpg')

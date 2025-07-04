@@ -1,10 +1,11 @@
 {% load static %}
+{% load catalog_extras %}
 <section class="teacher-info">
     <div class="teacher-card" >
       <div class="photo-container">
         <div class="teacher-photo">
           <!-- If a teacher photo is available, display it; otherwise use a default image. -->
-            <img x-bind:src="`${item.teacher.photo}`" alt="Teacher photo">
+            <img x-bind:src="item.teacher.photo" alt="Teacher photo" onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
         </div>
       </div>
       <div class="teacher-details">

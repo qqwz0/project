@@ -38,21 +38,16 @@ class TeachersCatalogView(TemplateView, FormView):
     template_name = 'catalog/teachers_catalog.html'
     form_class = FilteringSearchingForm
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = self.get_form()
+        return context
+    
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teachers catalog.
-        
-        Args:
-            request (HttpRequest): The HTTP request object.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-            
-        Returns:
-            HttpResponse: Rendered template with the filter form.
         """
-        form = self.form_class()
-        context = {'form': form}
-        return render(request, self.template_name, context)
+        return self.render_to_response(self.get_context_data())
     
 class TeachersListView(ListView):    
     """
@@ -150,8 +145,9 @@ class TeachersListView(ListView):
 
                 # Handle profile picture URL safely
                 try:
-                    photo_url = teacher.teacher_id.profile_picture.url if teacher.teacher_id.profile_picture else static('images/default-avatar.jpg')
-                except (ValueError, AttributeError):
+                    photo_url = get_profile_picture_url(teacher.teacher_id)
+                except Exception as e:
+                    print(f"Error getting profile picture URL: {str(e)}")
                     photo_url = static('images/default-avatar.jpg')
 
                 data.append({
