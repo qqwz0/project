@@ -2,11 +2,6 @@ from django import template
 from django.db.models import Model
 from django.utils.safestring import mark_safe
 import json
-from django.templatetags.static import static
-try:
-    from cloudinary_storage.storage import MediaCloudinaryStorage
-except ImportError:
-    MediaCloudinaryStorage = None
 
 register = template.Library()
 
@@ -66,14 +61,3 @@ def filter_status(requests, status):
     Використання: {{ requests|filter_status:'Активний' }}
     """
     return [req for req in requests if req.request_status == status]
-
-@register.filter
-def cloudinary_avatar(image_field):
-    if image_field and image_field.name and MediaCloudinaryStorage:
-        try:
-            storage = MediaCloudinaryStorage()
-            if storage.exists(image_field.name):
-                return storage.url(image_field.name)
-        except Exception:
-            pass
-    return static('images/default-avatar.jpg')
