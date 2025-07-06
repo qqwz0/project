@@ -1597,3 +1597,146 @@ textarea.form-control::placeholder {
         max-height: 60vw;
     }
 }
+
+/* === Стиль для маленької червоної модалки відмови студента === */
+#studentRefuseModal .modal-content {
+    background-color: #fff;
+    border: 2px solid #DC2626;
+    max-width: 400px;
+    width: 90%;
+    margin: 8% auto;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(220,38,38,0.10);
+    padding: 24px 20px 18px 20px;
+    position: relative;
+    text-align: left;
+}
+#studentRefuseModal h3 {
+    color: #DC2626;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    text-align: left;
+    border-bottom: 1.5px solid #DC2626;
+    padding-bottom: 0.5rem;
+}
+#studentRefuseModal label {
+    color: #991B1B;
+    font-weight: 600;
+    margin-bottom: 0.3em;
+    display: block;
+}
+#studentRefuseModal textarea {
+    width: 100%;
+    border: 1px solid #FCA5A5;
+    border-radius: 7px;
+    padding: 8px;
+    font-size: 1rem;
+    margin-bottom: 1.1em;
+    background: #FEF2F2;
+    color: #991B1B;
+    resize: vertical;
+}
+#studentRefuseModal .modal-reject-btn {
+    background: #DC2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5em;
+    transition: background 0.2s;
+}
+#studentRefuseModal .modal-reject-btn:hover {
+    background: #B91C1C;
+}
+#studentRefuseModal .close-modal {
+    color: #DC2626;
+    font-size: 26px;
+    font-weight: bold;
+    position: absolute;
+    right: 18px;
+    top: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+#studentRefuseModal .close-modal:hover {
+    color: #991B1B;
+}
+
+.student-refuse-btn {
+    background: #DC2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+    box-shadow: 0 2px 6px rgba(220,38,38,0.08);
+    display: inline-block;
+    line-height: 1.2;
+}
+.student-refuse-btn:hover {
+    background: #B91C1C;
+}
+
+.student-refuse-icon-btn {
+    background: #DC2626;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.10);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-left: 8px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding: 0;
+}
+.student-refuse-icon-btn:hover {
+    background: #B91C1C;
+    box-shadow: 0 4px 12px rgba(220,38,38,0.18);
+}
+.student-refuse-icon-btn svg {
+    display: block;
+}
+
+button.student-refuse-badge-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(45deg, #ef4444, #dc2626);
+    color: #fff;
+    border: 1px solid #fca5a5;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-left: 10px;
+    margin-top: 0;
+    margin-bottom: 0;
+    line-height: 1.2;
+    min-width: unset;
+    width: auto;
+    height: auto;
+    align-self: flex-start;
+}
+button.student-refuse-badge-btn:hover {
+    background: linear-gradient(45deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 12px rgba(220,38,38,0.18);
+}

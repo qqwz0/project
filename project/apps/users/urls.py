@@ -22,4 +22,7 @@ urlpatterns = [
     path('profile/load-tab/<str:tab_name>/', views.load_profile_tab, name='load_profile_tab'),
     path('archived-request-details/<int:request_id>/', views.archived_request_details, name='archived_request_details'),
     path('catalog/', include('apps.catalog.urls')),
+    path('request-details-for-approve/<int:request_id>/', views.request_details_for_approve, name='request_details_for_approve'),
+    path('approve-request-with-theme/<int:request_id>/', views.approve_request_with_theme, name='approve_request_with_theme'),
+    path('student-refuse-request/<int:request_id>/', views.student_refuse_request, name='student_refuse_request'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -5,6 +5,7 @@ from io import BytesIO
 from urllib.parse import urlencode, parse_qs
 from dotenv import load_dotenv
 import os
+import re
 
 import requests
 from PIL import Image
@@ -39,8 +40,11 @@ from apps.catalog.models import (
     Request,
     TeacherTheme,
     RequestFile,
-    FileComment
+    FileComment,
+    StudentTheme
 )
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 
 # Load environment variables
 load_dotenv()
@@ -295,9 +299,16 @@ def handle_registration_callback(request, code):
             logger.info("New user registered: %s", email)
             # Створюємо профіль в залежності від ролі
             if derived_role == "Студент":
+                # Визначаємо курс з номера групи
+                course = 1  # Значення за замовчуванням
+                if group:
+                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', group)
+                    if match:
+                        course = int(match.group(1))
+                
                 OnlyStudent.objects.create(
                     student_id=user,
-                    course=1,  # Значення за замовчуванням
+                    course=course,  # Використовуємо визначений курс
                     speciality="Не вказано"  # Значення за замовчуванням
                 )
             elif derived_role == "Викладач":
@@ -492,7 +503,7 @@ def profile(request: HttpRequest, user_id=None):
         
         context.update({
             'teacher_profile': teacher_profile,
-            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
+            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile).exclude(theme_description='(Запропоновано студентом)'),
             'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(available=F('quota') - F('occupied'))
             .filter(available__gt=0),
             'pending_requests': Request.objects.select_related(
@@ -1145,3 +1156,97 @@ def custom_500(request):
     except Exception as e:
         logger.error(f"Error rendering 500 page: {str(e)}")
         return HttpResponseServerError('<h1>500 - Внутрішня помилка сервера</h1>')
+
+@require_GET
+def request_details_for_approve(request, request_id):
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        req = Request.objects.select_related('student_id', 'teacher_id').prefetch_related('student_themes').get(id=request_id, request_status='Очікує')
+        if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
+            return JsonResponse({'error': 'Forbidden'}, status=403)
+        # Теми викладача
+        teacher_themes = TeacherTheme.objects.filter(teacher_id=req.teacher_id, is_occupied=False)
+        # Теми студента
+        student_themes = req.student_themes.all()
+        # Формуємо список тем для вибору
+        themes = [
+            {'id': f'teacher_{t.id}', 'title': f'Тема викладача: {t.theme}'} for t in teacher_themes
+        ] + [
+            {'id': f'student_{t.id}', 'title': f'Тема студента: {t.theme}'} for t in student_themes
+        ]
+        data = {
+            'student_name': req.student_id.get_full_name(),
+            'student_group': req.student_id.academic_group,
+            'motivation': req.motivation_text,
+            'request_date': req.request_date.strftime('%d.%m.%Y'),
+            'themes': themes,
+        }
+        return JsonResponse(data)
+    except Request.DoesNotExist:
+        return JsonResponse({'error': 'Request not found'}, status=404)
+
+@csrf_exempt
+@require_POST
+def approve_request_with_theme(request, request_id):
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        req = Request.objects.select_related('teacher_id').get(id=request_id, request_status='Очікує')
+        if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
+            return JsonResponse({'error': 'Forbidden'}, status=403)
+        data = json.loads(request.body.decode('utf-8'))
+        theme_id = data.get('theme_id')
+        if not theme_id:
+            return JsonResponse({'error': 'Тему не обрано'}, status=400)
+        # Визначаємо тип теми
+        if str(theme_id).startswith('teacher_'):
+            theme_pk = int(str(theme_id).replace('teacher_', ''))
+            theme = TeacherTheme.objects.get(id=theme_pk, teacher_id=req.teacher_id)
+            req.teacher_theme = theme
+        elif str(theme_id).startswith('student_'):
+            theme_pk = int(str(theme_id).replace('student_', ''))
+            theme = StudentTheme.objects.get(id=theme_pk, student_id=req.student_id)
+            # Для студентської теми створюємо копію як TeacherTheme (щоб зберегти як основну)
+            new_teacher_theme = TeacherTheme.objects.create(
+                teacher_id=req.teacher_id,
+                theme=theme.theme,
+                theme_description='(Запропоновано студентом)',
+                is_occupied=False
+            )
+            req.teacher_theme = new_teacher_theme
+        else:
+            return JsonResponse({'error': 'Некоректна тема'}, status=400)
+        req.request_status = 'Активний'
+        req.save()
+        return JsonResponse({'success': True})
+    except Request.DoesNotExist:
+        return JsonResponse({'error': 'Request not found'}, status=404)
+    except TeacherTheme.DoesNotExist:
+        return JsonResponse({'error': 'Тема викладача не знайдена'}, status=404)
+    except StudentTheme.DoesNotExist:
+        return JsonResponse({'error': 'Тема студента не знайдена'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def student_refuse_request(request, request_id):
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        req = Request.objects.get(id=request_id)
+        if request.user.role != 'Студент' or req.student_id != request.user:
+            return JsonResponse({'error': 'Forbidden'}, status=403)
+        if req.request_status not in ['Очікує', 'Активний']:
+            return JsonResponse({'error': 'Відмовитися можна лише від запиту зі статусом "Очікує" або "Активний"'}, status=400)
+        data = json.loads(request.body.decode('utf-8'))
+        reason = data.get('reason', '').strip()
+        req.request_status = 'Відхилено студентом'
+        req.rejected_reason = reason or 'Студент не вказав причину відмови'
+        req.save()
+        return JsonResponse({'success': True})
+    except Request.DoesNotExist:
+        return JsonResponse({'error': 'Request not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
