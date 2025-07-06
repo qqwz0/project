@@ -8,6 +8,7 @@ from django import forms
 from .models import CustomUser
 from apps.catalog.models import Slot, OnlyTeacher, TeacherTheme  # Ensure Slot is imported from the correct module
 # Ensure CustomUserAdmin is imported if defined in another module, otherwise it's defined below
+from django.db.models import Q
 
 class CustomUserChangeForm(forms.ModelForm):
     class Meta:
@@ -47,10 +48,48 @@ class CustomUserAdmin(UserAdmin):
     
 
 class SlotAdmin(admin.ModelAdmin):
-    list_display = ('get_teacher_email', 'quota')
-    ordering = ('quota',)
+    list_display = (
+        'get_teacher_name',
+        'get_teacher_email',
+        'get_stream_code',
+        'quota',
+    )
+    ordering = (
+        'teacher_id__teacher_id__last_name',
+        'teacher_id__teacher_id__first_name',
+        'teacher_id__teacher_id__patronymic',
+    )
     # прибираємо readonly_fields тут, бо будемо керувати динамічно
     # readonly_fields = ('occupied',)
+
+    search_fields = (
+        'teacher_id__first_name',
+        'teacher_id__last_name',
+        'teacher_id__email',
+    )
+
+    autocomplete_fields = ('teacher_id',)
+
+    def get_search_results(self, request, queryset, search_term):
+        """
+        When Django calls autocomplete, it does:
+           qs, distinct = self.get_search_results(request, Slot.objects.all(), term)
+        We intercept that and turn it into “all slots whose teacher matches…”
+        """
+        # First, pull in the default logic (so filters like department_admin still apply)
+        qs, use_distinct = super().get_search_results(request, queryset, search_term)
+
+        # But override qs to only filter by related OnlyTeacher:
+        teachers = OnlyTeacher.objects.filter(
+            Q(teacher_id__first_name__icontains=search_term) |
+            Q(teacher_id__last_name__icontains=search_term) |
+            Q(teacher_id__patronymic__icontains=search_term) |
+            Q(teacher_id__email__icontains=search_term)
+        )
+
+        # Return all slots whose FK is in that teacher set
+        qs = queryset.filter(teacher_id__in=teachers)
+        return qs, False  # False == no .distinct() needed
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -60,10 +99,25 @@ class SlotAdmin(admin.ModelAdmin):
                 teacher_id__teacher_id__role="Викладач"
             )
         return qs
+    
+    def get_teacher_name(self, obj):
+        u = obj.teacher_id.teacher_id
+        parts = [u.last_name, u.first_name]
+        if u.patronymic:
+            parts.append(u.patronymic)
+        return " ".join(parts)
+    get_teacher_name.short_description = "Викладач"
+    # Let the “Викладач” header sort by last_name
+    get_teacher_name.admin_order_field = 'teacher_id__teacher_id__last_name'
 
     def get_teacher_email(self, obj):
         return obj.teacher_id.teacher_id.email
     get_teacher_email.short_description = "Email викладача"
+
+    def get_stream_code(self, obj):
+        # use the actual FK name 'stream_id'
+        return obj.stream_id.stream_code
+    get_stream_code.short_description = "Потік"
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id":
@@ -135,12 +189,28 @@ class StreamAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
+admin.site.unregister(OnlyTeacher)
+
 class OnlyTeacherAdmin(admin.ModelAdmin):
-    list_display = ('teacher', 'teacher__department')
-    search_fields = ('teacher__email','teacher__first_name')
+    list_display = ('get_teacher_email', 'get_teacher_department')
+    search_fields = (
+        'teacher_id__first_name',
+        'teacher_id__last_name',
+        'teacher_id__email',
+    )
+
+    def get_teacher_email(self, obj):
+        return obj.teacher_id.email
+    get_teacher_email.short_description = "Teacher Email"
+
+    def get_teacher_department(self, obj):
+        return obj.teacher_id.department
+    get_teacher_department.short_description = "Department"
 
 # І нарешті реєструємо модель:
 admin.site.register(Stream, StreamAdmin)
+
+admin.site.register(OnlyTeacher, OnlyTeacherAdmin)
 
 # Реєструємо модель TeacherTheme в адмінці з новою конфігурацією
 admin.site.register(TeacherTheme, TeacherThemeAdmin)

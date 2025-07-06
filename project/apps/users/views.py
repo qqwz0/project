@@ -25,6 +25,7 @@ from django.utils import timezone
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.views import View
+from django.db.models import F
 
 from cloudinary_storage.storage import MediaCloudinaryStorage
 
@@ -492,7 +493,8 @@ def profile(request: HttpRequest, user_id=None):
         context.update({
             'teacher_profile': teacher_profile,
             'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
-            'slots': Slot.objects.filter(teacher_id=teacher_profile),
+            'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(available=F('quota') - F('occupied'))
+            .filter(available__gt=0),
             'pending_requests': Request.objects.select_related(
                 'student_id', 'teacher_id', 'teacher_theme', 'slot'
             ).prefetch_related('student_themes', 'files').filter(
