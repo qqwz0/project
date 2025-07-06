@@ -109,11 +109,24 @@ class RequestForm(forms.ModelForm):
 
     student_themes = forms.CharField(
         label="Введи свою тему",
+        max_length=100, 
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': 'Введи'
+            'placeholder': 'Введи',
+            'maxlength': 100,
+        })
+    )
+
+    motivation_text = forms.CharField(
+        required=False,       # необов’язкове
+        max_length=500,       # макс. 500 символів
+        widget=forms.Textarea(attrs={
+            'class': 'form-textarea',
+            'placeholder': 'Опиши свою мотивацію',
+            'rows': 4,
+            'maxlength': 500,   # обмеження на стороні клієнта
         }),
-        required=False
+        label=''              # якщо хочеш забрати лейбл
     )
 
     def __init__(self, teacher_id, *args, **kwargs):
@@ -176,6 +189,12 @@ class RequestForm(forms.ModelForm):
         if text and len(text) > 2000:
             raise forms.ValidationError("Мотиваційний текст занадто довгий.")
         return text
+    
+    def clean_student_themes(self):
+        text = self.cleaned_data.get('student_themes', '').strip()
+        if text and len(text) > 100:
+            raise forms.ValidationError("Тема не може бути довшою за 100 символів.")
+        return text
 
     class Meta:
         """
@@ -184,15 +203,15 @@ class RequestForm(forms.ModelForm):
         model = Request
         fields = ['teacher_themes', 'student_themes', 'motivation_text']
         label_suffix = ''
-        labels = {
-            'motivation_text': '',
-        }
-        widgets = {
-            'motivation_text': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'placeholder': 'Опиши свою мотивацію'
-            })
-        }
+        # labels = {
+        #     'motivation_text': '',
+        # }
+        # widgets = {
+        #     'motivation_text': forms.Textarea(attrs={
+        #         'class': 'form-textarea',
+        #         'placeholder': 'Опиши свою мотивацію'
+        #     })
+        # }
      
         
 

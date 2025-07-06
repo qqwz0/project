@@ -195,7 +195,11 @@
             </div>
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає активних робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає активних робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
     {% elif user.role == "Викладач" %}
     {% csrf_token %}
@@ -377,7 +381,11 @@
             </div>
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає активних робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає активних робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
 {% endif %}
 {% endblock %}

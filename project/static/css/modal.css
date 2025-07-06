@@ -182,11 +182,10 @@ margin-bottom: 0.4375rem;
 color: #388E3C;
 }
 
-.theme-list {
+/* .theme-list {
 list-style: none;
 padding: 0;
 margin-top: 0;
-margin-bottom: 0.125rem;
 }
 
 .theme-item {
@@ -212,9 +211,9 @@ font-size: 1rem;
 
 .theme-item:hover {
 box-shadow: 0.125rem 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-}
+} */
 
-.remove-theme {
+/* .remove-theme {
 background: none;
 border: none;
 color: #ff4444;
@@ -229,7 +228,176 @@ transition: color 0.3s ease-in-out;
 color: #cc0000;
 }
 
-.theme-item input[readonly],
+.theme-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 0;
+}
+
+.theme-item {
+    padding: 0.625rem;
+    display: flex;
+    width: 50%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 0.625rem;
+    align-items: center;
+    justify-content: space-between;
+    border: 0.0625rem solid #ccc;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0.125rem 0.25rem 0.25rem rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+    font-weight: 400; 
+    font-family: var(--default-font);
+    color: #3f3e3e;  
+    font-size: 1rem;
+    position: relative;
+    cursor: pointer;
+}
+
+.theme-item:hover {
+    box-shadow: 0.125rem 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* Remove button styling */
+.theme-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 0;
+}
+
+.theme-item {
+    padding: 0.625rem;
+    display: flex;
+    width: 80%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 0.8rem;
+    align-items: center;
+    justify-content: space-between;
+    border: 0.0625rem solid #ccc;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0.125rem 0.25rem 0.25rem rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+    font-weight: 400; 
+    font-family: var(--default-font);
+    color: #3f3e3e;  
+    font-size: 1rem;
+    position: relative;
+    cursor: pointer;
+}
+
+.remove-theme {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.remove-theme:hover {
+    background: #ff5252;
+}
+
+/* Tooltip styles */
+.theme-item::after {
+    content: attr(data-full-text);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 300px;
+    min-width: 200px;
+    text-align: center;
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+    line-height: 1.4;
+}
+
+.theme-item::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(1px);
+    border-left: 0.3125rem solid transparent;
+    border-right: 0.3125rem solid transparent;
+    border-top: 0.3125rem solid #333;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+/* 
+.theme-item:hover::after,
+.theme-item:hover::before {
+    opacity: 1;
+    visibility: visible;
+} */
+
+/* Expanded state */
+.theme-item.expanded {
+    white-space: normal;
+    height: auto;
+    min-height: 2.5rem;
+    padding: 0.75rem;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.theme-item.expanded::after,
+.theme-item.expanded::before {
+    display: none;
+}
+
+/* Truncation warning */
+.truncation-warning {
+    color: #ff6b6b;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .theme-item {
+        width: 100%;
+    }
+    
+    .theme-item::after {
+        max-width: 250px;
+        min-width: 150px;
+    }
+}
+
+.theme-item input[readonly], */
 .theme-item textarea[readonly] {
 background-color: #f5f5f5;
 border: none;
@@ -308,7 +476,6 @@ background-color: #f1f1f1;
 .textera-container {
 position: relative;
 width: 100%;
-margin-bottom: 1.5rem;
 text-align: left;
 }
 
@@ -402,6 +569,7 @@ transform: scale(1.1);
 display: flex;
 flex-direction: column;
 align-items: center;
+gap: 5px;
 }
 
 .error-message {

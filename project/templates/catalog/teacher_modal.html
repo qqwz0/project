@@ -60,7 +60,7 @@
         <!-- Form for submitting a request -->
         <form hx-post="{% url 'modal' teacher.pk %}" class="teacher-modal" id="request-form">
             <div id="form-errors" class="error-container"></div>
-            <h1>Подай заявку!</h1>
+            <h1 style="margin-top: 0;">Подай заявку!</h1>
             <input type="hidden" name="csrfmiddlewaretoken" id="csrf_token" value="{{ csrf_token }}">
         
             <!-- Dropdown for selecting teacher themes -->
@@ -95,7 +95,7 @@
                         <img src="{% static 'images/plus.svg' %}" alt="Add Icon" class="add-icon">
                     </button>
                 </div>
-                <div class="error-message"></div>
+                {% comment %} <div class="error-message"></div> {% endcomment %}
                 <div id="hidden-themes"></div>
                 <ul id="theme-list" class="theme-list"></ul>
             </div>

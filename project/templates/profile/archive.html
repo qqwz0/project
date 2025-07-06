@@ -31,7 +31,11 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає завершених робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає завершених робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
 
 {% elif user_profile.role == "Викладач" %}
@@ -59,7 +63,11 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає завершених робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає завершених робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
 {% endif %} 
 

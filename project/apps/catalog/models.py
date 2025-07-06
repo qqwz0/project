@@ -119,7 +119,10 @@ class Request(models.Model):
                                     null=True, blank=True)
     
     student_themes = models.ManyToManyField('StudentTheme', blank=True)
-    motivation_text = models.TextField()
+    motivation_text = models.TextField(
+    blank=True,
+    max_length=500,
+)
     request_date = models.DateTimeField(default=timezone.now)
     request_status = models.CharField(max_length=100, choices=STATUS, 
                                     default='Очікує')

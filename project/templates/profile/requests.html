@@ -51,8 +51,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -93,8 +95,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -159,8 +163,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -229,8 +235,10 @@
                             </ul>
                         {% endif %}
 
-                        <strong>Мотивація:</strong>
-                        <p class="motivation">{{ request.motivation_text }}</p>
+                        {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                             
                             <strong>Дата запиту:</strong>
                             <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -279,8 +287,10 @@
                                     </ul>
                                 {% endif %}
 
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -337,8 +347,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                             </div>
