@@ -21,9 +21,11 @@
 
       {% if user.is_authenticated %}
       <div class="icons">
-        <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
-          <i class="fas fa-home"></i>
-        </a>
+        {% if user_profile.role == 'Студент' %}
+          <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
+            <i class="fas fa-home"></i>
+          </a>
+        {% endif %}
         <a
           href="#"
           id="dropdownMenuButton"

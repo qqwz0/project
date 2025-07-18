@@ -130,6 +130,9 @@ class Request(models.Model):
     rejected_reason = models.TextField(blank=True, null=True)
     completion_date = models.DateTimeField(null=True, blank=True)
     academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
+
+    comment = models.TextField(blank=True, null=True, max_length=1000)
+    send_contacts = models.BooleanField(default=False)
     
     @property
     def is_active(self):

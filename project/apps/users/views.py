@@ -832,6 +832,7 @@ def teacher_profile_edit(request):
     # Get all available streams that the teacher doesn't already have
     existing_stream_ids = slots.values_list('stream_id_id', flat=True)
     available_streams = Stream.objects.exclude(id__in=existing_stream_ids)
+
     
     return render(request, 'profile/teacher_edit.html', {
         'form': form,
@@ -903,7 +904,13 @@ def student_profile_edit(request):
                 }, status=400)
     else:
         form = StudentProfileForm(instance=student_profile, user=request.user)
-    
+
+    print("=== DEBUG: student_profile instance ===")
+    print(request.user)                          # викличе __str__(), якщо є, або <OnlyStudent: pk>
+    print("profile_picture field:", request.user.profile_picture)  
+    if request.user.profile_picture:
+        print("URL:", request.user.profile_picture.url)
+
     return render(request, 'profile/student_edit.html', {
         'form': form,
         'user': request.user
@@ -1189,17 +1196,27 @@ def request_details_for_approve(request, request_id):
 @csrf_exempt
 @require_POST
 def approve_request_with_theme(request, request_id):
-    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
         req = Request.objects.select_related('teacher_id').get(id=request_id, request_status='Очікує')
         if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'Forbidden'}, status=403)
+
         data = json.loads(request.body.decode('utf-8'))
         theme_id = data.get('theme_id')
         if not theme_id:
             return JsonResponse({'error': 'Тему не обрано'}, status=400)
-        # Визначаємо тип теми
+
+        # Extract new fields
+        comment = data.get('comment', '').strip()
+        send_contacts = data.get('send_contacts', False)
+
+        # Assign comment and send_contacts
+        req.comment = comment
+        req.send_contacts_to_student = send_contacts
+
+        # Assign theme
         if str(theme_id).startswith('teacher_'):
             theme_pk = int(str(theme_id).replace('teacher_', ''))
             theme = TeacherTheme.objects.get(id=theme_pk, teacher_id=req.teacher_id)
@@ -1207,7 +1224,6 @@ def approve_request_with_theme(request, request_id):
         elif str(theme_id).startswith('student_'):
             theme_pk = int(str(theme_id).replace('student_', ''))
             theme = StudentTheme.objects.get(id=theme_pk, student_id=req.student_id)
-            # Для студентської теми створюємо копію як TeacherTheme (щоб зберегти як основну)
             new_teacher_theme = TeacherTheme.objects.create(
                 teacher_id=req.teacher_id,
                 theme=theme.theme,
@@ -1217,9 +1233,14 @@ def approve_request_with_theme(request, request_id):
             req.teacher_theme = new_teacher_theme
         else:
             return JsonResponse({'error': 'Некоректна тема'}, status=400)
+
         req.request_status = 'Активний'
+        print(f"Saving Request ID {req.id}")
+        print(f"Comment: {req.comment}")
+        print(f"Send contacts to student: {req.send_contacts_to_student}")
         req.save()
         return JsonResponse({'success': True})
+
     except Request.DoesNotExist:
         return JsonResponse({'error': 'Request not found'}, status=404)
     except TeacherTheme.DoesNotExist:
@@ -1228,6 +1249,7 @@ def approve_request_with_theme(request, request_id):
         return JsonResponse({'error': 'Тема студента не знайдена'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 
 @csrf_exempt
 @require_POST

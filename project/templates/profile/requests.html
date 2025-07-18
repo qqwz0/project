@@ -60,9 +60,27 @@
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
-                            <button class="student-refuse-badge-btn" style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);background:linear-gradient(45deg,#ef4444,#dc2626);color:#fff;border:1px solid #fca5a5;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-left:10px;margin-top:0;margin-bottom:0;line-height:1.2;min-width:unset;width:auto;height:auto;align-self:flex-start;" onclick="showStudentRefuseModal({{ request.id }})">Відмовитися</button>
+                        <div class="actions" style="display: flex; flex-direction: column; align-items: center; gap: 30%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            {% comment %} Only show edit/refuse if this request belongs to the logged-in student {% endcomment %}
+                            {% if user.id == request.student_id.id %}
+                            <button class="icon-btn edit-btn"
+                                    title="Редагувати"
+                                    onclick="openStudentEditRequestModal({{ request.id }})"
+                                    style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#2563eb;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn refuse-btn"
+                                    title="Відхилити"
+                                    onclick="showStudentRefuseModal({{ request.id }})"
+                                    style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#ef4444;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <span class="status {{ request.request_status }}">
+                            {{ request.get_request_status_display }}
+                        </span>
                         </div>
                     </div>
                 {% endif %}
@@ -125,10 +143,10 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        {% comment %} <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
                             <button class="student-refuse-badge-btn" style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);background:linear-gradient(45deg,#ef4444,#dc2626);color:#fff;border:1px solid #fca5a5;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-left:10px;margin-top:0;margin-bottom:0;line-height:1.2;min-width:unset;width:auto;height:auto;align-self:flex-start;" onclick="showStudentRefuseModal({{ request.id }})">Відмовитися</button>
-                        </div>
+                        </div> {% endcomment %}
                     </div>
                 {% elif request.request_status == 'Завершено' %}
                     <div class="request-card accepted-request">
@@ -498,7 +516,7 @@
 
 <!-- Student Refuse Modal -->
 <div id="studentRefuseModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="border: none">
         <span class="close-modal" onclick="closeStudentRefuseModal()">&times;</span>
         <h3>Відмовитися від курсової роботи</h3>
         <form id="studentRefuseForm" onsubmit="handleStudentRefuseSubmit(event)">
@@ -508,6 +526,40 @@
                 <textarea id="studentRefuseReason" name="refuseReason" rows="4" cols="30"></textarea>
             </div>
             <button type="submit" class="request-button reject modal-reject-btn">Відмовитися</button>
+        </form>
+    </div>
+</div>
+
+<!-- Student Edit Request Modal -->
+<div id="studentEditRequestModal" class="modal">
+    <div class="modal-content" style="border: none">
+        <span class="close-modal" onclick="closeStudentEditRequestModal()">&times;</span>
+        <h3>Редагувати запит студента</h3>
+        <form id="studentEditRequestForm" onsubmit="handleStudentEditRequestSubmit(event)">
+            <input type="hidden" id="studentEditRequestId" name="requestId">
+            <!-- Редагування мотивації -->
+            <div class="form-group">
+            <label for="editMotivation">Мотивація:</label>
+            <textarea id="editMotivation" name="motivation" rows="4" style="width:100%;padding:8px;">
+                {{ request.motivation_text }}
+            </textarea>
+            </div>
+
+            <!-- Редагування тем студента -->
+            <div class="form-group">
+            <label>Тематика студента:</label>
+            <ul class="student-themes-list-edit" style="list-style:none;padding:0;">
+                {% for theme in request.student_themes.all %}
+                <li style="margin-bottom:4px;">
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" name="themes" value="{{ theme.id }}" checked>
+                    {{ theme.theme }}
+                </label>
+                </li>
+                {% endfor %}
+            </ul>
+            </div>
+            <button type="submit" class="request-button accept modal-reject-btn">Зберегти</button>
         </form>
     </div>
 </div>
@@ -697,24 +749,86 @@
                 themesHtml = '<div style="color:#888;">Немає доступних тем для вибору</div>';
             }
             
+            // Generate motivation section conditionally
+            const motivationHtml = data.motivation
+                ? `<p><strong>Мотивація:</strong> ${data.motivation}</p>`
+                : '';
+
+            // Build the complete modal content with inline styles only
             approveDetails.innerHTML = `
-                <h3 style='color: #374151; font-size: 1.5rem; margin-bottom: 1.5rem; font-weight: 600; border-bottom: 2px solid #6FCF97; padding-bottom: 0.5rem;'>
+                <h3 style="color: #374151; font-size: 1.5rem; margin-bottom: 1.5rem;
+                        font-weight: 600; border-bottom: 2px solid #6FCF97;
+                        padding-bottom: 0.5rem;">
                     Підтвердження запиту
                 </h3>
-                <div class='highlight'>
+                
+                <div class="highlight" style="margin-bottom: 20px;">
                     <p><strong>Студент:</strong> ${data.student_name} (${data.student_group})</p>
-                    <p><strong>Мотивація:</strong> ${data.motivation}</p>
+                    ${motivationHtml}
                     <p><strong>Дата запиту:</strong> ${data.request_date}</p>
                 </div>
-                <div style="margin-top: 20px;">
-                    <h4 style="color: #374151; font-weight: 600; margin-bottom: 10px;">Оберіть тему курсової роботи:</h4>
-                    ${themesHtml}
+                
+                <div style="margin-top: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #374151; font-weight: 600; margin-bottom: 10px;">
+                        Оберіть тему курсової роботи:
+                    </h4>
+                    <div style="margin-top: 10px;">
+                        ${themesHtml}
+                    </div>
                 </div>
-                <div class="modal-buttons">
-                    <button onclick="closeApproveModal()" class="cancel-btn">Скасувати</button>
-                    <button onclick="submitApprove(${requestId})" class="confirm-btn">Підтвердити запит</button>
+
+                <div style="margin-top: 20px; margin-bottom: 20px;">
+                    <label for="approveComment" 
+                        style="font-weight: 600; display: block; margin-bottom: 5px; color: #374151;">
+                        Коментар до студента:
+                    </label>
+                    <textarea 
+                        id="approveComment" 
+                        name="approveComment" 
+                        rows="3" 
+                        style="width: 100%; padding: 8px; border: 1px solid #d1d5db; 
+                            border-radius: 4px; font-family: inherit; font-size: 14px; 
+                            resize: vertical; box-sizing: border-box;"
+                        placeholder="Ваші додаткові вказівки чи зауваження...">
+                    </textarea>
+                </div>
+                
+                <div style="margin-top: 15px; margin-bottom: 20px; padding: 12px; 
+                            background-color: #f8fafc; border: 1px solid #e2e8f0; 
+                            border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="sendContacts" name="sendContacts" 
+                        style="width: 18px; height: 18px; accent-color: #6FCF97; 
+                                cursor: pointer; margin: 0;">
+                    <label for="sendContacts" 
+                        style="margin: 0; font-size: 0.95rem; color: #374151; 
+                                cursor: pointer; font-weight: 500; line-height: 1.4;">
+                        Надіслати студенту контакти
+                    </label>
+                </div>
+
+                <div class="modal-buttons" style="display: flex; justify-content: flex-end; 
+                                                gap: 10px; margin-top: 20px;">
+                    <button onclick="closeApproveModal()" 
+                            class="cancel-btn"
+                            style="padding: 10px 20px; border: none; border-radius: 4px; 
+                                font-weight: 500; cursor: pointer; background-color: #f3f4f6; 
+                                color: #374151; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#e5e7eb'" 
+                            onmouseout="this.style.backgroundColor='#f3f4f6'">
+                        Скасувати
+                    </button>
+                    <button onclick="submitApprove(${requestId})" 
+                            class="confirm-btn"
+                            style="padding: 10px 20px; border: none; border-radius: 4px; 
+                                font-weight: 500; cursor: pointer; background-color: #6FCF97; 
+                                color: white; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#5cbf87'" 
+                            onmouseout="this.style.backgroundColor='#6FCF97'">
+                        Підтвердити запит
+                    </button>
                 </div>
             `;
+
 
             // Add click handlers for theme cards
             document.querySelectorAll('.theme-card').forEach(card => {
@@ -757,27 +871,33 @@
             return;
         }
         const themeId = selected.value;
-        // Відправити ajax-запит на підтвердження
+        const comment = document.getElementById('approveComment').value;
+        const sendContacts = document.getElementById('sendContacts').checked;
+
         fetch(`/users/approve-request-with-theme/${requestId}/`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({theme_id: themeId})
+            body: JSON.stringify({
+            theme_id: themeId,
+            comment: comment,
+            send_contacts: sendContacts
+            })
         })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                closeApproveModal();
-                window.location.reload();
+            closeApproveModal();
+            window.location.reload();
             } else {
-                alert(data.error || 'Не вдалося підтвердити запит');
+            alert(data.error || 'Не вдалося підтвердити запит');
             }
         })
         .catch(() => alert('Помилка при підтвердженні запиту.'));
-    }
+        }
 
     function showStudentRefuseModal(requestId) {
         document.getElementById('studentRefuseModal').style.display = 'block';
@@ -820,6 +940,59 @@
         })
         .catch(() => alert('Помилка при відмові від курсової.'));
     }
+</script>
+
+<script>
+// Відкрити “редагувати запит” модал
+  function openStudentEditRequestModal(requestId) {
+    const modal = document.getElementById('studentEditRequestModal');
+    document.getElementById('studentEditRequestId').value = requestId;
+    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
+    modal.style.display = 'block';
+  }
+
+  // Закрити модал
+  function closeStudentEditRequestModal() {
+    document.getElementById('studentEditRequestModal').style.display = 'none';
+  }
+
+  // Відправка форми редагування
+  function handleStudentEditRequestSubmit(event) {
+    event.preventDefault();
+    const form = document.getElementById('studentEditRequestForm');
+    const requestId = document.getElementById('studentEditRequestId').value;
+    const data = new FormData(form);
+
+    fetch(`/users/edit-student-request/${requestId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: data
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        closeStudentEditRequestModal();
+        window.location.reload();
+      } else {
+        alert(json.error || 'Не вдалось зберегти зміни');
+      }
+    })
+    .catch(() => alert('Помилка при збереженні'));
+  }
+
+  // Закрити модал ESC чи клік поза ним, якщо потрібно
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeStudentEditRequestModal();
+  });
+  window.onclick = e => {
+    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
+  };
+
+  // Підключаємо сабміт-обробник
+  document.getElementById('studentEditRequestForm')
+          .addEventListener('submit', handleStudentEditRequestSubmit);
 </script>
 
 <!-- Підключаємо зовнішній JavaScript файл для фільтрації запитів -->

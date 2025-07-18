@@ -749,6 +749,12 @@ body {
     max-width: 80px;
 }
 
+.modal-approve-btn {
+    margin-left: auto;
+    display: block;
+    max-width: 80px;
+}
+
 @media (max-width: 600px) {
     .modal-content {
         width: 98%;
