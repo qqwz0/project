@@ -164,10 +164,20 @@
 
 {% block scripts %}
 <script>
+// --- Глобальні функції для тем ---
+let themes = [];
+
+// Load existing themes (серверний рендер)
+{% for theme in existing_themes %}
+themes.push({
+    theme: "{{ theme.theme|escapejs }}",
+    description: ""
+});
+{% endfor %}
+
 document.addEventListener('DOMContentLoaded', function() {
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePreview = document.getElementById('profile-preview');
-    
     function handleProfilePictureChange(event) {
         const file = event.target.files[0];
         if (file) {
@@ -180,68 +190,45 @@ document.addEventListener('DOMContentLoaded', function() {
             profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
         }
     }
-    
-    profilePictureInput.addEventListener('change', handleProfilePictureChange);
-    
-    let themes = [];
-    
-    // Load existing themes
-    {% for theme in existing_themes %}
-    themes.push({
-        theme: "{{ theme.theme|escapejs }}",
-        description: ""
-    });
-    {% endfor %}
-    
-    window.addTheme = function() {
-        const input = document.getElementById('new-theme');
-        const theme = input.value.trim();
-        
-        if (theme) {
-            themes.push({
-                theme: theme,
-                description: ""
-            });
-            
-            const container = document.getElementById('themes-container');
-            const themeDiv = document.createElement('div');
-            themeDiv.className = 'theme-item';
-            themeDiv.innerHTML = `
-                <input type="text" value="${theme}" readonly>
-                <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
-            `;
-            
-            container.appendChild(themeDiv);
-            input.value = '';
-            
-            // Update hidden input with themes data
-            document.getElementById('themes-data').value = JSON.stringify(themes);
-        }
-    };
-    
-    window.removeTheme = function(button) {
-        const themeDiv = button.closest('.theme-item');
-        const themeText = themeDiv.querySelector('input').value;
-        
-        // Remove from themes array
-        themes = themes.filter(t => t.theme !== themeText);
-        
-        // Remove from DOM
-        themeDiv.remove();
-        
-        // Update hidden input with themes data
-        document.getElementById('themes-data').value = JSON.stringify(themes);
-    };
-    
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', handleProfilePictureChange);
+    }
     // Initialize themes data in hidden input
     document.getElementById('themes-data').value = JSON.stringify(themes);
-    
     // Handle form submission
     document.getElementById('teacherProfileForm').addEventListener('submit', function(e) {
-        // Update themes data before submission
         document.getElementById('themes-data').value = JSON.stringify(themes);
     });
 });
+
+window.addTheme = function() {
+    const input = document.getElementById('new-theme');
+    const theme = input.value.trim();
+    if (theme) {
+        themes.push({
+            theme: theme,
+            description: ""
+        });
+        const container = document.getElementById('themes-container');
+        const themeDiv = document.createElement('div');
+        themeDiv.className = 'theme-item';
+        themeDiv.innerHTML = `
+            <input type="text" value="${theme}" readonly>
+            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
+        `;
+        container.appendChild(themeDiv);
+        input.value = '';
+        document.getElementById('themes-data').value = JSON.stringify(themes);
+    }
+};
+
+window.removeTheme = function(button) {
+    const themeDiv = button.closest('.theme-item');
+    const themeText = themeDiv.querySelector('input').value;
+    themes = themes.filter(t => t.theme !== themeText);
+    themeDiv.remove();
+    document.getElementById('themes-data').value = JSON.stringify(themes);
+};
 </script>
 {% endblock %}
 
