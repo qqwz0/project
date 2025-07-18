@@ -121,6 +121,18 @@ class TeachersListView(ListView):
                     request_status='Активний'
                 ).exists() else False
                 
+                # --- Фільтрація за кафедрою для 3+ курсу ---
+                # Витягуємо курс з academic_group (наприклад, ФЕС-33 -> 3)
+                course = None
+                if user.academic_group:
+                    import re
+                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user.academic_group)
+                    if match:
+                        course = int(match.group(1))
+                if course and course >= 3 and user.department:
+                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                # ---
+
                 teacher_ids = [t.pk for t in teachers]
                 already_requested_qs = Request.objects.filter(
                     student_id=user,

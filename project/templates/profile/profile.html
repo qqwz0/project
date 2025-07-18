@@ -43,6 +43,9 @@
                     {% elif user_profile.role == "Студент" %}
                         <h3>{{ user_profile.role }}</h3>
                         <p>Група: {{ user_profile.academic_group }}</p>
+                        {% if student_course and student_course >= 3 and user_profile.department %}
+                            <p>Кафедра: {{ user_profile.department }}</p>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
