@@ -551,6 +551,14 @@ def profile(request: HttpRequest, user_id=None):
             'archived_requests': archived_requests,
             'active_request_files': active_request_files,
         })
+        # Додаємо номер курсу для шаблону
+        student_course = None
+        if user_profile.academic_group:
+            import re
+            match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user_profile.academic_group)
+            if match:
+                student_course = int(match.group(1))
+        context['student_course'] = student_course
 
     return render(request, 'profile/profile.html', context)
 
@@ -797,7 +805,9 @@ def teacher_profile_edit(request):
                             'slots': Slot.objects.filter(teacher_id=teacher_profile),
                             'available_streams': Stream.objects.exclude(
                                 id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
-                            )
+                            ),
+                            'user': request.user,
+                            'user_profile': request.user  # Додаємо user_profile в контекст
                         })
                         
                     except json.JSONDecodeError as e:
@@ -838,7 +848,9 @@ def teacher_profile_edit(request):
         'form': form,
         'existing_themes': existing_themes,
         'slots': slots,
-        'available_streams': available_streams
+        'available_streams': available_streams,
+        'user': request.user,
+        'user_profile': request.user  # Додаємо user_profile в контекст
     })
 
 def teacher_requests(request):
@@ -904,16 +916,14 @@ def student_profile_edit(request):
                 }, status=400)
     else:
         form = StudentProfileForm(instance=student_profile, user=request.user)
-
-    print("=== DEBUG: student_profile instance ===")
-    print(request.user)                          # викличе __str__(), якщо є, або <OnlyStudent: pk>
-    print("profile_picture field:", request.user.profile_picture)  
-    if request.user.profile_picture:
-        print("URL:", request.user.profile_picture.url)
-
+    
+    # Get the user profile from the database to ensure we have the latest data
+    user_profile = get_object_or_404(CustomUser, id=request.user.id)
+    
     return render(request, 'profile/student_edit.html', {
         'form': form,
-        'user': request.user
+        'user': request.user,
+        'user_profile': user_profile
     })
 
 @login_required
