@@ -18,7 +18,10 @@
                             {{ request_obj.teacher_id.teacher_id.get_full_name }}
                         </a>
                         <p class="role">{{ request_obj.teacher_id.teacher_id.role }}</p>
-                        {% if request_obj.teacher_theme %}
+                        {% if request_obj.approved_student_theme %}
+                            <strong>Тема:</strong>
+                            <p class="theme">{{ request_obj.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request_obj.teacher_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request_obj.teacher_theme.theme }}</p>
                         {% endif %}

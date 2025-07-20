@@ -117,12 +117,12 @@ class Request(models.Model):
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
     teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
                                     null=True, blank=True)
-    
-    student_themes = models.ManyToManyField('StudentTheme', blank=True)
+    # Якщо затверджено студентську тему, зберігаємо її тут
+    approved_student_theme = models.ForeignKey('StudentTheme', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_requests', help_text='Затверджена студентська тема для цього запиту (якщо обрано тему студента)')
     motivation_text = models.TextField(
-    blank=True,
-    max_length=500,
-)
+        blank=True,
+        max_length=500,
+    )
     request_date = models.DateTimeField(default=timezone.now)
     request_status = models.CharField(max_length=100, choices=STATUS, 
                                     default='Очікує')
@@ -130,7 +130,6 @@ class Request(models.Model):
     rejected_reason = models.TextField(blank=True, null=True)
     completion_date = models.DateTimeField(null=True, blank=True)
     academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
-
     comment = models.TextField(blank=True, null=True, max_length=1000)
     send_contacts = models.BooleanField(default=False)
     
@@ -226,6 +225,7 @@ class TeacherTheme(models.Model):
 
 class StudentTheme(models.Model):
     student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
+    request = models.ForeignKey('Request', on_delete=models.CASCADE, related_name='student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):

@@ -7,6 +7,7 @@ urlpatterns = [
     path('register/', views.microsoft_register, name='register'),  # Register path
     path('login/', views.microsoft_login, name='login'),        # Login pathS
     path('fake_login/', views.fake_login, name='fake_login'),        # Login pathS
+    path('fake_student_login/', views.fake_student_login, name='fake_student_login'),
     path('callback', views.microsoft_callback, name='microsoft_callback'),
     path("profile/", views.profile, name="profile"),
     path('profile/<int:user_id>/', views.profile, name='profile_detail'),  # Чужий профіль

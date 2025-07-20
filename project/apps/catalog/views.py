@@ -38,6 +38,14 @@ class TeachersCatalogView(TemplateView, FormView):
     template_name = 'catalog/teachers_catalog.html'
     form_class = FilteringSearchingForm
     
+    def dispatch(self, request, *args, **kwargs):
+        # Дозволяємо доступ лише студентам
+        if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'Студент':
+            from django.urls import reverse
+            from django.shortcuts import redirect
+            return redirect('profile')
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = self.get_form()
@@ -313,9 +321,9 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
                 if theme and isinstance(theme, str):
                     student_theme = StudentTheme.objects.create(
                         student_id=self.request.user,
+                        request=req,
                         theme=theme.strip()
                     )
-                    req.student_themes.add(student_theme)
                     print(f"Student theme added: {student_theme.theme}")
             
             # Update slot occupancy

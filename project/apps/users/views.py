@@ -451,6 +451,33 @@ def fake_login(request):
     auth_login(request, user)
     return redirect("profile")
 
+def fake_student_login(request):
+    email = "STUDENT.STUDENT@lnu.edu.ua"
+    try:
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        user = CustomUser.objects.create(
+            email=email,
+            first_name="Студент",
+            last_name="Тестовий",
+            patronymic="Іванович",
+            role="Студент",
+            academic_group="ФЕС-21",
+            is_active=True,
+            password=make_password("fake_password")
+        )
+    OnlyStudent.objects.get_or_create(
+        student_id=user,
+        defaults={
+            "speciality": "Не вказано",
+            "course": 2,
+            "additional_email": "student.test@lnu.edu.ua",
+            "phone_number": "+380991234568"
+        }
+    )
+    auth_login(request, user)
+    return redirect("profile")
+
 @login_required
 def profile(request: HttpRequest, user_id=None):
     """
@@ -1231,16 +1258,12 @@ def approve_request_with_theme(request, request_id):
             theme_pk = int(str(theme_id).replace('teacher_', ''))
             theme = TeacherTheme.objects.get(id=theme_pk, teacher_id=req.teacher_id)
             req.teacher_theme = theme
+            req.approved_student_theme = None  # Явно очищаємо, якщо раніше була студентська
         elif str(theme_id).startswith('student_'):
             theme_pk = int(str(theme_id).replace('student_', ''))
-            theme = StudentTheme.objects.get(id=theme_pk, student_id=req.student_id)
-            new_teacher_theme = TeacherTheme.objects.create(
-                teacher_id=req.teacher_id,
-                theme=theme.theme,
-                theme_description='(Запропоновано студентом)',
-                is_occupied=False
-            )
-            req.teacher_theme = new_teacher_theme
+            theme = StudentTheme.objects.get(id=theme_pk, request=req)
+            req.teacher_theme = None  # Явно очищаємо, якщо раніше була викладацька
+            req.approved_student_theme = theme  # Зберігаємо посилання на студентську тему
         else:
             return JsonResponse({'error': 'Некоректна тема'}, status=400)
 

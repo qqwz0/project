@@ -39,8 +39,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -104,8 +107,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -157,8 +163,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -219,8 +228,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -289,8 +301,11 @@
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
 
-                        {% if request.teacher_theme %}
-                            <strong>Запропонована тема:</strong>
+                        {% if request.approved_student_theme %}
+                            <strong>Обрана тема:</strong>
+                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request.teacher_theme %}
+                            <strong>Обрана тема:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
 
@@ -341,8 +356,11 @@
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
 
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
 
@@ -394,8 +412,11 @@
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
 
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
 
@@ -453,8 +474,11 @@
                             <div class="user-info">
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 <strong>Теми студента:</strong>
@@ -740,7 +764,6 @@
                         <label class="theme-card" data-theme-id="${theme.id}">
                             <input type="radio" name="selected_theme" value="${theme.id}">
                             <h4>${theme.title}</h4>
-                            <div class="theme-source">${source}</div>
                         </label>
                     `;
                 });
