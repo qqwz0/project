@@ -56,6 +56,7 @@ def send_notification_on_request(sender, instance, created, **kwargs):
                     recipient=teacher_user,
                     sender=student,
                     created_at=time,
+                    related_request=instance
                 )
                 event = {
                     "type": "send_notification",
@@ -101,6 +102,7 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                 logger.warning("Unknown uploader role")
                 return
 
+            request_id = instance.request
             uploader_name = f"{uploader.first_name} {uploader.last_name}"
             short_file_name = instance.get_filename()
             message = f"{uploader_name} завантажив файл {short_file_name} до вашої роботи! 📎"
@@ -126,6 +128,7 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                     recipient=another_user,
                     sender=uploader,
                     created_at=time,
+                    related_request=request_id
                 )
                 event = {
                     "type": "send_notification",
@@ -198,7 +201,8 @@ def send_notification_on_request_status_changed(sender, instance, **kwargs):
                 recipient=student_user,
                 sender=teacher_user,
                 created_at=time,
-                status=status_text
+                status=status_text,
+                related_request=instance
             )
             event = {
                 "type": "send_notification",
@@ -257,6 +261,7 @@ def send_notification_on_work_status_changed(sender, instance, **kwargs):
                 recipient=student_user,
                 sender=teacher_user,
                 created_at=time,
+                related_request=instance,
             )
             event = {
                 "type": "send_notification",
@@ -284,6 +289,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
     channel_layer = get_channel_layer()
     if created:
         try:
+            request_id = instance.file.request
             author = instance.author
             if author.role == ROLE_TEACHER:
                 another_user = instance.file.request.student_id
@@ -308,6 +314,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
                     recipient=another_user,
                     sender=author,
                     created_at=time,
+                    related_request=request_id
                 )
                 event = {
                     "type": "send_notification",

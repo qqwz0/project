@@ -1,92 +1,115 @@
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 12px 25px;
-    max-height: 90px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: webkit-fill-available;
+  display: flex;
+  justify-content: space-between;
+  /* align-items: center; */
+  background: white;
+  padding: 12px 25px;
+  max-height: 90px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: webkit-fill-available;
 }
 
 .logo img {
-    height: 45px;
+  height: 45px;
 }
 
 .icons {
-    display: flex;
-    align-items: center;
-    gap: 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .icons i {
-    font-size: 22px;
-    color: #666;
-    cursor: pointer;
-    transition: color 0.3s ease;
+  font-size: 22px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s ease;
 }
 
 .icons i:hover {
-    color: #007bff;
+  color: #007bff;
 }
 
 .icons i.active {
-    color: #007bff;
+  color: #007bff;
 }
 
 .header-pic {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .header-pic img {
-    height: 42px;
-    width: 42px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border 0.3s ease;
+  height: 42px;
+  width: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border 0.3s ease;
 }
 
 .header-pic img:hover {
-    border: 2px solid #007bff;
+  border: 2px solid #007bff;
 }
 
 .auth-buttons {
-    display: flex;
-    justify-content: space-between;
-    width: 20%;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  justify-content: space-between;
+  width: 20%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .header-button {
-    text-align: center;
-    background-color: #1570ef;
-    color: white;
-    padding: 14px;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    height: 48px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    cursor: pointer;
-    outline: none;
-    border: none;
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-    flex: 1; /* Makes both buttons take up equal width */
-  }
-  
-  .header-button:hover {
-    background-color: #005A9E;
-  }
+  text-align: center;
+  background-color: #1570ef;
+  color: white;
+  padding: 14px;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+  flex: 1; /* Makes both buttons take up equal width */
+}
 
-  .auth-buttons span {
-    margin: 0 10px; /* Space around the "або" text */
-    font-size: 16px;
-    color: #555; /* Change to desired text color */
+.header-button:hover {
+  background-color: #005a9e;
+}
+
+/* Primary button - keeps the original styling */
+.header-button.primary {
+  background-color: #1570ef;
+  color: white;
+}
+
+.header-button.primary:hover {
+  background-color: #005a9e;
+}
+
+/* Secondary button - outlined version with same colors */
+.header-button.secondary {
+  background-color: transparent;
+  color: #1570ef;
+  border: 2px solid #1570ef;
+}
+
+.header-button.secondary:hover {
+  background-color: #1570ef;
+  color: white;
+}
+
+.auth-buttons span {
+  margin: 0 10px; /* Space around the "або" text */
+  font-size: 16px;
+  color: #555; /* Change to desired text color */
 }

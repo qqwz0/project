@@ -40,8 +40,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -52,14 +55,37 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                             </div>
                         </div>
-                        <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                        <div class="actions" style="display: flex; flex-direction: column; align-items: center; gap: 30%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            {% comment %} Only show edit/refuse if this request belongs to the logged-in student {% endcomment %}
+                            {% if user.id == request.student_id.id %}
+                            <button class="icon-btn edit-btn"
+                                    title="Редагувати"
+                                    onclick="openStudentEditRequestModal({{ request.id }})"
+                                    style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#2563eb;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="icon-btn refuse-btn"
+                                    title="Відхилити"
+                                    onclick="showStudentRefuseModal({{ request.id }})"
+                                    style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#ef4444;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <span class="status {{ request.request_status }}">
+                            {{ request.get_request_status_display }}
+                        </span>
+                        </div>
                     </div>
                 {% endif %}
             {% empty %}
@@ -75,7 +101,7 @@
         {%if active_requests or archived_requests %}
             <h2>✅ Прийняті запити</h2>
             {% for request in all_requests|dictsortreversed:"request_date" %}
-                {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
+                {% if request.request_status == 'Активний' %}
                     <div class="request-card accepted-request">
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
@@ -84,8 +110,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -96,8 +125,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -121,13 +152,63 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <span class="status {{ request.request_status }}">
-                            {% if request.request_status == 'Завершено' %}
-                                Завершено
-                            {% else %}
-                                Прийнято
+                        {% comment %} <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                            <button class="student-refuse-badge-btn" style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 2px 4px rgba(0,0,0,0.05);background:linear-gradient(45deg,#ef4444,#dc2626);color:#fff;border:1px solid #fca5a5;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-left:10px;margin-top:0;margin-bottom:0;line-height:1.2;min-width:unset;width:auto;height:auto;align-self:flex-start;" onclick="showStudentRefuseModal({{ request.id }})">Відмовитися</button>
+                        </div> {% endcomment %}
+                    </div>
+                {% elif request.request_status == 'Завершено' %}
+                    <div class="request-card accepted-request">
+                        <div class="request-user">
+                            <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
+                            <div class="user-info">
+                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                    {{ request.teacher_id.teacher_id.get_full_name }}
+                                </a>
+                                <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+                                {% if request.student_themes.all %}
+                                    <strong>Тематика студента:</strong>
+                                    <ul class="student-themes-list">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                
+                                {% if request.completion_date %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-flag-checkered" style="margin-right: 5px;"></i> Робота завершена
+                                        </h4>
+                                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                            <strong style="color: #2563eb; min-width: 100px;">Дата завершення:</strong>
+                                            <p class="date" style="margin: 0;">{{ request.completion_date|date:"d.m.Y" }}</p>
+                                        </div>
+                                        {% if request.grade %}
+                                            <div style="display: flex; align-items: center;">
+                                                <strong style="color: #2563eb; min-width: 100px;">Оцінка:</strong>
+                                                <p style="font-size: 16px; font-weight: 600; color: #1e40af; margin: 0;">{{ request.grade }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
                             {% endif %}
-                        </span>
+                            </div>
+                        </div>
+                        <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
                     </div>
                 {% endif %}
             {% empty %}
@@ -152,8 +233,11 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Тема викладача:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
@@ -164,8 +248,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -222,8 +308,11 @@
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
 
-                        {% if request.teacher_theme %}
-                            <strong>Запропонована тема:</strong>
+                        {% if request.approved_student_theme %}
+                            <strong>Обрана тема:</strong>
+                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request.teacher_theme %}
+                            <strong>Обрана тема:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
 
@@ -236,8 +325,10 @@
                             </ul>
                         {% endif %}
 
-                        <strong>Мотивація:</strong>
-                        <p class="motivation">{{ request.motivation_text }}</p>
+                        {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                             
                             <strong>Дата запиту:</strong>
                             <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -246,7 +337,7 @@
 
                 <!-- Buttons for approval/decline -->
                 <div class="request-actions">
-                    <button onclick="handleRequest('approve', {{ request.id }})" class="request-button accept">
+                    <button onclick="openApproveModal({{ request.id }})" class="request-button accept">
                         <i class="fas fa-check"></i> Прийняти
                     </button>
                     <button onclick="showRejectModal({{ request.id }})" class="request-button reject">
@@ -264,7 +355,7 @@
         {% if accepted_requests %}
             <h2 class="mt-4">✅ Прийняті запити</h2>
             {% for request in accepted_requests|dictsortreversed:"request_date" %}
-                {% if request.request_status == 'Активний' or request.request_status == 'Завершено' %}
+                {% if request.request_status == 'Активний' %}
                     <div class="request-card accepted-request">
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.student_id %}" alt="Фото профілю" class="request-avatar">
@@ -272,8 +363,11 @@
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
 
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
 
@@ -286,8 +380,10 @@
                                     </ul>
                                 {% endif %}
 
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
@@ -311,10 +407,63 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
-                        <span class="status {% if request.request_status == 'Завершено' %}Завершено{% else %}Активний{% endif %}">
-                            {% if request.request_status == 'Завершено' %}Завершено{% else %}Прийнято{% endif %}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
+                        </div>
+                    </div>
+                {% elif request.request_status == 'Завершено' %}
+                    <div class="request-card accepted-request">
+                        <div class="request-user">
+                            <img src="{% get_profile_picture_url request.student_id %}" alt="Фото профілю" class="request-avatar">
+                            <div class="user-info">
+                                <h3>{{ request.student_id.get_full_name }}</h3>
+                                <p class="role">{{ request.student_id.academic_group }}</p>
+
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                {% endif %}
+
+                                <strong>Теми студента:</strong>
+                                {% if request.student_themes.all %}
+                                    <ul class="student-themes-list">
+                                        {% for theme in request.student_themes.all %}
+                                            <li>{{ theme.theme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
+                                
+                                <strong>Дата запиту:</strong>
+                                <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                
+                                {% if request.completion_date %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-flag-checkered" style="margin-right: 5px;"></i> Робота завершена
+                                        </h4>
+                                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                            <strong style="color: #2563eb; min-width: 100px;">Дата завершення:</strong>
+                                            <p class="date" style="margin: 0;">{{ request.completion_date|date:"d.m.Y" }}</p>
+                                        </div>
+                                        {% if request.grade %}
+                                            <div style="display: flex; align-items: center;">
+                                                <strong style="color: #2563eb; min-width: 100px;">Оцінка:</strong>
+                                                <p style="font-size: 16px; font-weight: 600; color: #1e40af; margin: 0;">{{ request.grade }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
                     </div>
                 {% endif %}
             {% endfor %}
@@ -332,8 +481,11 @@
                             <div class="user-info">
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
-                                {% if request.teacher_theme %}
-                                    <strong>Запропонована тема:</strong>
+                                {% if request.approved_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                                {% elif request.teacher_theme %}
+                                    <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
                                 <strong>Теми студента:</strong>
@@ -344,8 +496,10 @@
                                         {% endfor %}
                                     </ul>
                                 {% endif %}
-                                <strong>Мотивація:</strong>
-                                <p class="motivation">{{ request.motivation_text }}</p>
+                                {% if request.motivation_text %}
+                                    <strong>Мотивація:</strong>
+                                    <p class="motivation">{{ request.motivation_text }}</p>
+                                {% endif %}
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
                             </div>
@@ -381,7 +535,176 @@
     </div>
 </div>
 
-{% block scripts %}
+<!-- Modal for Approving Request and Selecting Theme -->
+<div id="approveRequestModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeApproveModal()">&times;</span>
+        <div id="approveRequestDetails" class="archive-modal-content">
+            <!-- Content will be injected by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Student Refuse Modal -->
+<div id="studentRefuseModal" class="modal">
+    <div class="modal-content" style="border: none">
+        <span class="close-modal" onclick="closeStudentRefuseModal()">&times;</span>
+        <h3>Відмовитися від курсової роботи</h3>
+        <form id="studentRefuseForm" onsubmit="handleStudentRefuseSubmit(event)">
+            <input type="hidden" id="studentRefuseRequestId" name="requestId">
+            <div class="form-group">
+                <label for="studentRefuseReason">Причина відмови:</label>
+                <textarea id="studentRefuseReason" name="refuseReason" rows="4" cols="30"></textarea>
+            </div>
+            <button type="submit" class="request-button reject modal-reject-btn">Відмовитися</button>
+        </form>
+    </div>
+</div>
+
+<!-- Student Edit Request Modal -->
+<div id="studentEditRequestModal" class="modal">
+    <div class="modal-content" style="border: none">
+        <span class="close-modal" onclick="closeStudentEditRequestModal()">&times;</span>
+        <h3>Редагувати запит студента</h3>
+        <form id="studentEditRequestForm" onsubmit="handleStudentEditRequestSubmit(event)">
+            <input type="hidden" id="studentEditRequestId" name="requestId">
+            <!-- Редагування мотивації -->
+            <div class="form-group">
+            <label for="editMotivation">Мотивація:</label>
+            <textarea id="editMotivation" name="motivation" rows="4" style="width:100%;padding:8px;">
+                {{ request.motivation_text }}
+            </textarea>
+            </div>
+
+            <!-- Редагування тем студента -->
+            <div class="form-group">
+            <label>Тематика студента:</label>
+            <ul class="student-themes-list-edit" style="list-style:none;padding:0;">
+                {% for theme in request.student_themes.all %}
+                <li style="margin-bottom:4px;">
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input type="checkbox" name="themes" value="{{ theme.id }}" checked>
+                    {{ theme.theme }}
+                </label>
+                </li>
+                {% endfor %}
+            </ul>
+            </div>
+            <button type="submit" class="request-button accept modal-reject-btn">Зберегти</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.theme-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.theme-card {
+    border: 2px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #F9FAFB;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-card.selected {
+    border-color: #22C55E;
+    background: #F0FDF4;
+}
+
+.theme-card:hover {
+    border-color: #22C55E;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-card h4 {
+    margin: 0 0 8px 0;
+    color: #374151;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.theme-source {
+    font-size: 0.875rem;
+    color: #6B7280;
+    margin-top: 8px;
+}
+
+.theme-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.theme-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #22C55E;
+    font-weight: bold;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 25px;
+    border: 1px solid #6FCF97;
+    border-radius: 12px;
+    width: 80%;
+    max-width: 800px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.highlight {
+    background-color: #F0FDF4;
+    border-left: 4px solid #6FCF97;
+    padding: 15px;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-buttons .cancel-btn {
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.modal-buttons .confirm-btn {
+    background-color: #22C55E;
+    color: white;
+    border: none;
+}
+
+.modal-buttons button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+</style>
+
 <script>
     function showRejectModal(requestId) {
         document.getElementById('rejectModal').style.display = 'block';
@@ -407,10 +730,348 @@
         document.getElementById(tabName + '-section').style.display = 'block';
 
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
+        event.target.classList.add('active');
     }
+
+    // --- APPROVE REQUEST MODAL LOGIC ---
+    const approveModal = document.getElementById('approveRequestModal');
+    const approveDetails = document.getElementById('approveRequestDetails');
+
+    // Видаляємо старий код відкриття модалки по кліку на картку
+    document.querySelectorAll('.request-card.pending-request').forEach(card => {
+        card.removeEventListener('click', function() {});
+    });
+
+    function openApproveModal(requestId) {
+        approveDetails.innerHTML = '<div style="text-align:center;padding:2em;">Завантаження...</div>';
+        approveModal.style.display = 'block';
+        fetch(`/users/request-details-for-approve/${requestId}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                approveDetails.innerHTML = `<div style='color:red;'>${data.error}</div>`;
+                return;
+            }
+            
+            let themesHtml = '';
+            if (data.themes && data.themes.length > 0) {
+                themesHtml = '<div class="theme-cards">';
+                data.themes.forEach(theme => {
+                    const source = theme.is_teacher_theme ? 'Тема викладача' : 'Тема студента';
+                    themesHtml += `
+                        <label class="theme-card" data-theme-id="${theme.id}">
+                            <input type="radio" name="selected_theme" value="${theme.id}">
+                            <h4>${theme.title}</h4>
+                        </label>
+                    `;
+                });
+                themesHtml += '</div>';
+            } else {
+                themesHtml = '<div style="color:#888;">Немає доступних тем для вибору</div>';
+            }
+            
+            // Generate motivation section conditionally
+            const motivationHtml = data.motivation
+                ? `<p><strong>Мотивація:</strong> ${data.motivation}</p>`
+                : '';
+
+            // Build the complete modal content with inline styles only
+            approveDetails.innerHTML = `
+                <h3 style="color: #374151; font-size: 1.5rem; margin-bottom: 1.5rem;
+                        font-weight: 600; border-bottom: 2px solid #6FCF97;
+                        padding-bottom: 0.5rem;">
+                    Підтвердження запиту
+                </h3>
+                
+                <div class="highlight" style="margin-bottom: 20px;">
+                    <p><strong>Студент:</strong> ${data.student_name} (${data.student_group})</p>
+                    ${motivationHtml}
+                    <p><strong>Дата запиту:</strong> ${data.request_date}</p>
+                </div>
+                
+                <div style="margin-top: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #374151; font-weight: 600; margin-bottom: 10px;">
+                        Оберіть тему курсової роботи:
+                    </h4>
+                    <div style="margin-top: 10px;">
+                        ${themesHtml}
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; margin-bottom: 20px;">
+                    <label for="approveComment" 
+                        style="font-weight: 600; display: block; margin-bottom: 5px; color: #374151;">
+                        Коментар до студента:
+                    </label>
+                    <textarea 
+                        id="approveComment" 
+                        name="approveComment" 
+                        rows="3" 
+                        style="width: 100%; padding: 8px; border: 1px solid #d1d5db; 
+                            border-radius: 4px; font-family: inherit; font-size: 14px; 
+                            resize: vertical; box-sizing: border-box;"
+                        placeholder="Ваші додаткові вказівки чи зауваження...">
+                    </textarea>
+                </div>
+                
+                <div style="margin-top: 15px; margin-bottom: 20px; padding: 12px; 
+                            background-color: #f8fafc; border: 1px solid #e2e8f0; 
+                            border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="sendContacts" name="sendContacts" 
+                        style="width: 18px; height: 18px; accent-color: #6FCF97; 
+                                cursor: pointer; margin: 0;">
+                    <label for="sendContacts" 
+                        style="margin: 0; font-size: 0.95rem; color: #374151; 
+                                cursor: pointer; font-weight: 500; line-height: 1.4;">
+                        Надіслати студенту контакти
+                    </label>
+                </div>
+
+                <div class="modal-buttons" style="display: flex; justify-content: flex-end; 
+                                                gap: 10px; margin-top: 20px;">
+                    <button onclick="closeApproveModal()" 
+                            class="cancel-btn"
+                            style="padding: 10px 20px; border: none; border-radius: 4px; 
+                                font-weight: 500; cursor: pointer; background-color: #f3f4f6; 
+                                color: #374151; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#e5e7eb'" 
+                            onmouseout="this.style.backgroundColor='#f3f4f6'">
+                        Скасувати
+                    </button>
+                    <button onclick="submitApprove(${requestId})" 
+                            class="confirm-btn"
+                            style="padding: 10px 20px; border: none; border-radius: 4px; 
+                                font-weight: 500; cursor: pointer; background-color: #6FCF97; 
+                                color: white; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#5cbf87'" 
+                            onmouseout="this.style.backgroundColor='#6FCF97'">
+                        Підтвердити запит
+                    </button>
+                </div>
+            `;
+
+
+            // Add click handlers for theme cards
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    // Remove selection from all cards
+                    document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+                    // Add selection to clicked card
+                    this.classList.add('selected');
+                    // Check the radio input
+                    this.querySelector('input[type="radio"]').checked = true;
+                });
+            });
+        })
+        .catch(err => {
+            approveDetails.innerHTML = `<div style='color:red;'>Помилка завантаження</div>`;
+        });
+    }
+
+    function closeApproveModal() {
+        approveModal.style.display = 'none';
+        approveDetails.innerHTML = '';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == approveModal) {
+            closeApproveModal();
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeApproveModal();
+        }
+    });
+
+    function submitApprove(requestId) {
+        const selected = approveDetails.querySelector('input[name="selected_theme"]:checked');
+        if (!selected) {
+            alert('Оберіть тему для підтвердження!');
+            return;
+        }
+        const themeId = selected.value;
+        const comment = document.getElementById('approveComment').value;
+        const sendContacts = document.getElementById('sendContacts').checked;
+
+        fetch(`/users/approve-request-with-theme/${requestId}/`, {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+            theme_id: themeId,
+            comment: comment,
+            send_contacts: sendContacts
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+            closeApproveModal();
+            window.location.reload();
+            } else {
+            alert(data.error || 'Не вдалося підтвердити запит');
+            }
+        })
+        .catch(() => alert('Помилка при підтвердженні запиту.'));
+        }
+
+    function showStudentRefuseModal(requestId) {
+        document.getElementById('studentRefuseModal').style.display = 'block';
+        document.getElementById('studentRefuseRequestId').value = requestId;
+        document.getElementById('studentRefuseReason').value = '';
+        document.getElementById('studentRefuseReason').focus();
+    }
+
+    function closeStudentRefuseModal() {
+        document.getElementById('studentRefuseModal').style.display = 'none';
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeStudentRefuseModal();
+        }
+    });
+
+    function handleStudentRefuseSubmit(event) {
+        event.preventDefault();
+        const requestId = document.getElementById('studentRefuseRequestId').value;
+        const reason = document.getElementById('studentRefuseReason').value;
+        fetch(`/users/student-refuse-request/${requestId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({reason: reason})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeStudentRefuseModal();
+                window.location.reload();
+            } else {
+                alert(data.error || 'Не вдалося відмовитися від курсової');
+            }
+        })
+        .catch(() => alert('Помилка при відмові від курсової.'));
+    }
+</script>
+
+<script>
+// Відкрити “редагувати запит” модал
+  function openStudentEditRequestModal(requestId) {
+    const modal = document.getElementById('studentEditRequestModal');
+    document.getElementById('studentEditRequestId').value = requestId;
+    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
+    modal.style.display = 'block';
+  }
+
+  // Закрити модал
+  function closeStudentEditRequestModal() {
+    document.getElementById('studentEditRequestModal').style.display = 'none';
+  }
+
+  // Відправка форми редагування
+  function handleStudentEditRequestSubmit(event) {
+    event.preventDefault();
+    const form = document.getElementById('studentEditRequestForm');
+    const requestId = document.getElementById('studentEditRequestId').value;
+    const data = new FormData(form);
+
+    fetch(`/users/edit-student-request/${requestId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: data
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        closeStudentEditRequestModal();
+        window.location.reload();
+      } else {
+        alert(json.error || 'Не вдалось зберегти зміни');
+      }
+    })
+    .catch(() => alert('Помилка при збереженні'));
+  }
+
+  // Закрити модал ESC чи клік поза ним, якщо потрібно
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeStudentEditRequestModal();
+  });
+  window.onclick = e => {
+    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
+  };
+
+  // Підключаємо сабміт-обробник
+  document.getElementById('studentEditRequestForm')
+          .addEventListener('submit', handleStudentEditRequestSubmit);
+</script>
+
+<script>
+// Відкрити “редагувати запит” модал
+  function openStudentEditRequestModal(requestId) {
+    const modal = document.getElementById('studentEditRequestModal');
+    document.getElementById('studentEditRequestId').value = requestId;
+    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
+    modal.style.display = 'block';
+  }
+
+  // Закрити модал
+  function closeStudentEditRequestModal() {
+    document.getElementById('studentEditRequestModal').style.display = 'none';
+  }
+
+  // Відправка форми редагування
+  function handleStudentEditRequestSubmit(event) {
+    event.preventDefault();
+    const form = document.getElementById('studentEditRequestForm');
+    const requestId = document.getElementById('studentEditRequestId').value;
+    const data = new FormData(form);
+
+    fetch(`/users/edit-student-request/${requestId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: data
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        closeStudentEditRequestModal();
+        window.location.reload();
+      } else {
+        alert(json.error || 'Не вдалось зберегти зміни');
+      }
+    })
+    .catch(() => alert('Помилка при збереженні'));
+  }
+
+  // Закрити модал ESC чи клік поза ним, якщо потрібно
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeStudentEditRequestModal();
+  });
+  window.onclick = e => {
+    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
+  };
+
+  // Підключаємо сабміт-обробник
+  document.getElementById('studentEditRequestForm')
+          .addEventListener('submit', handleStudentEditRequestSubmit);
 </script>
 
 <!-- Підключаємо зовнішній JavaScript файл для фільтрації запитів -->
 <script src="{% static 'js/request-filter.js' %}"></script>
-{% endblock %}

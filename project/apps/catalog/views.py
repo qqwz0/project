@@ -39,16 +39,14 @@ class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     """
     template_name = 'catalog/teachers_catalog.html'
     form_class = FilteringSearchingForm
-    
+        
     def dispatch(self, request, *args, **kwargs):
-        """
-        Checks user role before allowing access to the catalog. Redirects teachers.
-        """
-        if request.user.is_authenticated and request.user.role == 'Викладач':
-                        messages.error(request, 'Викладачі не можуть переглядати каталог викладачів.')
-                        return redirect('profile')
+        # Дозволяємо доступ лише студентам
+        if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'Студент':
+            from django.urls import reverse
+            from django.shortcuts import redirect
+            return redirect('profile')
         return super().dispatch(request, *args, **kwargs)
-
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -133,6 +131,18 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                     request_status='Активний'
                 ).exists() else False
                 
+                # --- Фільтрація за кафедрою для 3+ курсу ---
+                # Витягуємо курс з academic_group (наприклад, ФЕС-33 -> 3)
+                course = None
+                if user.academic_group:
+                    import re
+                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user.academic_group)
+                    if match:
+                        course = int(match.group(1))
+                if course and course >= 3 and user.department:
+                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                # ---
+
                 teacher_ids = [t.pk for t in teachers]
                 already_requested_qs = Request.objects.filter(
                     student_id=user,
@@ -313,9 +323,9 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
                 if theme and isinstance(theme, str):
                     student_theme = StudentTheme.objects.create(
                         student_id=self.request.user,
+                        request=req,
                         theme=theme.strip()
                     )
-                    req.student_themes.add(student_theme)
                     print(f"Student theme added: {student_theme.theme}")
             
             # Update slot occupancy

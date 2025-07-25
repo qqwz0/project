@@ -10,7 +10,13 @@
       </div>
       <div class="teacher-details">
         <!-- Display teacher credentials such as name, position, and department. -->
-        <h2 x-text="`${item.teacher.teacher_id.full_name}`"></h2>
+        <h2>
+          <a 
+            :href="`{% url 'profile_detail' 0 %}`.replace('0', item.teacher.id)"
+            x-text="`${item.teacher.teacher_id.full_name}`"
+            style="color: inherit; text-decoration: none;"
+          ></a>
+        </h2>
         <template x-if="item.teacher.academic_level">
           <p x-text="`${item.teacher.academic_level}`"></p>
         </template>

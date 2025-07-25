@@ -1,15 +1,12 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
+{% load catalog_extras %}
 
 {% block content %}
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
-            {% if user.profile_picture %}
-                <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
-            {% else %}
-                <img src="{% static 'images/default-avatar.jpg' %}" alt="Default Profile Picture">
-            {% endif %}
+            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю">
         </div>
         <div class="profile-title">
             <h1>{{ user.get_full_name }}</h1>
@@ -139,12 +136,13 @@
                       </div>
                     </div>
                   </div>
-                  <!-- <div class="themes-section">
+                  <div class="themes-section">
                     <h3>Теми робіт</h3>
                     <div id="themes-container">
                         {% for theme in existing_themes %}
                         <div class="theme-item">
                             <input type="text" value="{{ theme.theme }}" readonly>
+                            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
                         </div>
                         {% endfor %}
                     </div>
@@ -152,7 +150,7 @@
                         <input type="text" id="new-theme" placeholder="Введіть тему">
                         <button type="button" class="add-theme" onclick="addTheme()">+</button>
                     </div>
-                  </div> -->
+                  </div>
                 </div>
             </div>
             
@@ -164,223 +162,75 @@
     </div>
 </div>
 
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // --- ЗАКОМЕНТОВАНО: функціонал додавання/видалення тем викладача ---
-    /*
-    let themes = [];
-    
-    // Load existing themes
-    {% for theme in existing_themes %}
-    themes.push({
-        theme: "{{ theme.theme|escapejs }}",
-        description: ""
-    });
-    {% endfor %}
-    
-    window.addTheme = function() {
-        const input = document.getElementById('new-theme');
-        const theme = input.value.trim();
-        
-        if (theme) {
-            themes.push({
-                theme: theme,
-                description: ""
-            });
-            
-            const container = document.getElementById('themes-container');
-            const themeDiv = document.createElement('div');
-            themeDiv.className = 'theme-item';
-            themeDiv.innerHTML = `
-                <input type="text" value="${theme}" readonly>
-                <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
-            `;
-            
-            container.appendChild(themeDiv);
-            input.value = '';
-            updateThemesData();
-        }
-    }
-    
-    window.removeTheme = function(button) {
-        const themeDiv = button.parentElement;
-        const themeText = themeDiv.querySelector('input').value;
-        themes = themes.filter(t => t.theme !== themeText);
-        themeDiv.remove();
-        updateThemesData();
-    }
-    
-    window.updateThemesData = function() {
-        console.log("Updating themes data:", themes);
-        const themesInput = document.getElementById('themes-data');
-        if (themesInput) {
-            themesInput.value = JSON.stringify(themes);
-            console.log("Updated value:", themesInput.value);
-        } else {
-            console.error("themes-data input not found");
-        }
-    }
-    
-    // Initialize the themes-data field with current themes
-    updateThemesData();
-    
-    // Add event listeners
-    document.getElementById('new-theme').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addTheme();
-        }
-    });
-    */
-    
-    const form = document.getElementById('teacherProfileForm');
+// --- Глобальні функції для тем ---
+let themes = [];
 
-    function clearErrors() {
-        document.querySelectorAll('.error-message').forEach(error => {
-            error.textContent = '';
-        });
-    }
-
-    function displayErrors(errors) {
-        clearErrors();
-        Object.keys(errors).forEach(field => {
-            const errorElement = document.getElementById(`${field}-error`);
-            if (errorElement) {
-                errorElement.textContent = errors[field].join(' ');
-            }
-        });
-    }
-
-    function showSuccessMessage(message) {
-        const messagesContainer = document.querySelector('.messages');
-        if (!messagesContainer) {
-            const newMessagesContainer = document.createElement('div');
-            newMessagesContainer.className = 'messages';
-            document.querySelector('.edit-title').insertAdjacentElement('afterend', newMessagesContainer);
-        }
-        
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message success';
-        messageElement.textContent = message;
-        
-        document.querySelector('.messages').innerHTML = '';
-        document.querySelector('.messages').appendChild(messageElement);
-        
-        setTimeout(() => {
-            messageElement.style.opacity = '0';
-            setTimeout(() => messageElement.remove(), 300);
-        }, 3000);
-    }
-
-    // Form submission handler for debugging
-    form.addEventListener('submit', function(e) {
-        e.preventDefault(); // Prevent default form submission
-        
-        // Make sure themes data is up to date
-        // updateThemesData(); // ЗАКОМЕНТОВАНО: оновлення тем
-        
-        // Create FormData object
-        const formData = new FormData(form);
-        
-        // Send AJAX request
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message
-                showSuccessMessage(data.message);
-                
-                // Clear any existing error messages
-                clearErrors();
-            } else {
-                // Handle errors
-                if (data.errors) {
-                    displayErrors(data.errors);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    });
-    
-    // ЗАКОМЕНТОВАНО: функції для роботи з квотами (буде відновлено пізніше)
-    /*
-    // Обробка додавання нового потоку
-    document.getElementById('addStreamBtn').addEventListener('click', function() {
-        openStreamModal();
-    });
-
-    function openStreamModal() {
-        document.getElementById('streamModal').style.display = 'block';
-    }
-
-    function closeStreamModal() {
-        document.getElementById('streamModal').style.display = 'none';
-    }
-
-    function saveNewStream() {
-        const streamSelect = document.getElementById('streamSelect');
-        const newQuota = document.getElementById('newQuota');
-        
-        if (streamSelect.options.length === 0) {
-            alert('Немає доступних потоків для додавання');
-            return;
-        }
-        
-        const streamId = streamSelect.value;
-        const streamText = streamSelect.options[streamSelect.selectedIndex].text;
-        const quotaValue = newQuota.value || 0;
-        
-        // Створюємо новий рядок для потоку
-        const newRow = document.createElement('div');
-        newRow.className = 'form-row slot-row';
-        newRow.innerHTML = `
-            <div class="form-group">
-                <label>Квота</label>
-                <input type="number" 
-                       name="quota_${streamId}" 
-                       value="${quotaValue}" 
-                       min="0" 
-                       class="quota-input"
-                       data-stream="${streamId}">
-            </div>
-            <div class="form-group">
-                <label>Потік</label>
-                <input type="text" 
-                       value="${streamText}" 
-                       readonly 
-                       class="stream-input">
-            </div>
-        `;
-        
-        // Додаємо новий рядок перед кнопкою додавання
-        const addBtn = document.getElementById('addStreamBtn');
-        addBtn.parentNode.insertBefore(newRow, addBtn);
-    
-        // Видаляємо вибраний потік з доступних
-        streamSelect.remove(streamSelect.selectedIndex);
-        
-        // Закриваємо модальне вікно
-        closeStreamModal();
-    }
-
-    // Закриття модального вікна при кліку поза ним
-    window.onclick = function(event) {
-        const modal = document.getElementById('streamModal');
-        if (event.target === modal) {
-            closeStreamModal();
-        }
-    }
-    */
+// Load existing themes (серверний рендер)
+{% for theme in existing_themes %}
+themes.push({
+    theme: "{{ theme.theme|escapejs }}",
+    description: ""
 });
+{% endfor %}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const profilePictureInput = document.getElementById('profile-picture-input');
+    const profilePreview = document.getElementById('profile-preview');
+    function handleProfilePictureChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePreview.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        } else {
+            profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
+        }
+    }
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', handleProfilePictureChange);
+    }
+    // Initialize themes data in hidden input
+    document.getElementById('themes-data').value = JSON.stringify(themes);
+    // Handle form submission
+    document.getElementById('teacherProfileForm').addEventListener('submit', function(e) {
+        document.getElementById('themes-data').value = JSON.stringify(themes);
+    });
+});
+
+window.addTheme = function() {
+    const input = document.getElementById('new-theme');
+    const theme = input.value.trim();
+    if (theme) {
+        themes.push({
+            theme: theme,
+            description: ""
+        });
+        const container = document.getElementById('themes-container');
+        const themeDiv = document.createElement('div');
+        themeDiv.className = 'theme-item';
+        themeDiv.innerHTML = `
+            <input type="text" value="${theme}" readonly>
+            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
+        `;
+        container.appendChild(themeDiv);
+        input.value = '';
+        document.getElementById('themes-data').value = JSON.stringify(themes);
+    }
+};
+
+window.removeTheme = function(button) {
+    const themeDiv = button.closest('.theme-item');
+    const themeText = themeDiv.querySelector('input').value;
+    themes = themes.filter(t => t.theme !== themeText);
+    themeDiv.remove();
+    document.getElementById('themes-data').value = JSON.stringify(themes);
+};
 </script>
+{% endblock %}
 
 <style>
   /* ЗАКОМЕНТОВАНО: стилі для секції квот (буде відновлено пізніше)

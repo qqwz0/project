@@ -88,23 +88,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        
-        // Close message popup when clicking outside
-        document.addEventListener('click', event => {
-            if (messagePopup && 
-                !messageToggleBtn.contains(event.target) && 
-                messagePopup.classList.contains('show')) {
-                messagePopup.classList.remove('show');
-            }
-        });
     }
-    
-    // Close notification dropdown when clicking outside
+
+    // --- FIX: Don't close dropdowns if modal is open ---
     document.addEventListener('click', event => {
+        const rejectionModal = document.getElementById('rejectionReasonModal');
+        if (rejectionModal && rejectionModal.style.display === 'flex') {
+            // If modal is open, do not close dropdowns
+            return;
+        }
         if (notificationDropdown && 
             !notificationToggleBtn.contains(event.target) && 
             notificationDropdown.classList.contains('show')) {
             notificationDropdown.classList.remove('show');
+        }
+        if (messagePopup && 
+            !messageToggleBtn.contains(event.target) && 
+            !messagePopup.contains(event.target) && // Important: don't close if clicking inside the popup
+            messagePopup.classList.contains('show')) {
+            messagePopup.classList.remove('show');
         }
     });
 });
@@ -129,5 +131,43 @@ document.body.addEventListener('htmx:wsAfterMessage', function(event) {
         if (container) {
             container.insertAdjacentHTML('afterbegin', event.detail.message);
         }
+    }
+});
+
+
+
+const rejectionModal = document.getElementById('rejectionReasonModal');
+const rejectionTextElement = document.getElementById('rejectionReasonText');
+
+function closeRejectionModal() {
+    if (rejectionModal) {
+        rejectionModal.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    const reasonButton = event.target.closest('.view-rejection-reason-btn');
+
+    if (reasonButton) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const reason = reasonButton.dataset.reason;
+
+        if (rejectionTextElement && rejectionModal) {
+            rejectionTextElement.textContent = reason;
+            rejectionModal.style.display = 'flex';
+        }
+        return false; 
+    }
+
+    if (event.target === rejectionModal) {
+        closeRejectionModal();
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeRejectionModal();
     }
 });

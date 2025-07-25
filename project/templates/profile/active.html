@@ -18,7 +18,10 @@
                             {{ request_obj.teacher_id.teacher_id.get_full_name }}
                         </a>
                         <p class="role">{{ request_obj.teacher_id.teacher_id.role }}</p>
-                        {% if request_obj.teacher_theme %}
+                        {% if request_obj.approved_student_theme %}
+                            <strong>Тема:</strong>
+                            <p class="theme">{{ request_obj.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request_obj.teacher_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request_obj.teacher_theme.theme }}</p>
                         {% endif %}
@@ -147,7 +150,11 @@
             </div>
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає активних робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає активних робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
     {% elif user.role == "Викладач" %}
     {% csrf_token %}
@@ -167,14 +174,6 @@
                         {% if request.teacher_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
-                        {% endif %}
-                        {% if request.student_themes.all %}
-                            <strong>Тематика студента:</strong>
-                            <ul class="student-themes-list">
-                                {% for theme in request.student_themes.all %}
-                                    <li>{{ theme.theme }}</li>
-                                {% endfor %}
-                            </ul>
                         {% endif %}
                         <strong>Мотивація:</strong>
                         <p class="motivation">{{ request.motivation_text }}</p>
@@ -329,7 +328,11 @@
             </div>
         {% endfor %}
     {% else %}
-        <p class="no-active-works">У вас немає активних робіт.</p>
+        {% if request.user == profile_user %}
+            <p class="no-active-works">У вас немає активних робіт.</p>
+        {% else %}
+            <p class="no-active-works">Тут пусто.</p>
+        {% endif %}
     {% endif %}
 {% endif %}
 {% endblock %}

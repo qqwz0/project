@@ -153,7 +153,7 @@ function showToast(message, type='success') {
     }, 3000);
 }
 
-window.handleRequest = function(action, requestId) {
+window.handleRequest = function(action, requestId, reason = null) {
     let url;
     if (action === 'approve') {
         url = `/users/approve_request/${requestId}/`;
@@ -166,13 +166,21 @@ window.handleRequest = function(action, requestId) {
         return;
     }
 
-    fetch(url, {
+    // Формуємо body для reject
+    let fetchOptions = {
         method: 'POST',
         headers: {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
             'X-Requested-With': 'XMLHttpRequest'
         }
-    })
+    };
+
+    if (action === 'reject' && reason !== null) {
+        fetchOptions.headers['Content-Type'] = 'application/json';
+        fetchOptions.body = JSON.stringify({ rejectReason: reason });
+    }
+
+    fetch(url, fetchOptions)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
@@ -182,7 +190,6 @@ window.handleRequest = function(action, requestId) {
                 action === 'restore' ? 'Запит успішно відновлено' : 'Операція виконана',
                 'success'
             );
-            // Оновити DOM або перезавантажити частину сторінки, якщо потрібно
             setTimeout(() => { location.reload(); }, 1200);
         } else {
             showToast(data.error || 'Сталася помилка', 'error');
@@ -191,4 +198,4 @@ window.handleRequest = function(action, requestId) {
     .catch(error => {
         showToast('Сталася помилка: ' + error, 'error');
     });
-}; 
+};

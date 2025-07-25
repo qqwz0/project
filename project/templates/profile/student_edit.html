@@ -1,15 +1,12 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
+{% load catalog_extras %}
 
 {% block content %}
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
-            {% if user.profile_picture %}
-                <img src="{{ user.profile_picture.url }}" alt="Profile Picture">
-            {% else %}
-                <img src="{% static 'images/default-avatar.jpg' %}" alt="Default Profile Picture">
-            {% endif %}
+            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю">
         </div>
         <div class="profile-title">
             <h1>{{ user.get_full_name }}</h1>
@@ -100,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('studentProfileForm');
     const courseInput = document.querySelector('input[name="course"]');
     const groupInput = document.querySelector('input[name="academic_group"]');
+    const profilePictureInput = document.getElementById('profile-picture-input');
+    const profilePreview = document.getElementById('profile-preview');
     
     function clearErrors() {
         document.querySelectorAll('.error-message').forEach(error => {
@@ -162,6 +161,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    function handleProfilePictureChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePreview.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        } else {
+            profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
+        }
+    }
+
+    profilePictureInput.addEventListener('change', handleProfilePictureChange);
 
     courseInput.addEventListener('change', function() {
         const course = parseInt(this.value);
