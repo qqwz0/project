@@ -26,6 +26,7 @@ from django.urls import reverse
 from django.template.loader import render_to_string
 from django.views import View
 
+
 from cloudinary_storage.storage import MediaCloudinaryStorage
 
 from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
@@ -38,7 +39,8 @@ from apps.catalog.models import (
     Request,
     TeacherTheme,
     RequestFile,
-    FileComment
+    FileComment,
+    StudentTheme
 )
 
 # Load environment variables
@@ -141,6 +143,7 @@ def microsoft_login(request):
             "response_mode": "query",
             "scope": " ".join(settings.MICROSOFT_SCOPES),
             "state": urlencode({"action": 'login', "csrf": CSRF_STATE}),
+            "redirect": request.GET.get("redirect", "")  # Preserve the redirect URL if provided
         }
         authorization_url = f"{MICROSOFT_AUTH_URL}?{urlencode(params)}"
         logger.info("Authorization URL: %s", authorization_url)
@@ -534,6 +537,8 @@ def profile(request: HttpRequest, user_id=None):
         context.update({
             'student_profile': student_profile,
             'all_requests': all_requests,
+            'has_rejected': all_requests.filter(request_status='Відхилено').exists(),
+            'has_pending': all_requests.filter(request_status='Очікує').exists(),
             'active_requests': active_requests,
             'archived_requests': archived_requests,
             'active_request_files': active_request_files,

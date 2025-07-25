@@ -29,15 +29,7 @@ def send_email_in_thread(subject, body, from_email, recipient_list, html_message
     thread.daemon = True
     thread.start()
     
-def get_short_file_name(file_name):
-    name_parts = file_name.rsplit('.', 1)
-    base = name_parts[0]
-    ext = name_parts[1] if len(name_parts) > 1 else ''
-    if '_' in base:
-        short_base = base.rsplit('_', 1)[0]
-    else:
-        short_base = base
-    return f"{short_base}.{ext}" if ext else short_base
+
 
 def get_group_name(user_id):
     return f'user_{user_id}'

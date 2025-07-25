@@ -14,7 +14,6 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from easy_thumbnails.conf import Settings as thumbnail_settings
-import dj_database_url
 
 load_dotenv()  # This loads the .env file into the environment
 

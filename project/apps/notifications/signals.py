@@ -6,7 +6,7 @@ from asgiref.sync import async_to_sync
 from django.db import transaction
 from .models import Message
 from django.template.loader import render_to_string
-from .utils import send_email_in_thread, get_short_file_name, get_group_name, get_now_str
+from .utils import send_email_in_thread, get_group_name, get_now_str
 from django.urls import reverse
 from django.conf import settings
 import logging
@@ -102,7 +102,7 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                 return
 
             uploader_name = f"{uploader.first_name} {uploader.last_name}"
-            short_file_name = get_short_file_name(instance.get_filename())
+            short_file_name = instance.get_filename()
             message = f"{uploader_name} завантажив файл {short_file_name} до вашої роботи! 📎"
             time = get_now_str()
             download_url = f"{settings.BASE_URL}{reverse('download_file', args=[instance.pk])}"
@@ -293,7 +293,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
                 logger.warning("Unknown author role")
                 return
 
-            short_file_name = get_short_file_name(instance.file.get_filename())
+            short_file_name = instance.file.get_filename()
             author_name = f"{author.first_name} {author.last_name}"
             message = f"{author_name} залишив коментар до файлу {short_file_name}! 💬"
             time = get_now_str()

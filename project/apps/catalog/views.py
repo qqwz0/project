@@ -1,7 +1,9 @@
+from urllib import request
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.http import JsonResponse, HttpResponseForbidden, FileResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import RequestForm, FilteringSearchingForm, RequestFileForm, FileCommentForm
 from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request, RequestFile, FileComment
 from django.core.exceptions import ValidationError 
@@ -21,7 +23,7 @@ from django.shortcuts import render
 import re
 import logging
 
-class TeachersCatalogView(TemplateView, FormView):
+class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     """
     Displays the teachers catalog page with filtering and searching capabilities.
     
@@ -38,6 +40,16 @@ class TeachersCatalogView(TemplateView, FormView):
     template_name = 'catalog/teachers_catalog.html'
     form_class = FilteringSearchingForm
     
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Checks user role before allowing access to the catalog. Redirects teachers.
+        """
+        if request.user.is_authenticated and request.user.role == 'Викладач':
+                        messages.error(request, 'Викладачі не можуть переглядати каталог викладачів.')
+                        return redirect('profile')
+        return super().dispatch(request, *args, **kwargs)
+
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = self.get_form()
@@ -49,7 +61,7 @@ class TeachersCatalogView(TemplateView, FormView):
         """
         return self.render_to_response(self.get_context_data())
     
-class TeachersListView(ListView):    
+class TeachersListView(LoginRequiredMixin ,ListView):    
     """
     API view that provides a list of teachers with their available slots.
     

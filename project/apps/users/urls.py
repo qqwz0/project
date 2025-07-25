@@ -21,5 +21,7 @@ urlpatterns = [
     path('complete_request/<int:request_id>/', views.complete_request, name='complete_request'),
     path('profile/load-tab/<str:tab_name>/', views.load_profile_tab, name='load_profile_tab'),
     path('archived-request-details/<int:request_id>/', views.archived_request_details, name='archived_request_details'),
+    path('edit_request/<int:request_id>/', views.edit_request, name='edit_request'),
+    path('delete_request/<int:request_id>/', views.delete_request, name='delete_request'),
     path('catalog/', include('apps.catalog.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

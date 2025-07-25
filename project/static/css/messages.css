@@ -42,13 +42,14 @@
   }
   
   /* Style for the close button */
-  .toast-close {
+  .success-popup .toast-close {
     position: absolute; /* Absolutely position it inside the parent */
     top: 10px; /* Distance from the top of the popup */
     right: 10px; /* Distance from the right of the popup */
-    font-size: 20px; /* Size of the close icon */
+    font-size: 18px; /* Size of the close icon */
     cursor: pointer; /* Pointer cursor to indicate it's clickable */
     color: #333; /* Close button color */
+    z-index: 1001; 
   }
     
   /* Error Message Styling */
