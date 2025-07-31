@@ -199,6 +199,7 @@ class SlotAdmin(admin.ModelAdmin):
         'get_teacher_name',
         'get_department',
         'get_stream_code',
+        'get_edu_degree',
         'get_quota',
         'available_slots',
     )
@@ -218,6 +219,7 @@ class SlotAdmin(admin.ModelAdmin):
 
     list_filter = (
         DepartmentFilter,
+        'stream_id__edu_degree',
         'stream_id',
         HasSlotsFilter,
     )
@@ -250,6 +252,10 @@ class SlotAdmin(admin.ModelAdmin):
     def get_stream_code(self, obj):
         return obj.stream_id.stream_code
     
+    @admin.display(description='Освітній ступінь', ordering='stream_id__edu_degree')
+    def get_edu_degree(self, obj):
+        return obj.stream_id.edu_degree
+
     @admin.display(description='Квота', ordering='quota')
     def get_quota(self, obj):
         return obj.quota
@@ -350,7 +356,7 @@ class StreamForm(forms.ModelForm):
 
     class Meta:
         model = Stream
-        fields = ('stream_code', 'specialty_name')
+        fields = ('stream_code', 'specialty_name', 'edu_degree')
 
     def clean_specialty_name(self):
         name = self.cleaned_data.get('specialty_name')
@@ -381,10 +387,15 @@ class StreamAdmin(admin.ModelAdmin):
     @admin.display(ordering='stream_code', description='Код потоку')
     def code(self, obj):
         return obj.stream_code
+    
+    @admin.display(ordering='edu_degree', description='Освітній ступінь')
+    def degree(self, obj):
+        return obj.edu_degree
 
-    list_display       = ('specialty', 'code')
+    list_display       = ('specialty', 'code', 'degree')
     list_display_links = ('code',)
     search_fields      = ('specialty_name', 'stream_code')
+    list_filter        = ('edu_degree',)
     ordering           = ('stream_code', 'specialty_name')
 
     def _is_super(self, request, obj=None):
@@ -523,6 +534,7 @@ class RequestForm(forms.ModelForm):
             'teacher_theme': 'Тема викладача',
             'approved_student_theme': 'Затверджена тема студента',
             'request_status': 'Статус',
+            
         }
 
 class RequestAdmin(admin.ModelAdmin):
@@ -542,15 +554,17 @@ class RequestAdmin(admin.ModelAdmin):
         'get_teacher_department',
         'get_student_group',
         'get_theme_display',
+        'get_work_type', 
         'request_status',
     ]
     extra_list_display = ['display_grade']
 
     list_filter = (
         'request_status',
-        'slot__stream_id',                     # фільтр за потоком
-        'teacher_id__teacher_id__department',  # фільтр за кафедрою
-        'academic_year',                       # фільтр за академічним роком
+        'work_type',
+        'slot__stream_id',
+        'teacher_id__teacher_id__department',
+        'academic_year',
     )
 
     search_fields = (
@@ -560,6 +574,7 @@ class RequestAdmin(admin.ModelAdmin):
         'teacher_id__teacher_id__last_name',
         'teacher_id__teacher_id__first_name',
         'teacher_id__teacher_id__patronymic',
+        'work_type', 
     )
 
     export_fields = [
@@ -569,6 +584,7 @@ class RequestAdmin(admin.ModelAdmin):
         'approved_student_theme',
         'request_status',
         'academic_year',
+        'work_type', 
     ]
 
     actions = ['export_to_word']
@@ -599,6 +615,7 @@ class RequestAdmin(admin.ModelAdmin):
                 'teacher_theme',
                 'approved_student_theme',
                 'request_status',
+                'work_type',
             ]
         return super().get_fields(request, obj)
 
@@ -617,6 +634,10 @@ class RequestAdmin(admin.ModelAdmin):
                    ordering='student_id__academic_group')
     def get_student_group(self, obj):
         return obj.student_id.academic_group
+    
+    @admin.display(description='Тип роботи', ordering='work_type')
+    def get_work_type(self, obj):
+        return capfirst(obj.work_type)+' роботи' if obj.work_type else '—'
 
     @admin.display(description='Тема')
     def get_theme_display(self, obj):

@@ -166,7 +166,7 @@ def send_notification_on_request_status_changed(sender, instance, **kwargs):
     except sender.DoesNotExist:
         return
 
-    if old_instance.request_status != instance.request_status and instance.request_status != 'Завершено':
+    if old_instance.request_status != instance.request_status and instance.request_status != 'Завершено' and instance.request_status != 'Відхилено студентом':
         try:
             channel_layer = get_channel_layer()
             student_user = instance.student_id

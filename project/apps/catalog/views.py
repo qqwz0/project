@@ -18,8 +18,6 @@ from .utils import HtmxModalFormAccessMixin, FileAccessMixin
 from django.templatetags.static import static
 from .templatetags.catalog_extras import get_profile_picture_url
 
-from django.shortcuts import render
-
 import re
 import logging
 
@@ -51,6 +49,7 @@ class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = self.get_form()
+        context['user_profile'] = self.request.user
         return context
     
     def get(self, request, *args, **kwargs):
@@ -134,13 +133,17 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 # --- Фільтрація за кафедрою для 3+ курсу ---
                 # Витягуємо курс з academic_group (наприклад, ФЕС-33 -> 3)
                 course = None
+                is_master = "М" in user.academic_group.upper()
                 if user.academic_group:
-                    import re
                     match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user.academic_group)
                     if match:
                         course = int(match.group(1))
-                if course and course >= 3 and user.department:
+                
+                # Оновлена, більш точна умова фільтрації
+                if user.department and ((course and course >= 3) or is_master):
                     teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                
+                teacher_ids = [t.pk for t in teachers]
                 # ---
 
                 teacher_ids = [t.pk for t in teachers]
@@ -153,7 +156,9 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
                 if match:
                     user_stream = match.group(1) + '-' + match.group(2)
-                    slots = slots.filter(stream_id__stream_code__iexact=user_stream)
+
+                    slots = slots.filter(stream_id__edu_degree__iexact='Магістр' if "М" in user.academic_group.upper() else 'Бакалавр', stream_id__stream_code__iexact=user_stream)
+
                     is_matched = True
 
             for teacher in teachers:
@@ -259,11 +264,12 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         
         # Filter slots by user's academic group if the user is a student.
         user = self.request.user
+        is_master =  "М" in user.academic_group.upper()
         match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
         if match:
             user_stream = match.group(1) + '-' + match.group(2)
             print(f"User stream: {user_stream}")
-            slots = slots.filter(stream_id__stream_code__iexact=user_stream)
+            slots = slots.filter(stream_id__stream_code__iexact=user_stream, stream_id__edu_degree='Магістр' if is_master else 'Бакалавр')
             print(f"Available slots for stream {user_stream}: {slots.count()}")
             is_matched = True
         
@@ -374,10 +380,20 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = 'Очікує'
         
+        
         student_stream_code = form.instance.extract_stream_from_academic_group()
+        is_master = "М" in self.request.user.academic_group.upper()
+        curse = student_stream_code.split('-')[1] if student_stream_code else None
+        
+        if curse and curse == 4:
+            form.instance.work_type = 'Дипломна'
+        elif  is_master:
+            form.instance.work_type = 'Магістерська'
+        else:
+            form.instance.work_type = 'Курсова'  
         if student_stream_code:
             try:
-                stream = Stream.objects.get(stream_code=student_stream_code)
+                stream = Stream.objects.get(stream_code=student_stream_code, edu_degree='Магістр' if is_master else 'Бакалавр')
                 # Get all slots for this teacher and stream
                 available_slots = Slot.objects.filter(
                     teacher_id=form.instance.teacher_id,

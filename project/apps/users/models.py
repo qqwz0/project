@@ -64,7 +64,7 @@ class CustomUser(AbstractUser):
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
-    academic_group = models.CharField(max_length=6, blank=False, null=True)  # For students
+    academic_group = models.CharField(max_length=9, blank=False, null=True)  # For students
     department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     patronymic = models.CharField("По-батькові", max_length=150, blank=True, null=True)

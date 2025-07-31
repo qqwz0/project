@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 import logging
 from django.utils import timezone
 import os
+import re
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -42,9 +43,15 @@ def create_only_teacher(sender, instance, created, **kwargs):
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)
     stream_code = models.CharField(max_length=100, unique=True)
+    edu_degree = models.CharField(max_length=50, choices=[
+        ('Бакалавр', 'Бакалавр'),
+        ('Магістр', 'Магістр'),
+    ], null=True, blank=False)
     
     def __str__(self):
-        return self.stream_code
+        return f"{self.stream_code} ({self.get_edu_degree_display()})"
+
+  
     
 class Slot(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
@@ -140,7 +147,12 @@ class Request(models.Model):
     academic_year = models.CharField(max_length=7, blank=True)  # Format: "2024/25"
     comment = models.TextField(blank=True, null=True, max_length=1000)
     send_contacts = models.BooleanField(default=False)
-    
+    work_type = models.CharField(max_length=50, choices=[
+        ('Курсова', 'Курсова'),
+        ('Дипломна', 'Дипломна'),
+        ('Магістерська', 'Магістерська'),
+    ], default='Курсова', help_text='Тип роботи, яку студент планує виконувати', blank=False)
+
     @property
     def is_active(self):
         """Перевіряє чи запит є активним (за останні 6 місяців)"""
@@ -154,11 +166,18 @@ class Request(models.Model):
 
     def extract_stream_from_academic_group(self):
         """
-        Extracts the stream code from the student's academic group.
-        Example: ФЕС-23 → ФЕС-2
+        Extracts the stream code from the student's academic group using a regular expression.
+        Example: 'ФЕС-23' -> 'ФЕС-2', 'ФЕІ-21м' -> 'ФЕІ-2'.
         """
-        if self.student_id.academic_group:
-            return self.student_id.academic_group[:-1]  # Remove the last digit
+        if not self.student_id or not self.student_id.academic_group:
+            return None
+        
+        # Цей вираз знаходить префікс (напр. ФЕІ) та першу цифру курсу (напр. 2)
+        match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', self.student_id.academic_group)
+        if match:
+            # Складаємо їх у код потоку (напр. ФЕІ-2)
+            return f"{match.group(1)}-{match.group(2)}"
+        
         return None
     
     def save(self, *args, **kwargs):
