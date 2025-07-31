@@ -78,7 +78,7 @@ class CustomUser(AbstractUser):
     
 
     def __str__(self):
-        return self.email
+        return self.get_full_name_with_patronymic()
     
     def get_full_name_with_patronymic(self):
         parts = [self.last_name, self.first_name]

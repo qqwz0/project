@@ -51,6 +51,14 @@ class Slot(models.Model):
     stream_id = models.ForeignKey(Stream, on_delete=models.CASCADE)
     quota = models.IntegerField(validators=[MinValueValidator(0)])
     occupied = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['teacher_id', 'stream_id'], name='unique_teacher_stream')
+        ]
+
+    def __str__(self):
+        available = self.quota - self.occupied
+        return f"{self.stream_id.stream_code} ({available} доступно з {self.quota})"
     
     def get_available_slots(self):
         active_requests_count = Request.objects.filter(
@@ -110,7 +118,7 @@ class Request(models.Model):
     ]
     student_id = models.ForeignKey('users.CustomUser', 
                                    on_delete=models.CASCADE, 
-                                   limit_choices_to={'role': 'student'}, 
+                                   limit_choices_to={'role': 'Студент'}, 
                                    unique=False,
                                    related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
