@@ -28,6 +28,7 @@ from django.template.loader import render_to_string
 from django.views import View
 from django.db.models import F
 
+
 from cloudinary_storage.storage import MediaCloudinaryStorage
 
 from .forms import RegistrationForm, TeacherProfileForm, StudentProfileForm, ProfilePictureUploadForm, CropProfilePictureForm
@@ -146,6 +147,7 @@ def microsoft_login(request):
             "response_mode": "query",
             "scope": " ".join(settings.MICROSOFT_SCOPES),
             "state": urlencode({"action": 'login', "csrf": CSRF_STATE}),
+            "redirect": request.GET.get("redirect", "")  # Preserve the redirect URL if provided
         }
         authorization_url = f"{MICROSOFT_AUTH_URL}?{urlencode(params)}"
         logger.info("Authorization URL: %s", authorization_url)
@@ -574,6 +576,8 @@ def profile(request: HttpRequest, user_id=None):
         context.update({
             'student_profile': student_profile,
             'all_requests': all_requests,
+            'has_rejected': all_requests.filter(request_status='Відхилено').exists(),
+            'has_pending': all_requests.filter(request_status='Очікує').exists(),
             'active_requests': active_requests,
             'archived_requests': archived_requests,
             'active_request_files': active_request_files,
@@ -635,28 +639,32 @@ def reject_request(request, request_id):
     if request.method == 'POST':
         try:
             req = Request.objects.get(id=request_id)
-            
-            # Add debugging logs
             logger.debug(f"Reject Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}")
             logger.debug(f"Current user: {request.user.id} - {request.user}")
             logger.debug(f"Teacher user: {req.teacher_id.teacher_id.id} - {req.teacher_id.teacher_id}")
-            
+
             # Check if the user is the teacher who received the request
             if req.teacher_id.teacher_id == request.user:
-                # Update request status
-                    
+                # --- FIX: Read reason from JSON if POST is empty ---
                 reason = request.POST.get('rejectReason')
+                if reason is None and request.content_type == 'application/json':
+                    try:
+                        data = json.loads(request.body.decode('utf-8'))
+                        reason = data.get('rejectReason')
+                    except Exception as e:
+                        logger.error(f"Error parsing JSON body: {e}")
+                        reason = None
+                        
                 req.request_status = 'Відхилено'
-                req.rejected_reason = reason if reason else 'Викладач не вказав причину відхилення'
+                req.rejected_reason = reason if reason else 'Викладач не вказав причину відмови'
                 req.save()
-                
-                # If there was a teacher theme, mark it as unoccupied
+
                 if req.teacher_theme:
                     req.teacher_theme.is_occupied = False
                     req.teacher_theme.save()
-                
+
                 messages.success(request, 'Запит успішно відхилено')
-                
+
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': True})
                 return redirect('profile')
@@ -668,7 +676,7 @@ def reject_request(request, request_id):
         except Exception as e:
             logger.exception(f"Error rejecting request {request_id}: {str(e)}")
             messages.error(request, f'Помилка при відхиленні запиту: {str(e)}')
-    
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Помилка при обробці запиту'})
     return redirect('profile')

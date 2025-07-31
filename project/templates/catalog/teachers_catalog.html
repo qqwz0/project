@@ -22,6 +22,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      show_occupied: false,
      full_names: [], 
      searchQuery: '', 
+     isLoading: true,
      showFilters: window.innerWidth > 780,
     isMobile: window.innerWidth <= 780,
     toggleFilters() {
@@ -51,6 +52,9 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         console.error('Error fetching data:', error);
         this.data = [];
         this.filteredData = [];
+      }
+      finally {
+        this.isLoading = false;
       }
      }
   }" 
@@ -121,8 +125,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         </button>
      </div>
 
+      <template x-if="isLoading">
+        <div class="loader-container">
+            <div class="loader"></div>
+        </div>
+     </template>
+
      <!-- No Results Message -->
-     <template x-if="filteredData.length === 0">
+     <template x-if="!isLoading && filteredData.length === 0">
       <div class="no-results">
        <h2>Нічого не знайдено!</h2>
       </div>
@@ -145,32 +155,29 @@ When a user triggers the HX request (via button click), the modal is swapped in 
     </div>
 </dialog>
 
-<!-- Django Messages Framework -->
+
+<!-- Messages -->
 {% if messages %}
-<div class="messages">
-    {% for message in messages %}
-     <div class="success-popup {{ message.tags }}">
-      {% if message.tags == 'success' %}
-       <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
-      {% elif message.tags == 'error' %}
-       <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
-      {% endif %}
-      <div class="popup-content">
-       <p class="popup-title">
-        {% if message.tags == 'success' %}
-            Успіх!
-        {% elif message.tags == 'error' %}
-            Помилка!
-        {% endif %}
-       </p>
-       <p class="popup-text">
-        {{ message }}
-       </p>
-      </div>
-      <i class="toast-close fas fa-times" onclick="closePopup()"></i>
-     </div>
-    {% endfor %}
-</div>
+    <div class="messages">
+        {% for message in messages %}
+            <div class="success-popup {{ message.tags }}">
+                {% if message.tags == 'success' %}
+                    <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
+                {% elif message.tags == 'error' %}
+                    <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
+                {% endif %}
+                <div>
+                    <div class="popup-content">
+                        <p class="popup-title">
+                            {% if message.tags == 'success' %}Успіх!{% elif message.tags == 'error' %}Помилка!{% endif %}
+                        </p>
+                        <p class="popup-text">{{ message }}</p>
+                    </div>
+                    <i class="toast-close fas fa-times close" onclick="closePopup()"></i>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 {% endif %}
 
 <!-- External JavaScript Files -->

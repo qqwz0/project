@@ -144,54 +144,6 @@
                                         fileNameSpan.style.color = '#6B7280';
                                     }
                                 }
-
-                                // Обробка форми завантаження файлу
-                                document.querySelector('.file-upload-form').addEventListener('submit', function(e) {
-                                    e.preventDefault();
-                                    var formData = new FormData(this);
-                                    var requestId = this.querySelector('input[type="file"]').id.split('-').pop();
-
-                                    fetch(this.action, {
-                                        method: 'POST',
-                                        body: formData,
-                                        headers: {
-                                            'X-Requested-With': 'XMLHttpRequest'
-                                        }
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.status === 'success') {
-                                            // Очищаємо форму
-                                            this.reset();
-                                            var fileNameSpan = document.getElementById('file-name-' + requestId);
-                                            if (fileNameSpan) {
-                                                fileNameSpan.textContent = 'Файл не вибрано';
-                                                fileNameSpan.style.color = '#6B7280';
-                                            }
-                                            // Показуємо тост і оновлюємо сторінку
-                                            if (window.showToast) {
-                                                window.showToast('Файл успішно додано', 'success');
-                                                setTimeout(() => { location.reload(); }, 1200);
-                                            } else {
-                                            location.reload();
-                                            }
-                                        } else {
-                                            if (window.showToast) {
-                                                window.showToast('Помилка при завантаженні файлу: ' + data.message, 'error');
-                                        } else {
-                                            alert('Помилка при завантаженні файлу: ' + data.message);
-                                            }
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        if (window.showToast) {
-                                            window.showToast('Помилка при завантаженні файлу', 'error');
-                                        } else {
-                                        alert('Помилка при завантаженні файлу');
-                                        }
-                                    });
-                                });
                             </script>
                         {% endwith %}
                 </div>

@@ -6,7 +6,7 @@ from asgiref.sync import async_to_sync
 from django.db import transaction
 from .models import Message
 from django.template.loader import render_to_string
-from .utils import send_email_in_thread, get_short_file_name, get_group_name, get_now_str
+from .utils import send_email_in_thread, get_group_name, get_now_str
 from django.urls import reverse
 from django.conf import settings
 import logging
@@ -56,6 +56,7 @@ def send_notification_on_request(sender, instance, created, **kwargs):
                     recipient=teacher_user,
                     sender=student,
                     created_at=time,
+                    related_request=instance
                 )
                 event = {
                     "type": "send_notification",
@@ -101,8 +102,9 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                 logger.warning("Unknown uploader role")
                 return
 
+            request_id = instance.request
             uploader_name = f"{uploader.first_name} {uploader.last_name}"
-            short_file_name = get_short_file_name(instance.get_filename())
+            short_file_name = instance.get_filename()
             message = f"{uploader_name} завантажив файл {short_file_name} до вашої роботи! 📎"
             time = get_now_str()
             download_url = f"{settings.BASE_URL}{reverse('download_file', args=[instance.pk])}"
@@ -126,6 +128,7 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                     recipient=another_user,
                     sender=uploader,
                     created_at=time,
+                    related_request=request_id
                 )
                 event = {
                     "type": "send_notification",
@@ -198,7 +201,8 @@ def send_notification_on_request_status_changed(sender, instance, **kwargs):
                 recipient=student_user,
                 sender=teacher_user,
                 created_at=time,
-                status=status_text
+                status=status_text,
+                related_request=instance
             )
             event = {
                 "type": "send_notification",
@@ -257,6 +261,7 @@ def send_notification_on_work_status_changed(sender, instance, **kwargs):
                 recipient=student_user,
                 sender=teacher_user,
                 created_at=time,
+                related_request=instance,
             )
             event = {
                 "type": "send_notification",
@@ -284,6 +289,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
     channel_layer = get_channel_layer()
     if created:
         try:
+            request_id = instance.file.request
             author = instance.author
             if author.role == ROLE_TEACHER:
                 another_user = instance.file.request.student_id
@@ -293,7 +299,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
                 logger.warning("Unknown author role")
                 return
 
-            short_file_name = get_short_file_name(instance.file.get_filename())
+            short_file_name = instance.file.get_filename()
             author_name = f"{author.first_name} {author.last_name}"
             message = f"{author_name} залишив коментар до файлу {short_file_name}! 💬"
             time = get_now_str()
@@ -308,6 +314,7 @@ def send_notification_on_comment(sender, instance, created, **kwargs):
                     recipient=another_user,
                     sender=author,
                     created_at=time,
+                    related_request=request_id
                 )
                 event = {
                     "type": "send_notification",
