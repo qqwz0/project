@@ -11,7 +11,7 @@ from django.views.generic import ListView, DetailView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.utils import timezone
 from django.template.loader import render_to_string
 from .utils import HtmxModalFormAccessMixin, FileAccessMixin
@@ -135,7 +135,7 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 course = None
                 is_master = "М" in user.academic_group.upper()
                 if user.academic_group:
-                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user.academic_group)
+                    match = re.match(r'^ФЕ[ЇСМЛПІ]-(\d)', user.academic_group)
                     if match:
                         course = int(match.group(1))
                 
@@ -157,7 +157,14 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 if match:
                     user_stream = match.group(1) + '-' + match.group(2)
 
-                    slots = slots.filter(stream_id__edu_degree__iexact='Магістр' if "М" in user.academic_group.upper() else 'Бакалавр', stream_id__stream_code__iexact=user_stream)
+                    # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
+                    expected_degree = 'Магістр' if "М" in user.academic_group.upper() else 'Бакалавр'
+                    slots = slots.filter(
+                        stream_id__stream_code__iexact=user_stream
+                    ).filter(
+                        Q(stream_id__edu_degree=expected_degree) | 
+                        Q(stream_id__edu_degree__isnull=True)
+                    )
 
                     is_matched = True
 
@@ -269,7 +276,14 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         if match:
             user_stream = match.group(1) + '-' + match.group(2)
             print(f"User stream: {user_stream}")
-            slots = slots.filter(stream_id__stream_code__iexact=user_stream, stream_id__edu_degree='Магістр' if is_master else 'Бакалавр')
+            # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
+            expected_degree = 'Магістр' if is_master else 'Бакалавр'
+            slots = slots.filter(
+                stream_id__stream_code__iexact=user_stream
+            ).filter(
+                Q(stream_id__edu_degree=expected_degree) | 
+                Q(stream_id__edu_degree__isnull=True)
+            )
             print(f"Available slots for stream {user_stream}: {slots.count()}")
             is_matched = True
         
@@ -393,7 +407,17 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
             form.instance.work_type = 'Курсова'  
         if student_stream_code:
             try:
-                stream = Stream.objects.get(stream_code=student_stream_code, edu_degree='Магістр' if is_master else 'Бакалавр')
+                # Шукаємо потік з урахуванням того, що edu_degree може бути None
+                expected_degree = 'Магістр' if is_master else 'Бакалавр'
+                stream = Stream.objects.filter(
+                    stream_code=student_stream_code
+                ).filter(
+                    Q(edu_degree=expected_degree) | Q(edu_degree__isnull=True)
+                ).first()
+                
+                if not stream:
+                    raise Stream.DoesNotExist()
+                    
                 # Get all slots for this teacher and stream
                 available_slots = Slot.objects.filter(
                     teacher_id=form.instance.teacher_id,

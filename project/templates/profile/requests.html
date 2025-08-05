@@ -40,7 +40,10 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -110,7 +113,10 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -166,7 +172,10 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -233,7 +242,10 @@
                                     {{ request.teacher_id.teacher_id.get_full_name }}
                                 </a>
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -308,7 +320,10 @@
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
 
-                        {% if request.approved_student_theme %}
+                        {% if request.custom_student_theme %}
+                            <strong>Обрана тема:</strong>
+                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                        {% elif request.approved_student_theme %}
                             <strong>Обрана тема:</strong>
                             <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                         {% elif request.teacher_theme %}
@@ -363,7 +378,10 @@
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
 
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -419,7 +437,10 @@
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
 
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -481,7 +502,10 @@
                             <div class="user-info">
                                 <h3>{{ request.student_id.get_full_name }}</h3>
                                 <p class="role">{{ request.student_id.academic_group }}</p>
-                                {% if request.approved_student_theme %}
+                                {% if request.custom_student_theme %}
+                                    <strong>Обрана тема:</strong>
+                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                                {% elif request.approved_student_theme %}
                                     <strong>Обрана тема:</strong>
                                     <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                                 {% elif request.teacher_theme %}
@@ -968,7 +992,7 @@
 </script>
 
 <script>
-// Відкрити “редагувати запит” модал
+// Відкрити "редагувати запит" модал
   function openStudentEditRequestModal(requestId) {
     const modal = document.getElementById('studentEditRequestModal');
     document.getElementById('studentEditRequestId').value = requestId;
@@ -1021,7 +1045,7 @@
 </script>
 
 <script>
-// Відкрити “редагувати запит” модал
+// Відкрити "редагувати запит" модал
   function openStudentEditRequestModal(requestId) {
     const modal = document.getElementById('studentEditRequestModal');
     document.getElementById('studentEditRequestId').value = requestId;

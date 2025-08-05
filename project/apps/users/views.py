@@ -480,6 +480,33 @@ def fake_student_login(request):
     auth_login(request, user)
     return redirect("profile")
 
+def fake_student_login_2(request):
+    email = "STUDENT2.STUDENT2@lnu.edu.ua"
+    try:
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        user = CustomUser.objects.create(
+            email=email,
+            first_name="Студент",
+            last_name="Тестовий",
+            patronymic="Петрович",
+            role="Студент",
+            academic_group="ФЕС-22",
+            is_active=True,
+            password=make_password("fake_password")
+        )
+    OnlyStudent.objects.get_or_create(
+        student_id=user,
+        defaults={
+            "speciality": "Не вказано",
+            "course": 3,
+            "additional_email": "student2.test@lnu.edu.ua",
+            "phone_number": "+380991234569"
+        }
+    )
+    auth_login(request, user)
+    return redirect("profile")
+
 @login_required
 def profile(request: HttpRequest, user_id=None):
     """
@@ -533,8 +560,9 @@ def profile(request: HttpRequest, user_id=None):
         context.update({
             'teacher_profile': teacher_profile,
             'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile).exclude(theme_description='(Запропоновано студентом)'),
-            'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(available=F('quota') - F('occupied'))
-            .filter(available__gt=0),
+            'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(
+                available=F('quota') - F('occupied')
+            ),
             'pending_requests': Request.objects.select_related(
                 'student_id', 'teacher_id', 'teacher_theme', 'slot'
             ).prefetch_related('student_themes', 'files').filter(
@@ -1166,6 +1194,15 @@ def archived_request_details(request, request_id):
                 'comments': comments_data,
             })
         
+        # Determine theme with proper priority
+        theme = 'Тема не вказана'
+        if req.custom_student_theme:
+            theme = f"{req.custom_student_theme} (довільна тема студента)"
+        elif req.approved_student_theme:
+            theme = f"{req.approved_student_theme.theme} (запропоновано студентом)"
+        elif req.teacher_theme:
+            theme = req.teacher_theme.theme
+
         response_data = {
             'student': {
                 'name': req.student_id.get_full_name(),
@@ -1174,7 +1211,7 @@ def archived_request_details(request, request_id):
             'teacher': {
                 'name': req.teacher_id.teacher_id.get_full_name(),
             },
-            'theme': req.teacher_theme.theme if req.teacher_theme else 'Тема не вказана',
+            'theme': theme,
             'grade': req.grade,
             'completion_date': req.completion_date.strftime('%d.%m.%Y'),
             'files': files_data
@@ -1227,6 +1264,14 @@ def request_details_for_approve(request, request_id):
         ] + [
             {'id': f'student_{t.id}', 'title': f'Тема студента: {t.theme}'} for t in student_themes
         ]
+        
+        # Додаємо довільну тему студента, якщо вона є
+        if req.custom_student_theme:
+            themes.append({
+                'id': 'custom_student_theme',
+                'title': f'Довільна тема студента: {req.custom_student_theme}'
+            })
+        
         data = {
             'student_name': req.student_id.get_full_name(),
             'student_group': req.student_id.academic_group,
@@ -1267,11 +1312,18 @@ def approve_request_with_theme(request, request_id):
             theme = TeacherTheme.objects.get(id=theme_pk, teacher_id=req.teacher_id)
             req.teacher_theme = theme
             req.approved_student_theme = None  # Явно очищаємо, якщо раніше була студентська
+            req.custom_student_theme = None  # Очищаємо довільну тему, якщо вона була
         elif str(theme_id).startswith('student_'):
             theme_pk = int(str(theme_id).replace('student_', ''))
             theme = StudentTheme.objects.get(id=theme_pk, request=req)
             req.teacher_theme = None  # Явно очищаємо, якщо раніше була викладацька
             req.approved_student_theme = theme  # Зберігаємо посилання на студентську тему
+            req.custom_student_theme = None  # Очищаємо довільну тему
+        elif str(theme_id) == 'custom_student_theme':
+            # Вибрана довільна тема студента
+            req.teacher_theme = None  # Очищаємо тему викладача
+            req.approved_student_theme = None  # Очищаємо затверджену тему студента
+            # custom_student_theme залишається як є
         else:
             return JsonResponse({'error': 'Некоректна тема'}, status=400)
 
@@ -1313,3 +1365,75 @@ def student_refuse_request(request, request_id):
         return JsonResponse({'error': 'Request not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def edit_request_theme(request, request_id):
+    """
+    Edit the theme of an active request.
+    Only teachers can edit themes of their active requests.
+    """
+    logger.info(f"edit_request_theme called with request_id: {request_id}")
+    
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        logger.warning("Invalid request - not AJAX")
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    try:
+        # Get the request
+        req = Request.objects.get(id=request_id, request_status='Активний')
+        logger.info(f"Found request: {req.id}, teacher: {req.teacher_id.teacher_id}, current user: {request.user}")
+        
+        # Check if user is the teacher of this request
+        if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
+            logger.warning(f"Permission denied: user {request.user.id} trying to edit theme for request {request_id}")
+            return JsonResponse({'error': 'У вас немає прав для редагування цієї теми'}, status=403)
+        
+        # Parse JSON data
+        data = json.loads(request.body.decode('utf-8'))
+        new_theme = data.get('new_theme', '').strip()
+        logger.info(f"New theme: '{new_theme}'")
+        
+        if not new_theme:
+            logger.warning("Empty theme provided")
+            return JsonResponse({'error': 'Тема не може бути порожньою'}, status=400)
+        
+        # Update the theme based on what type it currently is, preserving the type
+        if req.custom_student_theme:
+            # If it's a custom student theme, update it directly
+            logger.info(f"Updating custom student theme: {req.custom_student_theme} -> {new_theme}")
+            req.custom_student_theme = new_theme
+            req.save()
+        elif req.approved_student_theme:
+            # If it's an approved student theme, update the theme text
+            logger.info(f"Updating approved student theme: {req.approved_student_theme.theme} -> {new_theme}")
+            req.approved_student_theme.theme = new_theme
+            req.approved_student_theme.save()
+        elif req.teacher_theme:
+            logger.info(f"Updating existing teacher theme: {req.teacher_theme.theme} -> {new_theme}")
+            req.teacher_theme.theme = new_theme
+            req.teacher_theme.save()
+        else:
+            logger.info("Creating new teacher theme")
+            # If no theme exists, create a new teacher theme
+            teacher_profile = OnlyTeacher.objects.get(teacher_id=request.user)
+            new_teacher_theme = TeacherTheme.objects.create(
+                teacher_id=teacher_profile,
+                theme=new_theme,
+                theme_description='Тема, створена під час редагування'
+            )
+            req.teacher_theme = new_teacher_theme
+            req.save()
+        
+        logger.info("Theme updated successfully")
+        return JsonResponse({'success': True, 'message': 'Тему успішно оновлено'})
+        
+    except Request.DoesNotExist:
+        logger.error(f"Request {request_id} not found or not active")
+        return JsonResponse({'error': 'Запит не знайдено або не є активним'}, status=404)
+    except OnlyTeacher.DoesNotExist:
+        logger.error(f"Teacher profile not found for user {request.user.id}")
+        return JsonResponse({'error': 'Профіль викладача не знайдено'}, status=404)
+    except Exception as e:
+        logger.error(f"Error editing request theme {request_id}: {str(e)}")
+        return JsonResponse({'error': 'Сталася помилка при оновленні теми'}, status=500)

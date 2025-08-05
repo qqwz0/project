@@ -9,7 +9,7 @@
                 {% for slot in slots %}
                     <!-- Slot Group -->
                     <div class="slot-group" 
-                         data-available="{{ slot.get_available_slots|default:0 }}" 
+                         data-available="{{ slot.available|default:0 }}" 
                          data-occupied="{{ slot.occupied|default:0 }}">
                         <p class="stream-title">{{ slot.stream_id }}</p>
                         <div class="slots-display"></div>

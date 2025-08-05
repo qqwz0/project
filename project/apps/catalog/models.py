@@ -49,7 +49,8 @@ class Stream(models.Model):
     ], null=True, blank=False)
     
     def __str__(self):
-        return f"{self.stream_code} ({self.get_edu_degree_display()})"
+        edu_degree_display = self.get_edu_degree_display() if self.edu_degree else "Не вказано"
+        return f"{self.stream_code} ({edu_degree_display})"
 
   
     
@@ -134,6 +135,8 @@ class Request(models.Model):
                                     null=True, blank=True)
     # Якщо затверджено студентську тему, зберігаємо її тут
     approved_student_theme = models.ForeignKey('StudentTheme', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_requests', help_text='Затверджена студентська тема для цього запиту (якщо обрано тему студента)')
+    # Довільна тема студента для введення в адмінці
+    custom_student_theme = models.CharField(max_length=200, blank=True, null=True, help_text='Довільна тема студента (для введення в адмінці)')
     motivation_text = models.TextField(
         blank=True,
         max_length=500,

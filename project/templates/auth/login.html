@@ -134,6 +134,43 @@
               Fake Student Login
             </a>
           </div>
+          <div class="input-box button">
+             <a
+              type="submit"
+              href="{% url 'fake_student_login_2' %}?redirect=true"
+              class="register-button microsoft-button"
+              style="
+                background-color: #aedeecff;
+                color: #5c838fff;
+                border: 2px dashed #5c838fff;
+                padding: 0.75em 1.5em;
+                font-weight: bold;
+                text-transform: uppercase;
+                position: relative;
+              "
+            >
+              <!-- optional badge -->
+              <span style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #dc3545;
+                color: #fff;
+                padding: 0.25em 0.5em;
+                font-size: 0.75em;
+                border-radius: 4px;
+              ">
+                TEMP
+              </span>
+              <img
+                src="{% static 'images/microsoft-logo.webp' %}"
+                alt="Microsoft Logo"
+                class="logo"
+                style="vertical-align: middle; margin-right: 0.5em;"
+              />
+              Fake Student Login 2
+            </a>
+          </div>
           
           <!-- Registration link -->
           <div class="text">

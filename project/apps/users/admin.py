@@ -533,6 +533,7 @@ class RequestForm(forms.ModelForm):
             'teacher_id': 'Викладач',
             'teacher_theme': 'Тема викладача',
             'approved_student_theme': 'Затверджена тема студента',
+            'custom_student_theme': 'Довільна тема студента',
             'request_status': 'Статус',
             
         }
@@ -614,6 +615,7 @@ class RequestAdmin(admin.ModelAdmin):
                 'teacher_id',
                 'teacher_theme',
                 'approved_student_theme',
+                'custom_student_theme',
                 'request_status',
                 'work_type',
             ]
@@ -641,12 +643,16 @@ class RequestAdmin(admin.ModelAdmin):
 
     @admin.display(description='Тема')
     def get_theme_display(self, obj):
-        # pick the text you want to show
-        text = (
-            obj.approved_student_theme.theme
-            if obj.approved_student_theme
-            else (obj.teacher_theme.theme if obj.teacher_theme else '')
-        )
+        # Пріоритет: довільна тема студента > затверджена тема студента > тема викладача
+        if obj.custom_student_theme:
+            text = obj.custom_student_theme
+        elif obj.approved_student_theme:
+            text = obj.approved_student_theme.theme
+        elif obj.teacher_theme:
+            text = obj.teacher_theme.theme
+        else:
+            text = ''
+        
         # truncate it
         if len(text) > self.MAX_THEME_LENGTH:
             return text[: self.MAX_THEME_LENGTH - 3] + '...'

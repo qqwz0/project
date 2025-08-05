@@ -18,7 +18,10 @@
                             {{ request_obj.teacher_id.teacher_id.get_full_name }}
                         </a>
                         <p class="role">{{ request_obj.teacher_id.teacher_id.role }}</p>
-                        {% if request_obj.approved_student_theme %}
+                        {% if request_obj.custom_student_theme %}
+                            <strong>Тема:</strong>
+                            <p class="theme">{{ request_obj.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                        {% elif request_obj.approved_student_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request_obj.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
                         {% elif request_obj.teacher_theme %}
@@ -171,9 +174,36 @@
                         </a>
                         <p class="role">{{ request.student_id.role }}</p>
                         <p>Група: {{ request.student_id.academic_group }}</p>
-                        {% if request.teacher_theme %}
+                        {% if request.custom_student_theme %}
+                            <strong>Тема:</strong>
+                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                            {% if user_profile.role == "Викладач" %}
+                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.custom_student_theme|escapejs }}')" 
+                                        class="edit-theme-btn" 
+                                        style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
+                                    <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
+                                </button>
+                            {% endif %}
+                        {% elif request.approved_student_theme %}
+                            <strong>Тема:</strong>
+                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                            {% if user_profile.role == "Викладач" %}
+                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.approved_student_theme.theme|escapejs }}')" 
+                                        class="edit-theme-btn" 
+                                        style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
+                                    <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
+                                </button>
+                            {% endif %}
+                        {% elif request.teacher_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
+                            {% if user_profile.role == "Викладач" %}
+                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.teacher_theme.theme|escapejs }}')" 
+                                        class="edit-theme-btn" 
+                                        style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
+                                    <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
+                                </button>
+                            {% endif %}
                         {% endif %}
                         <strong>Мотивація:</strong>
                         <p class="motivation">{{ request.motivation_text }}</p>
@@ -340,6 +370,29 @@
 
 <!-- Додаємо прихований iframe -->
 <iframe name="hidden_upload_frame" id="hidden_upload_frame" style="display:none;"></iframe>
+
+<!-- Модальне вікно для редагування теми -->
+<div id="editThemeModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редагувати тему роботи</h3>
+            <span class="close" onclick="closeEditThemeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="editThemeForm">
+                <div class="form-group">
+                    <label for="newTheme">Нова тема:</label>
+                    <textarea id="newTheme" name="newTheme" rows="3" class="form-control" placeholder="Введіть нову тему роботи..." required></textarea>
+                </div>
+                <input type="hidden" id="editThemeRequestId" name="requestId">
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeEditThemeModal()">Скасувати</button>
+                    <button type="submit" class="btn-submit">Зберегти зміни</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -811,6 +864,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitComplete();
             }
         });
+    }
+});
+</script>
+
+<script>
+// Функції для редагування теми
+function showEditThemeModal(requestId, currentTheme) {
+    document.getElementById('editThemeRequestId').value = requestId;
+    document.getElementById('newTheme').value = currentTheme;
+    document.getElementById('editThemeModal').style.display = 'block';
+}
+
+function closeEditThemeModal() {
+    document.getElementById('editThemeModal').style.display = 'none';
+    document.getElementById('editThemeForm').reset();
+}
+
+// Обробка форми редагування теми
+document.getElementById('editThemeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const requestId = document.getElementById('editThemeRequestId').value;
+    const newTheme = document.getElementById('newTheme').value.trim();
+    
+    if (!newTheme) {
+        alert('Будь ласка, введіть нову тему');
+        return;
+    }
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Show loading state
+    const submitBtn = document.querySelector('#editThemeForm .btn-submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Збереження...';
+    
+    // Send request to server
+    fetch(`/users/edit-request-theme/${requestId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            new_theme: newTheme
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal and reload page
+            closeEditThemeModal();
+            window.location.reload();
+        } else {
+            throw new Error(data.error || 'Не вдалося оновити тему');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeEditThemeModal();
     }
 });
 </script>

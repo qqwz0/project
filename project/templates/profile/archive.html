@@ -17,7 +17,13 @@
                     <div class="user-info">
                         <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
                         <p class="role">{{ request.teacher_id.academic_level }}</p>
-                        {% if request.teacher_theme %}
+                        {% if request.custom_student_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                        {% elif request.approved_student_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request.teacher_theme %}
                             <strong>Тема роботи:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}
@@ -49,7 +55,13 @@
                     <div class="user-info">
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
-                        {% if request.teacher_theme %}
+                        {% if request.custom_student_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                        {% elif request.approved_student_theme %}
+                            <strong>Тема роботи:</strong>
+                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
+                        {% elif request.teacher_theme %}
                             <strong>Тема роботи:</strong>
                             <p class="theme">{{ request.teacher_theme.theme }}</p>
                         {% endif %}

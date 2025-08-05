@@ -200,6 +200,8 @@ class TeacherProfileForm(forms.ModelForm):
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get('phone_number', '')
+        if phone is None:
+            return ''
         # Видаляємо все, крім цифр
         phone = ''.join(filter(str.isdigit, phone))
         # Якщо номер починається з '380', видаляємо
@@ -313,6 +315,8 @@ class StudentProfileForm(forms.ModelForm):
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get('phone_number', '')
+        if phone is None:
+            return ''
         phone = ''.join(filter(str.isdigit, phone))
         if phone.startswith('380'):
             phone = phone[3:]
