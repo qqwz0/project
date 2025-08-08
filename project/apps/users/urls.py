@@ -28,4 +28,6 @@ urlpatterns = [
     path('approve-request-with-theme/<int:request_id>/', views.approve_request_with_theme, name='approve_request_with_theme'),
     path('student-refuse-request/<int:request_id>/', views.student_refuse_request, name='student_refuse_request'),
     path('edit-request-theme/<int:request_id>/', views.edit_request_theme, name='edit_request_theme'),
+    path('get-student-request-details/<int:request_id>/', views.get_student_request_details, name='get_student_request_details'),
+    path('edit-student-request/<int:request_id>/', views.edit_student_request, name='edit_student_request'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

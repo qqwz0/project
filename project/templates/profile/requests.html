@@ -585,36 +585,46 @@
     </div>
 </div>
 
-<!-- Student Edit Request Modal -->
 <div id="studentEditRequestModal" class="modal">
     <div class="modal-content" style="border: none">
         <span class="close-modal" onclick="closeStudentEditRequestModal()">&times;</span>
-        <h3>Редагувати запит студента</h3>
-        <form id="studentEditRequestForm" onsubmit="handleStudentEditRequestSubmit(event)">
+        <h3>Редагувати запит</h3>
+        <form id="studentEditRequestForm">
+            {% csrf_token %}
             <input type="hidden" id="studentEditRequestId" name="requestId">
-            <!-- Редагування мотивації -->
+            
+            <!-- Тема викладача -->
             <div class="form-group">
-            <label for="editMotivation">Мотивація:</label>
-            <textarea id="editMotivation" name="motivation" rows="4" style="width:100%;padding:8px;">
-                {{ request.motivation_text }}
-            </textarea>
+                <label for="editTeacherTheme">Тема від викладача:</label>
+               <select id="editTeacherTheme" name="teacher_theme_id" style="width:100%;padding:8px; border: 1px solid #ccc; border-radius: 6px;font-size: 16px;">
+                    <!-- Опції будуть завантажені сюди через JS -->
+                </select>
             </div>
 
-            <!-- Редагування тем студента -->
+            <!-- Тематика студента -->
             <div class="form-group">
-            <label>Тематика студента:</label>
-            <ul class="student-themes-list-edit" style="list-style:none;padding:0;">
-                {% for theme in request.student_themes.all %}
-                <li style="margin-bottom:4px;">
-                <label style="display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" name="themes" value="{{ theme.id }}" checked>
-                    {{ theme.theme }}
-                </label>
-                </li>
-                {% endfor %}
-            </ul>
+                <label for="newThemeInput">Ваша тематика (додайте нову або видаліть існуючу):</label>
+                <div style="position: relative; display: flex; align-items: center; margin-bottom: 10px;">
+                    <input type="text" id="newThemeInput" placeholder="Введіть текст нової теми" style="width: 100%; padding: 10px 50px 10px 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px;">
+                    <button type="button" onclick="addNewThemeField()" title="Додати тему" 
+                            style="position: absolute; right: 0; top: 0; height: 100%; width: 45px; border: none; background-color: #3b82f6; color: white; cursor: pointer; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; line-height: 1; border-radius: 0 6px 6px 0; transition: background-color 0.2s ease;"
+                            onmouseover="this.style.backgroundColor='#2563eb'" 
+                            onmouseout="this.style.backgroundColor='#3b82f6'">
+                        +
+                    </button>
+                </div>
+                <div id="all-themes-container" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Теми будуть додані сюди -->
+                </div>
             </div>
-            <button type="submit" class="request-button accept modal-reject-btn">Зберегти</button>
+
+            <!-- Редагування мотивації -->
+            <div class="form-group">
+                <label for="editMotivation">Мотивація:</label>
+                <textarea id="editMotivation" name="motivation" rows="4" style="width:100%;padding:8px;font-size: 16px;"></textarea>
+            </div>
+
+            <button type="submit" class="request-button accept modal-reject-btn">Зберегти зміни</button>
         </form>
     </div>
 </div>
@@ -993,108 +1003,220 @@
 
 <script>
 // Відкрити "редагувати запит" модал
-  function openStudentEditRequestModal(requestId) {
-    const modal = document.getElementById('studentEditRequestModal');
-    document.getElementById('studentEditRequestId').value = requestId;
-    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
-    modal.style.display = 'block';
+function openStudentEditRequestModal(requestId) {
+  const modal = document.getElementById('studentEditRequestModal');
+  document.getElementById('studentEditRequestId').value = requestId;
+
+  const existingErrors = modal.querySelectorAll('.error-message');
+  existingErrors.forEach(error => error.remove());
+  
+  const motivationField = document.getElementById('editMotivation');
+  motivationField.style.borderColor = '#ccc';
+
+  // Очищуємо старі дані
+  document.getElementById('editMotivation').value = '';
+  document.getElementById('all-themes-container').innerHTML = '';
+  document.getElementById('newThemeInput').value = '';
+  const teacherThemeSelect = document.getElementById('editTeacherTheme');
+  teacherThemeSelect.innerHTML = ''; // Очищуємо селект
+
+  // Запитуємо дані з сервера
+  fetch(`/users/get-student-request-details/${requestId}/`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        console.error('Не вдалося завантажити дані для редагування.');
+        return;
+      }
+      // Заповнюємо поля
+      if (data.motivation) {
+        document.getElementById('editMotivation').value = data.motivation;
+      }
+      
+      // Заповнюємо теми студента
+      data.student_themes.forEach(theme => {
+        createThemeElement(theme.theme, theme.id);
+      });
+
+      // Перевіряємо кількість тем і блокуємо додавання, якщо досягнуто ліміту
+      updateThemeInputState();
+
+      // Заповнюємо випадаючий список тем викладача
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'Не обрано';
+      teacherThemeSelect.appendChild(defaultOption);
+
+      if (data.available_teacher_themes) {
+        data.available_teacher_themes.forEach(theme => {
+          const option = document.createElement('option');
+          option.value = theme.id;
+          option.textContent = theme.theme;
+          if (theme.id === data.selected_teacher_theme_id) {
+            option.selected = true;
+          }
+          teacherThemeSelect.appendChild(option);
+        });
+      }
+
+      modal.style.display = 'block';
+    })
+    .catch(err => {
+      console.error('Помилка при завантаженні даних.', err);
+    });
+}
+
+function createThemeElement(themeText, themeId = null) {
+  const container = document.getElementById('all-themes-container');
+  const newField = document.createElement('div');
+  
+  // Стилі для контейнера теми
+  newField.style.display = 'flex';
+  newField.style.alignItems = 'center';
+  newField.style.justifyContent = 'space-between';
+  newField.style.padding = '8px 12px';
+  newField.style.border = '1px solid #e5e7eb';
+  newField.style.borderRadius = '6px';
+  newField.style.backgroundColor = '#f9fafb';
+  newField.style.maxWidth = '400px';
+
+  // Визначаємо, який input створювати
+  const inputHtml = themeId
+    ? `<input type="hidden" name="themes" value="${themeId}">`
+    : `<input type="hidden" name="new_themes" value="${themeText}">`;
+
+  // Вміст елемента: текст, приховане поле, кнопка "видалити"
+  newField.innerHTML = `
+    <span title="${themeText}" style="padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${themeText}</span>
+    ${inputHtml}
+    <button type="button" onclick="removeTheme(this)" title="Видалити тему" 
+            style="background: transparent; border: none; color: #ef4444; font-size: 26px; cursor: pointer; line-height: 1; padding: 0 5px; display: flex; align-items: center; justify-content: center; transition: color 0.2s ease;"
+            onmouseover="this.style.color='#b91c1c'" 
+            onmouseout="this.style.color='#ef4444'">&times;</button>
+  `;
+  
+  container.appendChild(newField);
+  
+  updateThemeInputState();
+
+}
+
+
+function removeTheme(button) {
+  button.parentElement.remove();
+  updateThemeInputState();
+}
+
+  function updateThemeInputState() {
+  const themeCount = document.querySelectorAll('#all-themes-container > div').length;
+  const newThemeInput = document.getElementById('newThemeInput');
+  const addThemeButton = document.querySelector('button[onclick="addNewThemeField()"]');
+  
+  if (themeCount >= 3) {
+    newThemeInput.disabled = true;
+    addThemeButton.disabled = true;
+    newThemeInput.placeholder = "Досягнуто ліміт тем (максимум 3)";
+    addThemeButton.style.backgroundColor = '#d1d5db';
+    addThemeButton.style.cursor = 'not-allowed';
+  } else {
+    newThemeInput.disabled = false;
+    addThemeButton.disabled = false;
+    newThemeInput.placeholder = "Введіть текст нової теми";
+    addThemeButton.style.backgroundColor = '#3b82f6';
+    addThemeButton.style.cursor = 'pointer';
+  }
+}
+
+  // Додає нову тему зі поля вводу
+function addNewThemeField() {
+  const input = document.getElementById('newThemeInput');
+  const themeText = input.value.trim();
+  if (!themeText) return;
+  
+  // Check if we've reached the limit
+  const currentThemes = document.querySelectorAll('#all-themes-container > div');
+  if (currentThemes.length >= 3) {
+    return; 
   }
 
-  // Закрити модал
-  function closeStudentEditRequestModal() {
-    document.getElementById('studentEditRequestModal').style.display = 'none';
-  }
+  createThemeElement(themeText); 
+  
+  input.value = ''; 
+  input.focus(); 
+}
 
-  // Відправка форми редагування
+  // Закрити модалку
+function closeStudentEditRequestModal() {
+  const modal = document.getElementById('studentEditRequestModal');
+
+  const existingErrors = modal.querySelectorAll('.error-message');
+  existingErrors.forEach(error => error.remove());
+  
+  const motivationField = document.getElementById('editMotivation');
+  motivationField.style.borderColor = '#ccc';
+  
+  modal.style.display = 'none';
+}
+
+    // Відправка форми редагування
   function handleStudentEditRequestSubmit(event) {
     event.preventDefault();
     const form = document.getElementById('studentEditRequestForm');
     const requestId = document.getElementById('studentEditRequestId').value;
+
+    const existingError = form.querySelector('.error-message');
+    if (existingError) {
+        existingError.remove();
+    }
+    
     const data = new FormData(form);
 
     fetch(`/users/edit-student-request/${requestId}/`, {
-      method: 'POST',
-      headers: {
+        method: 'POST',
+        headers: {
         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: data
+        },
+        body: data
     })
     .then(res => res.json())
     .then(json => {
-      if (json.success) {
+        if (json.success) {
         closeStudentEditRequestModal();
         window.location.reload();
-      } else {
-        alert(json.error || 'Не вдалось зберегти зміни');
-      }
+        } else {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'error-message';
+        errorContainer.style.color = '#ef4444';
+        errorContainer.style.fontSize = '0.875rem';
+        errorContainer.style.marginTop = '0.25rem';
+        errorContainer.textContent = json.error || 'Не вдалось зберегти зміни';
+        form.insertBefore(errorContainer, form.firstChild);
+        }
     })
-    .catch(() => alert('Помилка при збереженні'));
-  }
+    .catch(err => {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'error-message';
+        errorContainer.style.color = '#ef4444';
+        errorContainer.style.fontSize = '0.875rem';
+        errorContainer.style.marginTop = '0.25rem';
+        errorContainer.textContent = 'Помилка при збереженні. Спробуйте ще раз.';
+        form.insertBefore(errorContainer, form.firstChild);
+    });
+    }
 
-  // Закрити модал ESC чи клік поза ним, якщо потрібно
+  // Обробники закриття модалки
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeStudentEditRequestModal();
   });
-  window.onclick = e => {
+  window.addEventListener('click', e => {
     if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
-  };
-
-  // Підключаємо сабміт-обробник
-  document.getElementById('studentEditRequestForm')
-          .addEventListener('submit', handleStudentEditRequestSubmit);
-</script>
-
-<script>
-// Відкрити "редагувати запит" модал
-  function openStudentEditRequestModal(requestId) {
-    const modal = document.getElementById('studentEditRequestModal');
-    document.getElementById('studentEditRequestId').value = requestId;
-    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
-    modal.style.display = 'block';
-  }
-
-  // Закрити модал
-  function closeStudentEditRequestModal() {
-    document.getElementById('studentEditRequestModal').style.display = 'none';
-  }
-
-  // Відправка форми редагування
-  function handleStudentEditRequestSubmit(event) {
-    event.preventDefault();
-    const form = document.getElementById('studentEditRequestForm');
-    const requestId = document.getElementById('studentEditRequestId').value;
-    const data = new FormData(form);
-
-    fetch(`/users/edit-student-request/${requestId}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: data
-    })
-    .then(res => res.json())
-    .then(json => {
-      if (json.success) {
-        closeStudentEditRequestModal();
-        window.location.reload();
-      } else {
-        alert(json.error || 'Не вдалось зберегти зміни');
-      }
-    })
-    .catch(() => alert('Помилка при збереженні'));
-  }
-
-  // Закрити модал ESC чи клік поза ним, якщо потрібно
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeStudentEditRequestModal();
   });
-  window.onclick = e => {
-    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
-  };
 
-  // Підключаємо сабміт-обробник
-  document.getElementById('studentEditRequestForm')
-          .addEventListener('submit', handleStudentEditRequestSubmit);
+  // Підключаємо сабміт-обробник до форми
+  document.getElementById('studentEditRequestForm').addEventListener('submit', handleStudentEditRequestSubmit);
+
 </script>
 
 <!-- Підключаємо зовнішній JavaScript файл для фільтрації запитів -->

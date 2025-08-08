@@ -27,6 +27,7 @@ from django.urls import reverse
 from django.template.loader import render_to_string
 from django.views import View
 from django.db.models import F
+from django.db.models import Q
 
 
 from cloudinary_storage.storage import MediaCloudinaryStorage
@@ -1437,3 +1438,100 @@ def edit_request_theme(request, request_id):
     except Exception as e:
         logger.error(f"Error editing request theme {request_id}: {str(e)}")
         return JsonResponse({'error': 'Сталася помилка при оновленні теми'}, status=500)
+    
+    
+@login_required
+@require_GET
+def get_student_request_details(request, request_id):
+    """
+    Get details for a student's request.
+    """
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+    req = get_object_or_404(Request.objects.select_related('teacher_theme', 'teacher_id'), id=request_id)
+
+    if req.student_id != request.user:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    student_themes = list(req.student_themes.all().values('id', 'theme'))
+    
+    selected_teacher_theme_id = req.teacher_theme.id if req.teacher_theme else None
+
+    available_teacher_themes_query = TeacherTheme.objects.filter(
+        teacher_id=req.teacher_id
+    ).filter(
+        Q(is_occupied=False) | Q(id=selected_teacher_theme_id)
+    )
+    available_teacher_themes = list(available_teacher_themes_query.values('id', 'theme'))
+    
+    data = {
+        'motivation': req.motivation_text,
+        'student_themes': student_themes,
+        'selected_teacher_theme_id': selected_teacher_theme_id,
+        'available_teacher_themes': available_teacher_themes,
+    }
+    return JsonResponse(data)
+
+@login_required
+@require_POST
+@transaction.atomic
+def edit_student_request(request, request_id):
+    """
+    Edit a student's request, including motivation and themes.
+    """
+    req = get_object_or_404(Request, id=request_id)
+
+    if req.student_id != request.user:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    
+    motivation = request.POST.get('motivation', '').strip()
+
+    current_student_theme_ids = {int(tid) for tid in request.POST.getlist('themes') if tid.isdigit()}
+    
+    new_themes = [t.strip() for t in request.POST.getlist('new_themes') if t.strip()]
+    
+    total_student_themes = len(current_student_theme_ids) + len(new_themes)
+    
+    if total_student_themes > 3:
+        return JsonResponse({'success': False, 'error': 'Ви можете запропонувати не більше 3 власних тем.'}, status=400)
+    
+    new_teacher_theme_id = request.POST.get('teacher_theme_id')
+    
+    if total_student_themes == 0 and not new_teacher_theme_id:
+        return JsonResponse({'success': False, 'error': 'Необхідно обрати тему викладача або запропонувати власну.'}, status=400)
+
+    req.motivation_text = motivation
+
+    StudentTheme.objects.filter(request=req).exclude(id__in=current_student_theme_ids).delete()
+
+    for theme_text in new_themes:
+        StudentTheme.objects.create(
+            request=req,
+            student_id=request.user,
+            theme=theme_text
+        )
+        
+    old_teacher_theme = req.teacher_theme
+    new_teacher_theme = None
+    if new_teacher_theme_id and new_teacher_theme_id.isdigit():
+        try:
+            new_teacher_theme = TeacherTheme.objects.get(id=int(new_teacher_theme_id))
+        except TeacherTheme.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Обрану тему викладача не знайдено.'}, status=400)
+
+    if old_teacher_theme != new_teacher_theme:
+        if old_teacher_theme:
+            old_teacher_theme.is_occupied = False
+            old_teacher_theme.save()
+
+        if new_teacher_theme:
+            if new_teacher_theme.is_occupied:
+                 return JsonResponse({'success': False, 'error': 'Ця тема вже зайнята іншим студентом.'}, status=400)
+            new_teacher_theme.is_occupied = True
+            new_teacher_theme.save()
+
+    req.teacher_theme = new_teacher_theme
+            
+    req.save()
+    return JsonResponse({'success': True, 'message': 'Запит успішно оновлено'})
