@@ -153,7 +153,7 @@ class DepartmentFilter(admin.SimpleListFilter):
         if self.value():
             return queryset.filter(teacher_id__teacher_id__department=self.value())
         return queryset
-
+    
 class SlotForm(forms.ModelForm):
     """
     Форма для Slot з українськими підписами.
@@ -199,7 +199,6 @@ class SlotAdmin(admin.ModelAdmin):
         'get_teacher_name',
         'get_department',
         'get_stream_code',
-        'get_edu_degree',
         'get_quota',
         'available_slots',
     )
@@ -219,7 +218,6 @@ class SlotAdmin(admin.ModelAdmin):
 
     list_filter = (
         DepartmentFilter,
-        'stream_id__edu_degree',
         'stream_id',
         HasSlotsFilter,
     )
@@ -252,10 +250,6 @@ class SlotAdmin(admin.ModelAdmin):
     def get_stream_code(self, obj):
         return obj.stream_id.stream_code
     
-    @admin.display(description='Освітній ступінь', ordering='stream_id__edu_degree')
-    def get_edu_degree(self, obj):
-        return obj.stream_id.edu_degree
-
     @admin.display(description='Квота', ordering='quota')
     def get_quota(self, obj):
         return obj.quota
@@ -338,11 +332,11 @@ class TeacherThemeAdmin(admin.ModelAdmin):
 
 # Мапа префіксів до назв спеціальностей
 PREFIX_MAP = {
-    'ФЕС': 'Інформаційні системи та технології',
-    'ФЕП': 'Інженерія програмного забезпечення',
-    'ФЕІ': 'Комп’ютерні науки',
-    'ФЕМ': 'Електроніка та комп’ютерні системи',
-    'ФЕЛ': 'Сенсорні та діагностичні електронні системи',
+    "ФЕС": '126 "Інформаційні системи та технології"',
+    "ФЕП": '121 "Інженерія програмного забезпечення"',
+    "ФЕІ": '122 "Комп\'ютерні науки"',
+    "ФЕМ": '171 "Електроніка та комп\'ютерні системи"',
+    "ФЕЛ": '176 "Сенсорні та діагностичні електронні системи"',
 }
 
 class StreamForm(forms.ModelForm):
@@ -352,21 +346,20 @@ class StreamForm(forms.ModelForm):
     - specialty_name не є обов'язковим на формі
     """
     # Явно визначаємо поле, щоб вимкнути required на рівні форми
-    specialty_name = forms.CharField(required=False, label='Назва спеціальності(-)')
-
     class Meta:
         model = Stream
-        fields = ('stream_code', 'specialty_name', 'edu_degree')
-
+        fields = ('stream_code',)
+        help_texts = {
+            'stream_code': 'Введіть код потоку, який повинен починатися з абревіатури спеціальності (ФЕС, ФЕП, ФЕІ, ФЕМ, ФЕЛ) та номеру потоку. Для магістрів додайте букву "м" після номеру потоку (наприклад, ФЕІ-2м).'
+        }
     def clean_specialty_name(self):
-        name = self.cleaned_data.get('specialty_name')
         code = self.cleaned_data.get('stream_code', '') or ''
-        # Якщо адміністратор не ввів назву, спробуємо автозаповнити
-        if not name and code:
+        # Автозаповнюємо спеціальність на основі префіксу
+        if code:
             for prefix, title in PREFIX_MAP.items():
                 if code.startswith(prefix):
                     return title
-        return name
+        return ''
 
     def clean(self):
         # Інші валідації залишаються стандартними
@@ -388,14 +381,9 @@ class StreamAdmin(admin.ModelAdmin):
     def code(self, obj):
         return obj.stream_code
     
-    @admin.display(ordering='edu_degree', description='Освітній ступінь')
-    def degree(self, obj):
-        return obj.edu_degree
-
-    list_display       = ('specialty', 'code', 'degree')
+    list_display       = ('specialty', 'code')
     list_display_links = ('code',)
     search_fields      = ('specialty_name', 'stream_code')
-    list_filter        = ('edu_degree',)
     ordering           = ('stream_code', 'specialty_name')
 
     def _is_super(self, request, obj=None):

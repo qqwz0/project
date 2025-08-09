@@ -43,17 +43,51 @@ def create_only_teacher(sender, instance, created, **kwargs):
 class Stream(models.Model):
     specialty_name = models.CharField(max_length=100)
     stream_code = models.CharField(max_length=100, unique=True)
-    edu_degree = models.CharField(max_length=50, choices=[
-        ('Бакалавр', 'Бакалавр'),
-        ('Магістр', 'Магістр'),
-    ], null=True, blank=False)
     
-    def __str__(self):
-        edu_degree_display = self.get_edu_degree_display() if self.edu_degree else "Не вказано"
-        return f"{self.stream_code} ({edu_degree_display})"
+    def bachelors_or_masters(self):
+        if self.stream_code.endswith('м'):
+            return 'Магістри'
+        return 'Бакалаври'
+    
+    def clean(self):
+        """Validate stream codes with proper faculty prefix and course number"""
+        super().clean()
+        
+        # Регулярний вираз для перевірки формату коду потоку
+        # Допустимі коди: ФЕС-1, ФЕП-2, ФЕЛ-3, ФЕІ-4, ФЕМ-2, ФЕІ-2м, ФЕМ-1м
+        pattern = r'^(ФЕ[СПЛІМ])-([1-4])(?:м)?$'
+        
+        match = re.match(pattern, self.stream_code)
+        if not match:
+            raise ValidationError({
+                'stream_code': "Код потоку має бути у форматі 'ФЕС-1', 'ФЕП-2', 'ФЕЛ-3', 'ФЕІ-4', 'ФЕМ-2', 'ФЕІ-2м' або 'ФЕМ-1м'."
+            })
+        
+        faculty = match.group(1)
+        course_number = int(match.group(2))
+        
+        # Перевірка обмежень для магістерських програм
+        if self.stream_code.endswith('м'):
+            if faculty not in ['ФЕІ', 'ФЕМ']:
+                raise ValidationError({
+                    'stream_code': "Магістерські програми (з кодом, що закінчується на 'м') можуть бути лише для ФЕІ та ФЕМ."
+                })
+            if course_number > 2:
+                raise ValidationError({
+                    'stream_code': "Магістерські програми можуть бути лише для курсів 1 або 2."
+                })
+        else:
+            if course_number > 4:
+                raise ValidationError({
+                    'stream_code': "Код потоку для бакалаврів не може бути більшим за 4 (наприклад, ФЕІ-4)."
+                })
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
-  
-    
+    def __str__(self):
+        return  f"{self.stream_code} ({self.bachelors_or_masters()})"
+
 class Slot(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     stream_id = models.ForeignKey(Stream, on_delete=models.CASCADE)
@@ -218,10 +252,17 @@ class Request(models.Model):
         if self.pk:  # Check if the request already exists
             old_request = Request.objects.get(pk=self.pk)
             if old_request.request_status != self.request_status:
+                # First save the request status change
+                super().save(*args, **kwargs)
+                
+                # Then update the slot count, which will now count this request
                 if self.request_status == 'Активний':
                     self.slot.update_occupied_slots(+1)
                 elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
+                    
+                # Return early since we've already saved
+                return
 
         if not self.academic_year:
             current_year = timezone.now().year

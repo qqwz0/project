@@ -155,15 +155,11 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 already_requested_set = set(already_requested_qs)
                 match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
                 if match:
-                    user_stream = match.group(1) + '-' + match.group(2)
+                    user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
 
                     # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
-                    expected_degree = 'Магістр' if "М" in user.academic_group.upper() else 'Бакалавр'
                     slots = slots.filter(
                         stream_id__stream_code__iexact=user_stream
-                    ).filter(
-                        Q(stream_id__edu_degree=expected_degree) | 
-                        Q(stream_id__edu_degree__isnull=True)
                     )
 
                     is_matched = True
@@ -274,15 +270,12 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         is_master =  "М" in user.academic_group.upper()
         match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
         if match:
-            user_stream = match.group(1) + '-' + match.group(2)
+            user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
             print(f"User stream: {user_stream}")
             # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
-            expected_degree = 'Магістр' if is_master else 'Бакалавр'
+            
             slots = slots.filter(
                 stream_id__stream_code__iexact=user_stream
-            ).filter(
-                Q(stream_id__edu_degree=expected_degree) | 
-                Q(stream_id__edu_degree__isnull=True)
             )
             print(f"Available slots for stream {user_stream}: {slots.count()}")
             is_matched = True
@@ -347,13 +340,7 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
                         theme=theme.strip()
                     )
                     print(f"Student theme added: {student_theme.theme}")
-            
-            # Update slot occupancy
-            if req.slot:
-                req.slot.occupied += 1
-                req.slot.save()
-                print(f"Slot {req.slot.id} occupancy updated to {req.slot.occupied}")
-            
+                        
             messages.success(self.request, self.get_success_message(form.cleaned_data))
             
             if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -394,29 +381,21 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = 'Очікує'
         
-        
-        student_stream_code = form.instance.extract_stream_from_academic_group()
         is_master = "М" in self.request.user.academic_group.upper()
+        student_stream_code = form.instance.extract_stream_from_academic_group() + ('м' if is_master else '')
         curse = student_stream_code.split('-')[1] if student_stream_code else None
         
-        if curse and curse == 4:
+        if curse and curse == '4':
             form.instance.work_type = 'Дипломна'
-        elif  is_master:
+        elif is_master:
             form.instance.work_type = 'Магістерська'
         else:
             form.instance.work_type = 'Курсова'  
+        
         if student_stream_code:
             try:
-                # Шукаємо потік з урахуванням того, що edu_degree може бути None
-                expected_degree = 'Магістр' if is_master else 'Бакалавр'
-                stream = Stream.objects.filter(
-                    stream_code=student_stream_code
-                ).filter(
-                    Q(edu_degree=expected_degree) | Q(edu_degree__isnull=True)
-                ).first()
-                
-                if not stream:
-                    raise Stream.DoesNotExist()
+                # Get a single Stream object instead of a QuerySet
+                stream = Stream.objects.get(stream_code=student_stream_code)
                     
                 # Get all slots for this teacher and stream
                 available_slots = Slot.objects.filter(
