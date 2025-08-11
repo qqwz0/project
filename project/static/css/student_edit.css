@@ -207,17 +207,46 @@ input:focus, select:focus {
     background: #16A34A;
 }
 
+.messages {
+    margin-bottom: 20px;
+}
+
 .message {
     padding: 12px 16px;
     border-radius: 6px;
     margin-bottom: 16px;
     transition: opacity 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .message.success {
     background-color: #DEF7EC;
     color: #03543F;
     border: 1px solid #31C48D;
+}
+
+.message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
+    white-space: pre-line;
+}
+
+/* Additional specificity for Django messages */
+.messages .message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
+}
+
+/* Force red color for error messages */
+div.message.error,
+.messages .message.error,
+#django-messages .message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
 }
 
 .themes-section {

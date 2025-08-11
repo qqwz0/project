@@ -951,7 +951,8 @@ def student_profile_edit(request):
     student_profile, created = OnlyStudent.objects.get_or_create(
         student_id=request.user,
         defaults={
-            'course': 1
+            'course': 1,
+            'speciality': 'Не вказано'
         }
     )
     
@@ -969,6 +970,7 @@ def student_profile_edit(request):
                     
                     # Update student profile fields
                     student_profile.course = form.cleaned_data['course']
+                    student_profile.education_level = form.cleaned_data.get('education_level')
                     student_profile.additional_email = form.cleaned_data['additional_email']
                     student_profile.phone_number = form.cleaned_data['phone_number']
                     student_profile.save()
@@ -979,10 +981,15 @@ def student_profile_edit(request):
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({
                             'success': True,
-                            'message': 'Профіль успішно оновлено',
-                            'redirect_url': reverse('profile')
+                            'message': 'Профіль успішно оновлено'
                         })
-                    return redirect('profile')
+                    
+                    # For regular requests, stay on the same page like teacher profile
+                    return render(request, 'profile/student_edit.html', {
+                        'form': form,
+                        'user': request.user,
+                        'user_profile': request.user
+                    })
             except Exception as e:
                 logger.error(f"Error saving student profile: {str(e)}")
                 messages.error(request, f"Помилка при збереженні профілю: {str(e)}")
@@ -992,11 +999,18 @@ def student_profile_edit(request):
                         'message': f"Помилка при збереженні профілю: {str(e)}"
                     }, status=400)
         else:
+            # Improved error handling - ensure all validation errors are captured
+            logger.warning(f"Student profile form validation failed: {form.errors}")
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'errors': dict(form.errors.items())
                 }, status=400)
+            else:
+                # For non-AJAX requests, add form errors to messages
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
     else:
         form = StudentProfileForm(instance=student_profile, user=request.user)
     

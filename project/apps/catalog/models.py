@@ -303,6 +303,11 @@ class StudentTheme(models.Model):
         return self.theme 
 
 class OnlyStudent(models.Model):
+    EDUCATION_LEVELS = [
+        ('bachelor', 'Bachelor'),
+        ('master', 'Master'),
+    ]
+    
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
@@ -310,6 +315,12 @@ class OnlyStudent(models.Model):
                                     related_name='catalog_student_profile')
     speciality = models.CharField(max_length=100)
     course = models.IntegerField()
+    education_level = models.CharField(
+        max_length=50,
+        choices=EDUCATION_LEVELS,
+        blank=True,
+        null=True
+    )
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 

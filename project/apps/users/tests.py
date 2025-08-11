@@ -3,10 +3,208 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import transaction
 from apps.catalog.models import OnlyTeacher, OnlyStudent, Request, Stream, Slot, TeacherTheme
+from apps.users.forms import StudentProfileForm
 from threading import Thread
 import time
 
 User = get_user_model()
+
+class StudentGroupValidationTestCase(TestCase):
+    def setUp(self):
+        # Create test student user
+        self.student_user = User.objects.create_user(
+            email='student.validation@test.com',
+            first_name='Студент',
+            last_name='Валідація',
+            role='Студент',
+            academic_group='ФЕС-21'  # Початкова група
+        )
+        
+        # Create or get student profile
+        self.student_profile, _ = OnlyStudent.objects.get_or_create(
+            student_id=self.student_user,
+            defaults={
+                'course': 2,
+                'speciality': 'Тестова спеціальність'
+            }
+        )
+
+    def test_valid_group_format_saves_correctly(self):
+        """Test that valid group format saves without errors"""
+        form_data = {
+            'first_name': 'Студент',
+            'last_name': 'Валідація',
+            'patronymic': '',
+            'academic_group': 'ФЕС-22',  # Нова коректна група
+            'course': 2,
+            'education_level': 'bachelor',
+            'additional_email': '',
+            'phone_number': ''
+        }
+        
+        form = StudentProfileForm(data=form_data, instance=self.student_profile, user=self.student_user)
+        
+        # Check that form is valid
+        if not form.is_valid():
+            print(f"Form errors: {form.errors}")
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+        
+        # Save the form - this saves only the OnlyStudent instance
+        form.save()
+        
+        # Manual update of user fields (as done in the view)
+        self.student_user.academic_group = form.cleaned_data['academic_group']
+        self.student_user.save()
+        
+        # Refresh user from database
+        self.student_user.refresh_from_db()
+        
+        # Check that academic_group was updated
+        self.assertEqual(self.student_user.academic_group, 'ФЕС-22')
+
+    def test_invalid_group_format_shows_error(self):
+        """Test that invalid group format shows validation error"""
+        invalid_groups = [
+            'ABC-21',  # not Ukrainian letters  
+            'ФЕС21',   # missing dash
+            'ФЕС-2',   # incomplete number
+            'ФЕС-221', # too long number
+            'ФЕХ-21',  # invalid faculty code
+            '',        # empty string
+        ]
+        
+        for invalid_group in invalid_groups:
+            with self.subTest(group=invalid_group):
+                form_data = {
+                    'first_name': 'Студент',
+                    'last_name': 'Валідація',
+                    'patronymic': '',
+                    'academic_group': invalid_group,
+                    'course': 2,
+                    'education_level': 'bachelor',
+                    'additional_email': '',
+                    'phone_number': ''
+                }
+                
+                form = StudentProfileForm(data=form_data, instance=self.student_profile, user=self.student_user)
+                self.assertFalse(form.is_valid(), f"Form should be invalid for group: {invalid_group}")
+                self.assertIn('academic_group', form.errors, f"Should have academic_group error for: {invalid_group}")
+
+    def test_lowercase_group_converts_to_uppercase(self):
+        """Test that lowercase group letters are converted to uppercase"""
+        form_data = {
+            'first_name': 'Студент',
+            'last_name': 'Валідація',
+            'patronymic': '',
+            'academic_group': 'фес-22',  # lowercase
+            'course': 2,
+            'education_level': 'bachelor',
+            'additional_email': '',
+            'phone_number': ''
+        }
+        
+        form = StudentProfileForm(data=form_data, instance=self.student_profile, user=self.student_user)
+        
+        # Check that form is valid after conversion
+        self.assertTrue(form.is_valid(), f"Form should be valid after uppercase conversion. Errors: {form.errors}")
+        
+        # Check that academic_group was converted to uppercase
+        self.assertEqual(form.cleaned_data['academic_group'], 'ФЕС-22')
+
+    def test_mixed_case_invalid_letters(self):
+        """Test that mixed case with invalid letters shows error"""
+        invalid_mixed_groups = [
+            'abc-21',  # latin letters
+            'ФЕХ-21',  # wrong faculty code
+            'ФЕС-51',  # invalid course number
+            'ФЕ-21',   # incomplete faculty code
+        ]
+        
+        for invalid_group in invalid_mixed_groups:
+            with self.subTest(group=invalid_group):
+                form_data = {
+                    'first_name': 'Студент',
+                    'last_name': 'Валідація',
+                    'patronymic': '',
+                    'academic_group': invalid_group,
+                    'course': 2,
+                    'education_level': 'bachelor',
+                    'additional_email': '',
+                    'phone_number': ''
+                }
+                
+                form = StudentProfileForm(data=form_data, instance=self.student_profile, user=self.student_user)
+                self.assertFalse(form.is_valid(), f"Form should be invalid for group: {invalid_group}")
+                self.assertIn('academic_group', form.errors, f"Should have academic_group error for: {invalid_group}")
+    
+    def test_course_group_mismatch_shows_error(self):
+        """Test that course and group mismatch shows validation error"""
+        form_data = {
+            'first_name': 'Студент',
+            'last_name': 'Валідація',
+            'academic_group': 'ФЕС-32',  # Course 3
+            'course': 2,  # But course field is 2
+            'education_level': 'bachelor'
+        }
+        
+        form = StudentProfileForm(
+            data=form_data,
+            instance=self.student_profile,
+            user=self.student_user
+        )
+        
+        self.assertFalse(form.is_valid())
+        self.assertIn('academic_group', form.errors)
+        self.assertIn('course', form.errors)
+    
+    def test_view_displays_validation_errors_ajax(self):
+        """Test that view properly returns validation errors for AJAX requests"""
+        self.client.force_login(self.student_user)
+        
+        form_data = {
+            'first_name': 'Студент',
+            'last_name': 'Валідація',
+            'academic_group': 'INVALID',  # Invalid format
+            'course': 2,
+            'education_level': 'bachelor'
+        }
+        
+        response = self.client.post(
+            reverse('student_profile_edit'),
+            data=form_data,
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 400)
+        response_data = response.json()
+        self.assertFalse(response_data['success'])
+        self.assertIn('errors', response_data)
+        self.assertIn('academic_group', response_data['errors'])
+    
+    def test_view_displays_validation_errors_non_ajax(self):
+        """Test that view properly shows validation errors for regular form submissions"""
+        self.client.force_login(self.student_user)
+        
+        form_data = {
+            'first_name': 'Студент',
+            'last_name': 'Валідація',
+            'academic_group': 'INVALID',  # Invalid format
+            'course': 2,
+            'education_level': 'bachelor'
+        }
+        
+        response = self.client.post(
+            reverse('student_profile_edit'),
+            data=form_data
+        )
+        
+        # Should render form again with errors
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'error-message')
+        
+        # Check that original values are preserved in case of error
+        self.assertContains(response, 'INVALID')
+
 
 class RequestApprovalTestCase(TransactionTestCase):
     def setUp(self):
