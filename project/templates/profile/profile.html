@@ -22,7 +22,9 @@
                             <label for="profile-pic-input" id="avatar-label">
                                 <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                             </label>
-                            {{ form.cropping }}
+                            {% if form %}
+                                {{ form.cropping }}
+                            {% endif %}
                         </form>
                     {% else %}
                         {% if user_profile.profile_picture %}
@@ -31,7 +33,9 @@
                             <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
                         {% endif %}
                     {% endif %}
-                    {{ form.media }}
+                    {% if form %}
+                        {{ form.media }}
+                    {% endif %}
                 </div>
 
                 <!-- Profile Text -->

@@ -6,6 +6,7 @@ from django.http import FileResponse, HttpResponse
 from django.urls import reverse
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
+import re
 
 from docxtpl import DocxTemplate
 
@@ -330,6 +331,32 @@ class TeacherThemeAdmin(admin.ModelAdmin):
                 kwargs["queryset"] = OnlyTeacher.objects.filter(teacher_id__department=request.user.department)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def delete_model(self, request, obj):
+        if Request.objects.filter(teacher_theme=obj, request_status__in=['Активний', 'Очікує']).exists():
+            self.message_user(
+                request,
+                f"Неможливо видалити тему «{obj.theme}», оскільки вона прив'язана до активного або очікуючого запиту.",
+                messages.ERROR
+            )
+        else:
+            super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        linked_themes = []
+        for theme in queryset:
+            if Request.objects.filter(teacher_theme=theme, request_status__in=['Активний', 'Очікує']).exists():
+                linked_themes.append(theme.theme)
+
+        if linked_themes:
+            themes_str = ", ".join(f"«{t}»" for t in linked_themes)
+            self.message_user(
+                request,
+                f"Неможливо виконати видалення. Наступні теми прив'язані до активних запитів або запитів в очікуванні: {themes_str}.",
+                messages.ERROR
+            )
+        else:
+            super().delete_queryset(request, queryset)
+
 # Мапа префіксів до назв спеціальностей
 PREFIX_MAP = {
     "ФЕС": '126 "Інформаційні системи та технології"',
@@ -525,6 +552,62 @@ class RequestForm(forms.ModelForm):
             'request_status': 'Статус',
             
         }
+    def clean(self):
+        """
+        Додає комплексну валідацію для запиту:
+        1. Перевіряє, чи є у викладача вільні місця для потоку студента.
+        2. Перевіряє, чи обрана тема викладача не є зайнятою або видаленою.
+        """
+        cleaned_data = super().clean()
+        teacher_theme = cleaned_data.get('teacher_theme')
+        teacher_profile = cleaned_data.get('teacher_id')
+        student = cleaned_data.get('student_id')
+
+        # Перевіряємо лише при створенні нового запиту або зміні ключових полів
+        is_new_request = not self.instance.pk
+
+        # 1. Валідація слота (наявності вільних місць)
+        if is_new_request and student and teacher_profile:
+            try:
+                # Визначаємо потік студента за його групою
+                is_master = student.academic_group.endswith('м')
+                match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', student.academic_group)
+                if match:
+                    student_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                stream = Stream.objects.get(stream_code__iexact=student_stream)
+
+                # Шукаємо відповідний слот
+                slot = Slot.objects.get(teacher_id=teacher_profile, stream_id=stream)
+
+                if (slot.quota - slot.occupied) < 1:
+                    raise forms.ValidationError(
+                        "У цього викладача немає вільних місць для потоку, до якого належить студент."
+                    )
+            except Stream.DoesNotExist:
+                raise forms.ValidationError(
+                    f"Не вдалося знайти потік для групи студента «{student.academic_group}»."
+                )
+            except Slot.DoesNotExist:
+                raise forms.ValidationError(
+                    "Викладач не має відкритих слотів для потоку, до якого належить студент."
+                )
+
+        # 2. Валідація теми викладача
+        if teacher_theme:
+            # Перевіряємо, чи тема нова для цього запиту
+            is_new_or_changed_theme = is_new_request or self.instance.teacher_theme != teacher_theme
+            
+            if is_new_or_changed_theme:
+                if teacher_theme.is_occupied:
+                    raise forms.ValidationError({
+                        'teacher_theme': "Ця тема вже зайнята іншим студентом і не може бути обрана."
+                    })
+                if getattr(teacher_theme, 'is_deleted', False):
+                    raise forms.ValidationError({
+                        'teacher_theme': "Ця тема була видалена і не може бути обрана."
+                    })
+
+        return cleaned_data   
 
 class RequestAdmin(admin.ModelAdmin):
     form = RequestForm

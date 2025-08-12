@@ -290,6 +290,7 @@ class TeacherTheme(models.Model):
     theme = models.CharField(max_length=100)
     theme_description = models.TextField()
     is_occupied = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     
     def __str__(self):
         return self.theme

@@ -560,7 +560,7 @@ def profile(request: HttpRequest, user_id=None):
         
         context.update({
             'teacher_profile': teacher_profile,
-            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile).exclude(theme_description='(Запропоновано студентом)'),
+            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False).exclude(theme_description='(Запропоновано студентом)'),
             'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(
                 available=F('quota') - F('occupied')
             ),
@@ -836,22 +836,41 @@ def teacher_profile_edit(request):
                     
                     try:
                         new_themes = json.loads(new_themes_data)
-                        logger.debug(f"Parsed themes: {new_themes}")
+                        new_theme_texts = {item['theme'] for item in new_themes}
                         
-                        # Delete existing themes
-                        TeacherTheme.objects.filter(teacher_id=teacher_profile).delete()
+                        existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
                         
-                        # Create new themes
+                        # Find themes to remove
+                        for theme in existing_themes:
+                            if theme.theme not in new_theme_texts:
+                                # Check if theme is in an active or pending request
+                                is_in_use = Request.objects.filter(
+                                    Q(teacher_theme=theme) | Q(approved_student_theme__theme=theme.theme),
+                                    request_status__in=['Активний', 'Очікує']
+                                ).exists()
+
+                                if is_in_use:
+                                    error_message = f"Неможливо видалити тему '{theme.theme}', оскільки вона використовується в активному або очікуючому запиті."
+                                    logger.warning(f"User {request.user.id} failed to delete theme '{theme.theme}' as it is in use.")
+                                    return JsonResponse({'success': False, 'message': error_message}, status=409)
+                                
+                                # Soft delete if not in use
+                                # Assuming TeacherTheme has an 'is_deleted' field.
+                                theme.is_deleted = True
+                                theme.save()
+
+                        # Add or update themes
                         for theme_data in new_themes:
-                                theme = theme_data.get('theme', '').strip()
-                                description = theme_data.get('description', '').strip()
-                                logger.debug(f"Processing theme: {theme}, description: {description}")
-                                if theme:  # Only create if theme is not empty
-                                    TeacherTheme.objects.create(
-                                        teacher_id=teacher_profile,
-                                        theme=theme,
-                                        theme_description=description
-                                    )
+                            theme_text = theme_data.get('theme', '').strip()
+                            if theme_text:
+                                theme_obj, created = TeacherTheme.objects.update_or_create(
+                                    teacher_id=teacher_profile,
+                                    theme=theme_text,
+                                    defaults={
+                                        'theme_description': theme_data.get('description', ''),
+                                        'is_deleted': False # Ensure it's active
+                                    }
+                                )
                         
                         messages.success(request, "Профіль успішно оновлено")
                         
@@ -865,7 +884,7 @@ def teacher_profile_edit(request):
                         # For regular requests, stay on the same page
                         return render(request, 'profile/teacher_edit.html', {
                             'form': form,
-                            'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),
+                            'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False),
                             'slots': Slot.objects.filter(teacher_id=teacher_profile),
                             'available_streams': Stream.objects.exclude(
                                 id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
@@ -900,7 +919,7 @@ def teacher_profile_edit(request):
     else:
         form = TeacherProfileForm(instance=teacher_profile, user=request.user)
     
-    existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
+    existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False)
     slots = Slot.objects.filter(teacher_id=teacher_profile)
     
     # Get all available streams that the teacher doesn't already have

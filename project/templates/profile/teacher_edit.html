@@ -17,7 +17,7 @@
     <h2 class="edit-title">Редагувати профіль</h2>
 
     {% if messages %}
-    <div class="messages">
+    <div class="messages" id="django-messages">
         {% for message in messages %}
             <div class="message {{ message.tags }}">
                 {{ message }}
@@ -132,8 +132,8 @@
                       <div class="phone-input">
                         <span class="country-code">+380</span>
                         {{ form.phone_number }}
-                        <div class="error-message" id="phone_number-error"></div>
                       </div>
+                      <div class="error-message" id="phone_number-error"></div>
                     </div>
                   </div>
                   <div class="themes-section">
@@ -175,32 +175,6 @@ themes.push({
 });
 {% endfor %}
 
-document.addEventListener('DOMContentLoaded', function() {
-    const profilePictureInput = document.getElementById('profile-picture-input');
-    const profilePreview = document.getElementById('profile-preview');
-    function handleProfilePictureChange(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                profilePreview.src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        } else {
-            profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
-        }
-    }
-    if (profilePictureInput) {
-        profilePictureInput.addEventListener('change', handleProfilePictureChange);
-    }
-    // Initialize themes data in hidden input
-    document.getElementById('themes-data').value = JSON.stringify(themes);
-    // Handle form submission
-    document.getElementById('teacherProfileForm').addEventListener('submit', function(e) {
-        document.getElementById('themes-data').value = JSON.stringify(themes);
-    });
-});
-
 window.addTheme = function() {
     const input = document.getElementById('new-theme');
     const theme = input.value.trim();
@@ -229,6 +203,171 @@ window.removeTheme = function(button) {
     themeDiv.remove();
     document.getElementById('themes-data').value = JSON.stringify(themes);
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('teacherProfileForm');
+    const profilePictureInput = document.getElementById('profile-picture-input');
+    const profilePreview = document.getElementById('profile-preview');
+
+    // Convert Django error messages to toast notifications on page load
+    const djangoMessages = document.getElementById('django-messages');
+    if (djangoMessages) {
+        const errorMessages = djangoMessages.querySelectorAll('.message.error');
+        if (errorMessages.length > 0) {
+            djangoMessages.style.display = 'none';
+            const errorTexts = Array.from(errorMessages).map(msg => msg.textContent.trim());
+            let userMessage = errorTexts.length === 1 ? errorTexts[0] : `Будь ласка, виправте наступні помилки:\n${errorTexts.join('\n')}`;
+            showErrorMessage(userMessage);
+        }
+    }
+
+    function clearErrors() {
+        document.querySelectorAll('.error-message').forEach(error => {
+            error.textContent = '';
+        });
+    }
+
+    function showSuccessMessage(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification success';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #DEF7EC; color: #03543F; border: 1px solid #31C48D;
+            padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999; font-size: 14px; font-weight: 500; opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.style.opacity = '1', 10);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+    }
+
+    function showErrorMessage(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification error';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #FEF2F2; color: #991B1B; border: 1px solid #F87171;
+            padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999; font-size: 14px; font-weight: 500; opacity: 0;
+            transition: opacity 0.3s ease; white-space: pre-line; max-width: 400px; text-align: center;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.style.opacity = '1', 10);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(toast), 5000);
+        }, 5000);
+    }
+
+    function displayErrors(errors) {
+        clearErrors();
+        let errorMessages = [];
+        Object.keys(errors).forEach(field => {
+            const errorElement = document.getElementById(`${field}-error`);
+            const fieldErrors = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
+            if (errorElement) {
+                errorElement.textContent = fieldErrors.join(' ');
+            }
+            const fieldName = getFieldDisplayName(field);
+            fieldErrors.forEach(error => {
+                errorMessages.push(`${fieldName}: ${error}`);
+            });
+        });
+        if (errorMessages.length > 0) {
+            let userMessage = errorMessages.length === 1 ? errorMessages[0] : `Будь ласка, виправте наступні помилки:\n${errorMessages.join('\n')}`;
+            showErrorMessage(userMessage);
+        }
+    }
+
+    function getFieldDisplayName(fieldName) {
+        const fieldNames = {
+            'first_name': "Ім'я",
+            'last_name': 'Прізвище',
+            'patronymic': 'По-батькові',
+            'department': 'Кафедра',
+            'academic_level': 'Науковий рівень',
+            'additional_email': 'Додаткова електронна скринька',
+            'phone_number': 'Робочий номер телефону'
+        };
+        return fieldNames[fieldName] || fieldName;
+    }
+
+    function handleProfilePictureChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePreview.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        } else {
+            profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
+        }
+    }
+
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', handleProfilePictureChange);
+    }
+
+    // Initialize themes data in hidden input
+    document.getElementById('themes-data').value = JSON.stringify(themes);
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearErrors();
+
+        const djangoMessages = document.getElementById('django-messages');
+        if (djangoMessages) {
+            djangoMessages.style.display = 'none';
+        }
+
+        // Update themes data before creating FormData
+        document.getElementById('themes-data').value = JSON.stringify(themes);
+        
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => {
+            if (response.status === 409) { // Conflict
+                return response.json().then(data => {
+                    data.isConflict = true;
+                    return data;
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showSuccessMessage(data.message || 'Профіль успішно оновлено');
+            } else {
+                if (data.isConflict) {
+                    showErrorMessage(data.message || 'Неможливо видалити тему, оскільки вона використовується.');
+                } else if (data.errors) {
+                    displayErrors(data.errors);
+                } else if (data.message) {
+                    showErrorMessage(data.message);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.');
+        });
+    });
+});
 </script>
 {% endblock %}
 

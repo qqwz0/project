@@ -313,7 +313,7 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
                         theme=teacher_theme_text, 
                         teacher_id=self.get_object()
                     )
-                    if not teacher_theme.is_occupied:
+                    if not teacher_theme.is_occupied and not teacher_theme.is_deleted:
                         req.teacher_theme = teacher_theme
                         teacher_theme.is_occupied = True
                         teacher_theme.save()
@@ -359,19 +359,10 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
             if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
-                    'errors': {'__all__': [str(e)]}
+                    'errors': {'__all__': e.messages}
                 }, status=400)
             return self.form_invalid(form)
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            messages.error(self.request, f"Помилка при створенні запиту: {str(e)}")
-            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'errors': {'__all__': [f"Помилка при створенні запиту: {str(e)}"]}
-                }, status=400)
-            return self.form_invalid(form)
-        
+
     def assign_request_fields(self, form):
         """
         Assigns current user, teacher, and request status to the form instance.
