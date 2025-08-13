@@ -273,34 +273,42 @@ class SlotAdmin(admin.ModelAdmin):
 class TeacherThemeForm(forms.ModelForm):
     class Meta:
         model = TeacherTheme
-        fields = ['teacher_id', 'theme', 'theme_description', 'is_occupied']
+        fields = ['teacher_id', 'theme', 'theme_description', 'is_occupied', 'is_active', 'streams']
         labels = {
             'teacher_id': 'Викладач',
             'theme': 'Тема',
             'theme_description': 'Опис',
             'is_occupied': 'Зайнята',
+            'is_active': 'Активна',
+            'streams': 'Потоки',
         }
         help_texts = {
             'theme': 'Формулювання теми, доступне для вибору студентом',
             'theme_description': 'Додаткові деталі або специфікація теми (необовʼязково)',
+            'is_active': 'Деактивовані теми не відображаються в списках для вибору',
+            'streams': 'Потоки, до яких прикріплена тема',
         }
 
 class TeacherThemeAdmin(admin.ModelAdmin):
     form = TeacherThemeForm
 
-    list_display = ('get_teacher_full_name', 'get_teacher_theme', 'is_occupied')
+    list_display = ('get_teacher_full_name', 'get_teacher_theme', 'is_occupied', 'is_active', 'get_streams_display')
     readonly_fields = ('is_occupied',)
 
     search_fields = (
         'teacher_id__teacher_id__last_name',
         'teacher_id__teacher_id__first_name',
         'teacher_id__teacher_id__patronymic',
+        'theme',
     )
 
-    list_filter = ('is_occupied', 'teacher_id__teacher_id__department')
+    list_filter = ('is_occupied', 'is_active', 'teacher_id__teacher_id__department', 'streams')
     ordering = ('teacher_id__teacher_id__last_name', 'teacher_id__teacher_id__first_name')
 
     autocomplete_fields = ('teacher_id',)
+    filter_horizontal = ('streams',)  # Для зручного вибору потоків
+    
+    actions = ['activate_themes', 'deactivate_themes']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -318,11 +326,29 @@ class TeacherThemeAdmin(admin.ModelAdmin):
 
     @admin.display(
         description="Тема",
-        ordering='theme'  # This is a direct model field, so sortable as-is
+        ordering='theme'
     )
-
     def get_teacher_theme(self, obj):
         return obj.theme
+
+    @admin.display(
+        description="Потоки"
+    )
+    def get_streams_display(self, obj):
+        streams = obj.streams.all()
+        if streams:
+            return ', '.join([stream.stream_code for stream in streams])
+        return '-'
+
+    @admin.action(description='Активувати вибрані теми')
+    def activate_themes(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'Активовано {updated} тем.')
+
+    @admin.action(description='Деактивувати вибрані теми')
+    def deactivate_themes(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'Деактивовано {updated} тем.')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id":
