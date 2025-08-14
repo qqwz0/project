@@ -21,6 +21,30 @@ from apps.catalog.models import (
 )
 from .export_service import export_requests_to_word
 
+from django.contrib.admin import SimpleListFilter
+
+class StreamFilter(SimpleListFilter):
+    title = 'Потік'
+    parameter_name = 'stream'
+
+    def lookups(self, request, model_admin):
+        streams = (
+            model_admin.model.objects
+            .select_related('slot__stream_id')
+            .values_list('slot__stream_id__id', 'slot__stream_id__stream_code')
+            .distinct()
+        )
+        return [
+            (stream_id, stream_code)
+            for stream_id, stream_code in streams
+            if stream_id is not None
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(slot__stream_id__id=self.value())
+        return queryset
+
 class StudentAutocompleteField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return obj.get_full_name_with_patronymic()
@@ -551,7 +575,7 @@ class RequestAdmin(admin.ModelAdmin):
     list_filter = (
         'request_status',
         'work_type',
-        'slot__stream_id',
+        StreamFilter,
         'teacher_id__teacher_id__department',
         'academic_year',
     )
