@@ -98,14 +98,14 @@ class RegistrationForm(forms.Form):
             if not group:
                 raise ValidationError("Це поле обов'язкове для студентів.")
             
-            # Convert group to uppercase
+            # Convert group to uppercase first
             group = group.upper()
             self.cleaned_data['group'] = group  # Save the updated value back into cleaned_data
             
-            # Regular expression to match the correct format
-            pattern = r'^(?:ФЕ[СЛ](?:-[1-4][1-9])?|ФЕ[ІМ](?:-(?:[1-4][1-9]|[1-2][1-9]М))?|ФЕП-[1-4][1-9](?:ВПК)?)$'
+            # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
+            pattern = r'^ФЕ[СЛІПМ]-[1-4][0-9](ВПК|М)?$'
             if not re.match(pattern, group):
-                raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
+                raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
         
         # Debugging log after successful group validation
         logger.debug(f"Group cleaned successfully: {group}")
@@ -241,6 +241,12 @@ class StudentProfileForm(forms.ModelForm):
             'max': 4
         })
     )
+    education_level = forms.ChoiceField(
+        label="Освітній рівень",
+        choices=[('', 'Оберіть рівень')] + OnlyStudent.EDUCATION_LEVELS,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
     additional_email = forms.EmailField(
         label="Додаткова електронна скринька",
         required=False,
@@ -260,7 +266,7 @@ class StudentProfileForm(forms.ModelForm):
 
     class Meta:
         model = OnlyStudent
-        fields = ['course', 'additional_email', 'phone_number']
+        fields = ['course', 'education_level', 'additional_email', 'phone_number']
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -273,6 +279,7 @@ class StudentProfileForm(forms.ModelForm):
         instance = kwargs.get('instance')
         if instance:
             self.fields['course'].initial = instance.course
+            self.fields['education_level'].initial = instance.education_level
             self.fields['additional_email'].initial = instance.additional_email
             self.fields['phone_number'].initial = instance.phone_number
 
@@ -283,7 +290,7 @@ class StudentProfileForm(forms.ModelForm):
 
         if course and academic_group:
             # Перевіряємо, чи співпадає курс з першою цифрою в номері групи
-            match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', academic_group)
+            match = re.match(r'^ФЕ[СЛІПМ]-(\d)', academic_group)
             if match:
                 group_course = int(match.group(1))
                 if group_course != course:
@@ -303,13 +310,13 @@ class StudentProfileForm(forms.ModelForm):
         if not group:
             raise ValidationError("Це поле обов'язкове.")
             
-        # Convert group to uppercase
+        # Convert group to uppercase first
         group = group.upper()
         
-        # Regular expression to match the correct format
-        pattern = r'^(?:ФЕ[СЛ](?:-[1-4][1-9])?|ФЕ[ІМ](?:-(?:[1-4][1-9]|[1-2][1-9]М))?|ФЕП-[1-4][1-9](?:ВПК)?)$'
+        # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
+        pattern = r'^ФЕ[СЛІПМ]-[1-4][0-9](ВПК|М)?$'
         if not re.match(pattern, group):
-            raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
+            raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
         
         return group
 
