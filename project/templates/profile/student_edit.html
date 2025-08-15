@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showErrorMessage(userMessage);
         }
     }
-
+    
     function clearErrors() {
         document.querySelectorAll('.error-message').forEach(error => {
             error.textContent = '';
@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // Create a more friendly message for multiple errors
                 userMessage = `Будь ласка, виправте наступні помилки:\n${errorMessages.join('\n')}`;
-            }
+        }
             showErrorMessage(userMessage);
         }
     }
