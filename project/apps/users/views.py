@@ -623,13 +623,16 @@ def profile(request: HttpRequest, user_id=None):
     return render(request, 'profile/profile.html', context)
 
 @login_required
+@transaction.atomic
 def approve_request(request, request_id):
     """
     Approve a request and update its status to 'Активний'.
+    Automatically cancel all other pending requests from the same student.
     """
     if request.method == 'POST':
         try:
-            req = Request.objects.get(id=request_id)
+            # Use select_for_update to prevent race conditions
+            req = Request.objects.select_for_update().get(id=request_id)
             
             # Add debugging logs
             logger.debug(f"Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}")
@@ -638,11 +641,27 @@ def approve_request(request, request_id):
             
             # Check if the user is the teacher who received the request - use more reliable comparison
             if req.teacher_id.teacher_id == request.user:
-                # Update request status
+                student_id = req.student_id
+                
+                # Cancel all other pending requests from this student
+                other_pending_requests = Request.objects.filter(
+                    student_id=student_id,
+                    request_status='Очікує'
+                ).exclude(id=req.id)
+                
+                cancelled_count = other_pending_requests.update(
+                    request_status='Відхилено', 
+                    rejected_reason='Автоматично скасовано через прийняття іншого запиту'
+                )
+                
+                # Accept the chosen request
                 req.request_status = 'Активний'
                 req.save()
                 
-                messages.success(request, 'Запит успішно підтверджено')
+                logger.info(f"Request {req.id} approved. {cancelled_count} other pending requests cancelled for student {student_id.id}")
+                
+                success_message = f'Запит успішно підтверджено. {cancelled_count} інших очікуючих запитів автоматично скасовано.' if cancelled_count > 0 else 'Запит успішно підтверджено.'
+                messages.success(request, success_message)
                 
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': True})
@@ -1286,11 +1305,13 @@ def request_details_for_approve(request, request_id):
 
 @csrf_exempt
 @require_POST
+@transaction.atomic
 def approve_request_with_theme(request, request_id):
     if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
-        req = Request.objects.select_related('teacher_id').get(id=request_id, request_status='Очікує')
+        # Use select_for_update to prevent race conditions
+        req = Request.objects.select_for_update().get(id=request_id, request_status='Очікує')
         if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
@@ -1302,6 +1323,20 @@ def approve_request_with_theme(request, request_id):
         # Extract new fields
         comment = data.get('comment', '').strip()
         send_contacts = data.get('send_contacts', False)
+
+        # Store student_id before making changes
+        student_id = req.student_id
+
+        # Cancel all other pending requests from this student
+        other_pending_requests = Request.objects.filter(
+            student_id=student_id,
+            request_status='Очікує'
+        ).exclude(id=req.id)
+        
+        cancelled_count = other_pending_requests.update(
+            request_status='Відхилено', 
+            rejected_reason='Автоматично скасовано через прийняття іншого запиту'
+        )
 
         # Assign comment and send_contacts
         req.comment = comment
@@ -1332,8 +1367,14 @@ def approve_request_with_theme(request, request_id):
         print(f"Saving Request ID {req.id}")
         print(f"Comment: {req.comment}")
         print(f"Send contacts to student: {req.send_contacts_to_student}")
+        
+        logger.info(f"Request {req.id} approved with theme. {cancelled_count} other pending requests cancelled for student {student_id.id}")
+        
         req.save()
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'cancelled_count': cancelled_count
+        })
 
     except Request.DoesNotExist:
         return JsonResponse({'error': 'Request not found'}, status=404)
