@@ -46,7 +46,7 @@ from apps.catalog.models import (
     StudentTheme
 )
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 # Load environment variables
 load_dotenv()
@@ -1563,36 +1563,6 @@ def edit_student_request(request, request_id):
 
 @login_required
 @require_POST
-def deactivate_teacher_theme(request, theme_id):
-    """
-    Деактивує тему викладача (логічне видалення)
-    """
-    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'error': 'Invalid request'}, status=400)
-    
-    try:
-        theme = TeacherTheme.objects.get(id=theme_id)
-        
-        # Перевіряємо права доступу
-        if request.user.role != 'Викладач' or theme.teacher_id.teacher_id != request.user:
-            return JsonResponse({'error': 'У вас немає прав для деактивації цієї теми'}, status=403)
-        
-        # Деактивуємо тему
-        theme.deactivate()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Тему успішно деактивовано'
-        })
-        
-    except TeacherTheme.DoesNotExist:
-        return JsonResponse({'error': 'Тему не знайдено'}, status=404)
-    except Exception as e:
-        logger.error(f"Error deactivating theme {theme_id}: {str(e)}")
-        return JsonResponse({'error': 'Сталася помилка при деактивації теми'}, status=500)
-
-@login_required
-@require_POST
 def activate_teacher_theme(request, theme_id):
     """
     Активує тему викладача
@@ -1607,8 +1577,10 @@ def activate_teacher_theme(request, theme_id):
         if request.user.role != 'Викладач' or theme.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'У вас немає прав для активації цієї теми'}, status=403)
         
-        # Активуємо тему
-        theme.activate()
+        # Активуємо тему (синхронізуємо обидва поля)
+        theme.is_active = True
+        theme.is_deleted = False  # ✅ Важливо!
+        theme.save()
         
         return JsonResponse({
             'success': True,
@@ -1620,6 +1592,38 @@ def activate_teacher_theme(request, theme_id):
     except Exception as e:
         logger.error(f"Error activating theme {theme_id}: {str(e)}")
         return JsonResponse({'error': 'Сталася помилка при активації теми'}, status=500)
+
+@login_required
+@require_POST
+def deactivate_teacher_theme(request, theme_id):
+    """
+    Деактивує тему викладача
+    """
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    try:
+        theme = TeacherTheme.objects.get(id=theme_id)
+        
+        # Перевіряємо права доступу
+        if request.user.role != 'Викладач' or theme.teacher_id.teacher_id != request.user:
+            return JsonResponse({'error': 'У вас немає прав для деактивації цієї теми'}, status=403)
+        
+        # Деактивуємо тему (синхронізуємо обидва поля)
+        theme.is_active = False
+        theme.is_deleted = True  # ✅ Важливо!
+        theme.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Тему успішно деактивовано'
+        })
+        
+    except TeacherTheme.DoesNotExist:
+        return JsonResponse({'error': 'Тему не знайдено'}, status=404)
+    except Exception as e:
+        logger.error(f"Error deactivating theme {theme_id}: {str(e)}")
+        return JsonResponse({'error': 'Сталася помилка при деактивації теми'}, status=500)
 
 @login_required
 @require_POST
@@ -1700,7 +1704,7 @@ def attach_theme_to_streams(request, theme_id):
         return JsonResponse({'error': 'Сталася помилка при прикріпленні теми до потоків'}, status=500)
 
 @login_required
-@require_POST
+@require_http_methods(["POST"])
 def create_teacher_theme(request):
     """
     Створює нову тему викладача
@@ -1715,7 +1719,7 @@ def create_teacher_theme(request):
         data = json.loads(request.body)
         theme_name = data.get('theme', '').strip()
         theme_description = data.get('description', '').strip()
-        stream_ids = data.get('stream_ids', [])
+        streams = data.get('streams', [])
         
         if not theme_name:
             return JsonResponse({'error': 'Назва теми не може бути порожньою'}, status=400)
@@ -1723,23 +1727,30 @@ def create_teacher_theme(request):
         # Отримати профіль викладача
         teacher_profile = OnlyTeacher.objects.get(teacher_id=request.user)
         
-        # Створити тему
+        # Створити тему з правильними полями
         theme = TeacherTheme.objects.create(
             teacher_id=teacher_profile,
             theme=theme_name,
             theme_description=theme_description,
-            is_active=True
+            is_occupied=False,
+            is_active=True,  # ✅ Використовуємо is_active
+            is_deleted=False  # ✅ Додаємо is_deleted
         )
         
         # Прикріпити до потоків
-        if stream_ids:
-            streams = Stream.objects.filter(id__in=stream_ids)
+        if streams:
             theme.streams.set(streams)
         
         return JsonResponse({
             'success': True,
             'message': 'Тему успішно створено',
-            'theme_id': theme.id
+            'theme': {
+                'id': theme.id,
+                'theme': theme.theme,
+                'description': theme.theme_description,
+                'is_active': theme.is_active,  # ✅ Повертаємо is_active
+                'streams': list(theme.streams.values_list('id', flat=True))
+            }
         })
         
     except OnlyTeacher.DoesNotExist:

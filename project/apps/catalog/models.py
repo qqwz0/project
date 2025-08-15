@@ -286,11 +286,12 @@ class Request(models.Model):
         return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
     
 class TeacherTheme(models.Model):
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE, related_name='themes')
     theme = models.CharField(max_length=100)
-    theme_description = models.TextField()
+    theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)  # Логічна деактивація
+    is_active = models.BooleanField(default=True)  # ✅ Додаємо це поле
+    is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')  # Зв'язок з потоками
     
     def __str__(self):
@@ -300,11 +301,13 @@ class TeacherTheme(models.Model):
     def deactivate(self):
         """Логічна деактивація теми"""
         self.is_active = False
+        self.is_deleted = True  # ✅ Синхронізуємо поля
         self.save()
     
     def activate(self):
         """Активація теми"""
         self.is_active = True
+        self.is_deleted = False  # ✅ Синхронізуємо поля
         self.save()
     
     def can_be_deleted(self):

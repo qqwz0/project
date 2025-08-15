@@ -158,9 +158,9 @@
                             
                             <!-- Статус та кількість запитів -->
                             <div class="theme-status-container">
-                                <div class="status-indicator {% if theme.is_active %}active{% else %}inactive{% endif %}">
+                                <div class="status-indicator {% if theme.is_active and not theme.is_deleted %}active{% else %}inactive{% endif %}">
                                     <span class="status-dot"></span>
-                                    <span class="status-text">{% if theme.is_active %}Активна{% else %}Неактивна{% endif %}</span>
+                                    <span class="status-text">{% if theme.is_active and not theme.is_deleted %}Активна{% else %}Неактивна{% endif %}</span>
                                 </div>
                                 <div class="requests-count">
                                     Запитів: {{ theme.get_active_requests_count }}
@@ -205,7 +205,7 @@
                                     <i class="icon">✏️</i>
                                     Редагувати
                                 </button>
-                                {% if theme.is_active %}
+                                {% if theme.is_active and not theme.is_deleted %}
                                     <button type="button" class="action-btn deactivate-btn" onclick="toggleThemeStatus({{ theme.id }}, false)" title="Деактивувати">
                                         <i class="icon">⏸️</i>
                                         Деактивувати
