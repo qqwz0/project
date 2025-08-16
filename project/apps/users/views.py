@@ -1258,8 +1258,15 @@ def request_details_for_approve(request, request_id):
         req = Request.objects.select_related('student_id', 'teacher_id').prefetch_related('student_themes').get(id=request_id, request_status='Очікує')
         if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'Forbidden'}, status=403)
+        
+        selected_theme_id = req.teacher_theme.id if req.teacher_theme else None
+        
         # Теми викладача
-        teacher_themes = TeacherTheme.objects.filter(teacher_id=req.teacher_id, is_occupied=False, is_active=True)
+        teacher_themes = TeacherTheme.objects.filter(
+            Q(teacher_id=req.teacher_id) & 
+            (Q(is_occupied=False, is_active=True) | Q(id=selected_theme_id))
+        )
+
         # Теми студента
         student_themes = req.student_themes.all()
         # Формуємо список тем для вибору
@@ -1294,8 +1301,12 @@ def approve_request_with_theme(request, request_id):
     if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
-        # Use select_for_update to prevent race conditions
-        req = Request.objects.select_for_update().get(id=request_id, request_status='Очікує')
+
+        req = Request.objects.select_for_update().select_related('teacher_id', 'teacher_theme').get(
+            id=request_id,
+            request_status='Очікує'
+        )
+
         if request.user.role != 'Викладач' or req.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
@@ -1303,6 +1314,10 @@ def approve_request_with_theme(request, request_id):
         theme_id = data.get('theme_id')
         if not theme_id:
             return JsonResponse({'error': 'Тему не обрано'}, status=400)
+
+        # Зберігаємо початкову тему викладача, щоб звільнити її, якщо буде обрано іншу
+        original_teacher_theme = req.teacher_theme
+        new_teacher_theme = None
 
         # Extract new fields
         comment = data.get('comment', '').strip()
@@ -1330,6 +1345,11 @@ def approve_request_with_theme(request, request_id):
         if str(theme_id).startswith('teacher_'):
             theme_pk = int(str(theme_id).replace('teacher_', ''))
             theme = TeacherTheme.objects.get(id=theme_pk, teacher_id=req.teacher_id)
+            
+            if theme.is_occupied and theme != original_teacher_theme:
+                return JsonResponse({'error': 'Ця тема вже зайнята іншим студентом.'}, status=400)
+            new_teacher_theme = theme
+
             req.teacher_theme = theme
             req.approved_student_theme = None  # Явно очищаємо, якщо раніше була студентська
             req.custom_student_theme = None  # Очищаємо довільну тему, якщо вона була
@@ -1343,9 +1363,16 @@ def approve_request_with_theme(request, request_id):
             # Вибрана довільна тема студента
             req.teacher_theme = None  # Очищаємо тему викладача
             req.approved_student_theme = None  # Очищаємо затверджену тему студента
-            # custom_student_theme залишається як є
         else:
             return JsonResponse({'error': 'Некоректна тема'}, status=400)
+
+        if original_teacher_theme and original_teacher_theme != new_teacher_theme:
+            original_teacher_theme.is_occupied = False
+            original_teacher_theme.save()
+        
+        if new_teacher_theme and not new_teacher_theme.is_occupied:
+            new_teacher_theme.is_occupied = True
+            new_teacher_theme.save()
 
         req.request_status = 'Активний'
         print(f"Saving Request ID {req.id}")
@@ -1372,15 +1399,21 @@ def approve_request_with_theme(request, request_id):
 
 @csrf_exempt
 @require_POST
+@transaction.atomic
 def student_refuse_request(request, request_id):
     if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
-        req = Request.objects.get(id=request_id)
+        req = Request.objects.select_related('teacher_theme').get(id=request_id)
         if request.user.role != 'Студент' or req.student_id != request.user:
             return JsonResponse({'error': 'Forbidden'}, status=403)
         if req.request_status not in ['Очікує', 'Активний']:
             return JsonResponse({'error': 'Відмовитися можна лише від запиту зі статусом "Очікує" або "Активний"'}, status=400)
+        
+        if req.teacher_theme:
+            req.teacher_theme.is_occupied = False
+            req.teacher_theme.save()
+
         data = json.loads(request.body.decode('utf-8'))
         reason = data.get('reason', '').strip()
         req.request_status = 'Відхилено студентом'
