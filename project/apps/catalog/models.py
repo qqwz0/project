@@ -293,6 +293,7 @@ class TeacherTheme(models.Model):
     is_active = models.BooleanField(default=True)  # ✅ Додаємо це поле
     is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')  # Зв'язок з потоками
+
     
     def __str__(self):
         status = "🟢" if self.is_active else "🔴"

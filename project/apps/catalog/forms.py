@@ -137,7 +137,9 @@ class RequestForm(forms.ModelForm):
         """
         super(RequestForm, self).__init__(*args, **kwargs)
         # Query all unoccupied themes for this teacher
-        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False, is_active=True)
+
+        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False, is_deleted=False, is_active=True)
+
         self.themes_list = [(theme.theme, theme.theme) for theme in themes]
         
         # Mark these fields as optional

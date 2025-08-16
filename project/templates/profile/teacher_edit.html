@@ -6,7 +6,7 @@
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
-            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю">
+            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" id="profile-preview">
         </div>
         <div class="profile-title">
             <h1>{{ user.get_full_name }}</h1>
@@ -17,7 +17,7 @@
     <h2 class="edit-title">Редагувати профіль</h2>
 
     {% if messages %}
-    <div class="messages">
+    <div class="messages" id="django-messages">
         {% for message in messages %}
             <div class="message {{ message.tags }}">
                 {{ message }}
@@ -27,7 +27,7 @@
     {% endif %}
 
     <div class="form-content">
-        <form method="post" class="edit-form" id="teacherProfileForm">
+        <form method="post" class="edit-form" id="teacherProfileForm" enctype="multipart/form-data">
             {% csrf_token %}
     
             <div class="form-sections teacher-sections">
@@ -131,8 +131,8 @@
                       <div class="phone-input">
                         <span class="country-code">+380</span>
                         {{ form.phone_number }}
-                        <div class="error-message" id="phone_number-error"></div>
                       </div>
+                      <div class="error-message" id="phone_number-error"></div>
                     </div>
                   </div>
                 <!-- ТЕМИ -->
@@ -774,7 +774,7 @@ function editTheme(themeId) {
     
     // Зберегти оригінальні значення
     const originalTitle = themeCard.querySelector('.theme-title').textContent;
-    const originalDescription = descriptionDiv ? descriptionDiv.textContent : '';
+    const originalDescription = descriptionDiv ? descriptionDiv.textContent.trim() : '';
     const originalActions = actionsDiv.innerHTML;
     
     // Перетворити заголовок на поле введення
@@ -932,16 +932,16 @@ function cancelThemeEdit(themeId, button) {
         descriptionContainer.remove();
     }
     
-    // Відновити або видалити опис залежно від того, чи був він раніше
+    let descriptionDiv = themeCard.querySelector('.theme-description');
     if (originalDescription && originalDescription.trim()) {
-        let descriptionDiv = themeCard.querySelector('.theme-description');
         if (!descriptionDiv) {
-            // Створити div для опису якщо його немає
             descriptionDiv = document.createElement('div');
             descriptionDiv.className = 'theme-description';
             themeCard.querySelector('.theme-status-container').parentNode.insertBefore(descriptionDiv, themeCard.querySelector('.theme-streams-container'));
         }
         descriptionDiv.textContent = originalDescription;
+    } else if (descriptionDiv) {
+        descriptionDiv.remove();
     }
     
     exitEditMode(themeCard);
@@ -1035,7 +1035,8 @@ async function toggleThemeStatus(themeId, activate) {
 async function deleteThemeWithValidation(themeId) {
     const themeCard = document.querySelector(`[data-theme-id="${themeId}"]`);
     const themeName = themeCard.querySelector('.theme-title').textContent;
-    const requestsCount = parseInt(themeCard.querySelector('.requests-count').textContent.replace('Запитів: ', ''));
+    const requestsCountText = themeCard.querySelector('.requests-count').textContent;
+    const requestsCount = parseInt(requestsCountText.replace(/[^0-9]/g, '')) || 0;
     
     if (requestsCount > 0) {
         showMessage(`Неможливо видалити тему "${themeName}". Вона використовується в ${requestsCount} активних запитах.`, 'error');
@@ -1145,23 +1146,112 @@ async function updateThemeStreams(themeId) {
 
 // Ініціалізація при завантаженні сторінки
 document.addEventListener('DOMContentLoaded', function() {
-    // Старий код для профілю...
+    const form = document.getElementById('teacherProfileForm');
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePreview = document.getElementById('profile-preview');
 
-    // Обробка зміни фото профілю
-    if (profilePictureInput) {
-        profilePictureInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    profilePreview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
+    // Convert Django error messages to toast notifications on page load
+    const djangoMessages = document.getElementById('django-messages');
+    if (djangoMessages) {
+        const errorMessages = djangoMessages.querySelectorAll('.message.error');
+        if (errorMessages.length > 0) {
+            djangoMessages.style.display = 'none';
+            const errorTexts = Array.from(errorMessages).map(msg => msg.textContent.trim());
+            let userMessage = errorTexts.length === 1 ? errorTexts[0] : `Будь ласка, виправте наступні помилки:\n${errorTexts.join('\n')}`;
+            showMessage(userMessage, 'error');
+        }
+    }
+
+    function clearErrors() {
+        document.querySelectorAll('.error-message').forEach(error => {
+            error.textContent = '';
         });
     }
+
+    function displayErrors(errors) {
+        clearErrors();
+        let errorMessages = [];
+        Object.keys(errors).forEach(field => {
+            const errorElement = document.getElementById(`${field}-error`);
+            const fieldErrors = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
+            if (errorElement) {
+                errorElement.textContent = fieldErrors.join(' ');
+            }
+            const fieldName = getFieldDisplayName(field);
+            fieldErrors.forEach(error => {
+                errorMessages.push(`${fieldName}: ${error}`);
+            });
+        });
+        if (errorMessages.length > 0) {
+            let userMessage = errorMessages.length === 1 ? errorMessages[0] : `Будь ласка, виправте наступні помилки:\n${errorMessages.join('\n')}`;
+            showMessage(userMessage, 'error');
+        }
+    }
+
+    function getFieldDisplayName(fieldName) {
+        const fieldNames = {
+            'first_name': "Ім'я",
+            'last_name': 'Прізвище',
+            'patronymic': 'По-батькові',
+            'department': 'Кафедра',
+            'academic_level': 'Науковий рівень',
+            'additional_email': 'Додаткова електронна скринька',
+            'phone_number': 'Робочий номер телефону'
+        };
+        return fieldNames[fieldName] || fieldName;
+    }
+
+    function handleProfilePictureChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePreview.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', handleProfilePictureChange);
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearErrors();
+
+        const djangoMessages = document.getElementById('django-messages');
+        if (djangoMessages) {
+            djangoMessages.style.display = 'none';
+        }
+        
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message || 'Профіль успішно оновлено', 'success');
+            } else {
+                if (data.errors) {
+                    displayErrors(data.errors);
+                } else if (data.message) {
+                    showMessage(data.message, 'error');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.', 'error');
+        });
+    });
 });
 </script>
 {% endblock %}
