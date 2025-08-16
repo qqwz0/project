@@ -151,6 +151,29 @@
                         {% endwith %}
                 </div>
             </div>
+            {% if user.role == "Студент" and request_obj.send_contacts %}
+                <div class="teacher-contacts" style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                        <i class="fas fa-address-card" style="margin-right: 5px;"></i> Контакти викладача
+                    </h4>
+                    {% if request_obj.teacher_id.additional_email %}
+                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                            <i class="fas fa-envelope" style="color: #2563eb; margin-right: 8px;"></i>
+                            <a href="mailto:{{ request_obj.teacher_id.additional_email }}" style="color: #2563eb; text-decoration: none;">
+                                {{ request_obj.teacher_id.additional_email }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if request_obj.teacher_id.phone_number %}
+                        <div style="display: flex; align-items: center;">
+                            <i class="fas fa-phone" style="color: #2563eb; margin-right: 8px;"></i>
+                            <a href="tel:{{ request_obj.teacher_id.phone_number }}" style="color: #2563eb; text-decoration: none;">
+                                {{ request_obj.teacher_id.phone_number }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% endfor %}
     {% else %}
         {% if request.user == profile_user %}

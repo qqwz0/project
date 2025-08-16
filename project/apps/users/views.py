@@ -561,7 +561,8 @@ def profile(request: HttpRequest, user_id=None):
         context.update({
             'teacher_profile': teacher_profile,
 
-            'themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False, is_active=True).exclude(theme_description='(Запропоновано студентом)'),
+            # Групуємо теми викладача за потоками
+            'themes_by_stream': _group_teacher_themes_by_stream(teacher_profile),
 
             'slots': Slot.objects.filter(teacher_id=teacher_profile).annotate(
                 available=F('quota') - F('occupied')
@@ -851,79 +852,83 @@ def teacher_profile_edit(request):
                     
                     form.save()
                     
+                    messages.success(request, "Профіль успішно оновлено")
+                    
                     # Handle themes
                     new_themes_data = request.POST.get('themes_data', '[]')
                     logger.debug(f"Themes data received: {new_themes_data}")
                     
-                    try:
-                        new_themes = json.loads(new_themes_data)
-                        new_theme_texts = {item['theme'] for item in new_themes}
-                        
-                        existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
-                        
-                        # Find themes to remove
-                        for theme in existing_themes:
-                            if theme.theme not in new_theme_texts:
-                                # Check if theme is in an active or pending request
-                                is_in_use = Request.objects.filter(
-                                    Q(teacher_theme=theme) | Q(approved_student_theme__theme=theme.theme),
-                                    request_status__in=['Активний', 'Очікує']
-                                ).exists()
+                    # Тільки обробляємо теми якщо дані дійсно передані і не порожні
+                    if new_themes_data and new_themes_data != '[]':
+                        try:
+                            new_themes = json.loads(new_themes_data)
+                            new_theme_texts = {item['theme'] for item in new_themes}
+                            
+                            existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile)
+                            
+                            # Find themes to remove
+                            for theme in existing_themes:
+                                if theme.theme not in new_theme_texts:
+                                    # Check if theme is in an active or pending request
+                                    is_in_use = Request.objects.filter(
+                                        Q(teacher_theme=theme) | Q(approved_student_theme__theme=theme.theme),
+                                        request_status__in=['Активний', 'Очікує']
+                                    ).exists()
 
-                                if is_in_use:
-                                    error_message = f"Неможливо видалити тему '{theme.theme}', оскільки вона використовується в активному або очікуючому запиті."
-                                    logger.warning(f"User {request.user.id} failed to delete theme '{theme.theme}' as it is in use.")
-                                    return JsonResponse({'success': False, 'message': error_message}, status=409)
-                                
-                                # Soft delete if not in use
-                                # Assuming TeacherTheme has an 'is_deleted' field.
-                                theme.is_deleted = True
-                                theme.save()
+                                    if is_in_use:
+                                        error_message = f"Неможливо видалити тему '{theme.theme}', оскільки вона використовується в активному або очікуючому запиті."
+                                        logger.warning(f"User {request.user.id} failed to delete theme '{theme.theme}' as it is in use.")
+                                        return JsonResponse({'success': False, 'message': error_message}, status=409)
+                                    
+                                    # Soft delete if not in use
+                                    theme.is_deleted = True
+                                    theme.save()
 
-                        # Add or update themes
-                        for theme_data in new_themes:
-                            theme_text = theme_data.get('theme', '').strip()
-                            if theme_text:
-                                theme_obj, created = TeacherTheme.objects.update_or_create(
-                                    teacher_id=teacher_profile,
-                                    theme=theme_text,
-                                    defaults={
-                                        'theme_description': theme_data.get('description', ''),
-                                        'is_deleted': False # Ensure it's active
-                                    }
-                                )
+                            # Add or update themes
+                            for theme_data in new_themes:
+                                theme_text = theme_data.get('theme', '').strip()
+                                if theme_text:
+                                    theme_obj, created = TeacherTheme.objects.update_or_create(
+                                        teacher_id=teacher_profile,
+                                        theme=theme_text,
+                                        defaults={
+                                            'theme_description': theme_data.get('description', ''),
+                                            'is_deleted': False # Ensure it's active
+                                        }
+                                    )
                         
-                        messages.success(request, "Профіль успішно оновлено")
-                        
-                        # Return JSON response for AJAX requests without redirect
-                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                            return JsonResponse({
-                                'success': True,
-                                'message': 'Профіль успішно оновлено'
-                            })
-                        
-                        # For regular requests, stay on the same page
-                        return render(request, 'profile/teacher_edit.html', {
-                            'form': form,
-                            'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False),
-                            'slots': Slot.objects.filter(teacher_id=teacher_profile),
-                            'available_streams': Stream.objects.exclude(
-                                id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
-                            ),
-                            'user': request.user,
-                            'user_profile': request.user  # Додаємо user_profile в контекст
+                        except json.JSONDecodeError as e:
+                            logger.error(f"JSON Decode Error: {str(e)} - Data: {new_themes_data}")
+                            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                                return JsonResponse({
+                                    'success': False,
+                                    'message': 'Помилка при збереженні тем'
+                                }, status=400)
+                            messages.error(request, "Помилка при збереженні тем")
+                    
+                    messages.success(request, "Профіль успішно оновлено")
+                    
+                    # Return JSON response for AJAX requests without redirect
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': True,
+                            'message': 'Профіль успішно оновлено'
                         })
-                        
-                    except json.JSONDecodeError as e:
-                        logger.error(f"JSON Decode Error: {str(e)} - Data: {new_themes_data}")
-                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                            return JsonResponse({
-                                'success': False,
-                                'message': 'Помилка при збереженні тем'
-                            }, status=400)
-                        messages.error(request, "Помилка при збереженні тем")
-                        
+                    
+                    # For regular requests, stay on the same page
+                    return render(request, 'profile/teacher_edit.html', {
+                        'form': form,
+                        'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False),
+                        'slots': Slot.objects.filter(teacher_id=teacher_profile),
+                        'available_streams': Stream.objects.exclude(
+                            id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
+                        ),
+                        'all_streams': Stream.objects.all(),
+                        'user': request.user,
+                        'user_profile': request.user
+                    })
             except Exception as e:
+                logger.error(f"Error processing profile: {str(e)}")
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': False,
@@ -937,24 +942,23 @@ def teacher_profile_edit(request):
                     'errors': dict(form.errors.items())
                 }, status=400)
             messages.error(request, "Помилка при збереженні профілю")
+
     else:
         form = TeacherProfileForm(instance=teacher_profile, user=request.user)
     
     existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False)
     slots = Slot.objects.filter(teacher_id=teacher_profile)
-    
-    # Get all available streams that the teacher doesn't already have
     existing_stream_ids = slots.values_list('stream_id_id', flat=True)
     available_streams = Stream.objects.exclude(id__in=existing_stream_ids)
 
-    
     return render(request, 'profile/teacher_edit.html', {
         'form': form,
         'existing_themes': existing_themes,
         'slots': slots,
         'available_streams': available_streams,
+        'all_streams': Stream.objects.all(),  # Всі потоки для селектора в темах
         'user': request.user,
-        'user_profile': request.user  # Додаємо user_profile в контекст
+        'user_profile': request.user
     })
 
 def teacher_requests(request):
@@ -1352,7 +1356,6 @@ def approve_request_with_theme(request, request_id):
     if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
-
         req = Request.objects.select_for_update().select_related('teacher_id', 'teacher_theme').get(
             id=request_id,
             request_status='Очікує'
@@ -1390,7 +1393,7 @@ def approve_request_with_theme(request, request_id):
 
         # Assign comment and send_contacts
         req.comment = comment
-        req.send_contacts_to_student = send_contacts
+        req.send_contacts = send_contacts  # Використовуємо правильне ім'я поля
 
         # Assign theme
         if str(theme_id).startswith('teacher_'):
@@ -1428,7 +1431,7 @@ def approve_request_with_theme(request, request_id):
         req.request_status = 'Активний'
         print(f"Saving Request ID {req.id}")
         print(f"Comment: {req.comment}")
-        print(f"Send contacts to student: {req.send_contacts_to_student}")
+        print(f"Send contacts to student: {req.send_contacts}")
         
         logger.info(f"Request {req.id} approved with theme. {cancelled_count} other pending requests cancelled for student {student_id.id}")
         
@@ -1446,7 +1449,6 @@ def approve_request_with_theme(request, request_id):
         return JsonResponse({'error': 'Тема студента не знайдена'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @csrf_exempt
 @require_POST
@@ -1693,9 +1695,9 @@ def deactivate_teacher_theme(request, theme_id):
         if request.user.role != 'Викладач' or theme.teacher_id.teacher_id != request.user:
             return JsonResponse({'error': 'У вас немає прав для деактивації цієї теми'}, status=403)
         
-        # Деактивуємо тему (синхронізуємо обидва поля)
+        # Деактивуємо тему (тільки is_active)
         theme.is_active = False
-        theme.is_deleted = True  # ✅ Важливо!
+        theme.is_deleted = False  # ✅ Змінюємо на False
         theme.save()
         
         return JsonResponse({
@@ -1803,7 +1805,8 @@ def create_teacher_theme(request):
         data = json.loads(request.body)
         theme_name = data.get('theme', '').strip()
         theme_description = data.get('description', '').strip()
-        streams = data.get('streams', [])
+        # Приймаємо stream_ids замість streams
+        stream_ids = data.get('stream_ids', [])
         
         if not theme_name:
             return JsonResponse({'error': 'Назва теми не може бути порожньою'}, status=400)
@@ -1817,12 +1820,13 @@ def create_teacher_theme(request):
             theme=theme_name,
             theme_description=theme_description,
             is_occupied=False,
-            is_active=True,  # ✅ Використовуємо is_active
-            is_deleted=False  # ✅ Додаємо is_deleted
+            is_active=True,
+            is_deleted=False
         )
         
         # Прикріпити до потоків
-        if streams:
+        if stream_ids:
+            streams = Stream.objects.filter(id__in=stream_ids)
             theme.streams.set(streams)
         
         return JsonResponse({
@@ -1832,7 +1836,7 @@ def create_teacher_theme(request):
                 'id': theme.id,
                 'theme': theme.theme,
                 'description': theme.theme_description,
-                'is_active': theme.is_active,  # ✅ Повертаємо is_active
+                'is_active': theme.is_active,
                 'streams': list(theme.streams.values_list('id', flat=True))
             }
         })
@@ -1904,4 +1908,64 @@ def update_teacher_theme(request, theme_id):
     except Exception as e:
         logger.error(f"Error updating theme {theme_id}: {str(e)}")
         return JsonResponse({'error': 'Сталася помилка при оновленні теми'}, status=500)
+
+@login_required
+def delete_theme(request, theme_id):
+    """
+    Видаляє тему викладача з перевіркою можливості видалення
+    """
+    theme = get_object_or_404(TeacherTheme, id=theme_id, teacher_id__teacher_id=request.user)
+    try:
+        active_requests = Request.objects.filter(
+            teacher_theme=theme,
+            request_status__in=['Очікує', 'Активний']
+        ).exists()
+
+        if active_requests:
+            return JsonResponse({
+                'error': 'Неможливо видалити тему, яка використовується в активних або очікуючих запитах'
+            }, status=400)
+        
+        theme.delete() 
+        return JsonResponse({'success': True})
+
+    except ValidationError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Помилка при видаленні теми: {str(e)}'}, status=500)
+
+def _group_teacher_themes_by_stream(teacher_profile):
+    """
+    Групує теми викладача за потоками
+    """
+    themes = TeacherTheme.objects.filter(
+        teacher_id=teacher_profile, 
+        is_deleted=False, 
+        is_active=True
+    ).exclude(
+        theme_description='(Запропоновано студентом)'
+    ).prefetch_related('streams')
+    
+    themes_by_stream = {}
+    
+    for theme in themes:
+        if not theme.streams.exists():
+            if 'Без потоку' not in themes_by_stream:
+                themes_by_stream['Без потоку'] = []
+            themes_by_stream['Без потоку'].append(theme)
+        else:
+            for stream in theme.streams.all():
+                stream_name = stream.stream_code.replace(' (Бакалаври)', '')
+                if stream_name not in themes_by_stream:
+                    themes_by_stream[stream_name] = []
+                themes_by_stream[stream_name].append(theme)
+    
+    sorted_themes_by_stream = {}
+    if 'Без потоку' in themes_by_stream:
+        sorted_themes_by_stream['Без потоку'] = themes_by_stream['Без потоку']
+    
+    for stream_name in sorted([k for k in themes_by_stream.keys() if k != 'Без потоку']):
+        sorted_themes_by_stream[stream_name] = themes_by_stream[stream_name]
+    
+    return sorted_themes_by_stream
 

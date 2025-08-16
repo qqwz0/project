@@ -12,7 +12,8 @@ from .views import (
     DownloadFileView,
     AddCommentView,
     DeleteCommentView,
-    archived_request_details
+    archived_request_details,
+    delete_theme
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -35,4 +36,5 @@ urlpatterns = [
     path('file/<int:file_id>/comment/', AddCommentView.as_view(), name='add_comment'),
     path('comment/<int:pk>/delete/', DeleteCommentView.as_view(), name='delete_comment'),
     path('archived-request-details/<int:request_id>/', archived_request_details, name='archived_request_details'),
+    
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

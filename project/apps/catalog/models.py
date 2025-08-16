@@ -11,6 +11,7 @@ import re
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from apps.users.models import CustomUser
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
         
@@ -152,6 +153,35 @@ class Slot(models.Model):
         super().save(*args, **kwargs)
 
 class Request(models.Model):
+    # Додаємо нові поля
+    topic_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Назва теми")
+    topic_description = models.TextField(blank=True, null=True, verbose_name="Опис теми")
+    is_topic_locked = models.BooleanField(default=False, verbose_name="Тема затверджена і заблокована")
+
+    # Існуючі поля залишаються без змін
+    teacher_theme = models.ForeignKey(
+        'TeacherTheme',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='requests',
+        verbose_name="Тема викладача",
+    )
+    approved_student_theme = models.ForeignKey(
+        'StudentTheme',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_requests',
+        verbose_name="Затверджена тема студента",
+    )
+    custom_student_theme = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Довільна тема студента"
+    )
+
     STATUS = [
         ('Очікує', 'Очікує'),
         ('Активний', 'Активний'),
@@ -165,12 +195,6 @@ class Request(models.Model):
                                    related_name='users_student_requests')
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
-    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
-                                    null=True, blank=True)
-    # Якщо затверджено студентську тему, зберігаємо її тут
-    approved_student_theme = models.ForeignKey('StudentTheme', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_requests', help_text='Затверджена студентська тема для цього запиту (якщо обрано тему студента)')
-    # Довільна тема студента для введення в адмінці
-    custom_student_theme = models.CharField(max_length=200, blank=True, null=True, help_text='Довільна тема студента (для введення в адмінці)')
     motivation_text = models.TextField(
         blank=True,
         max_length=500,
@@ -218,56 +242,66 @@ class Request(models.Model):
         return None
     
     def save(self, *args, **kwargs):
-        """
-        Assigns the correct Slot before saving.
-        """
-        if not self.slot:  # Only assign slot if not manually set
+        # Перевіряємо чи змінюється статус і чи потрібно заблокувати тему
+        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
+            self.is_topic_locked = True
+            
+            # Зберігаємо тему в текстове поле при затвердженні
+            if self.teacher_theme:
+                self.topic_name = self.teacher_theme.theme
+                self.topic_description = self.teacher_theme.theme_description
+            elif self.approved_student_theme:
+                self.topic_name = self.approved_student_theme.theme
+            elif self.custom_student_theme:
+                self.topic_name = self.custom_student_theme
+
+        # Захист від зміни заблокованої теми - перевіряємо ТІЛЬКИ якщо тема вже заблокована
+        if self.is_topic_locked and self.pk:  # Перевіряємо тільки для існуючих об'єктів
+            try:
+                original = Request.objects.get(pk=self.pk)
+                if original.is_topic_locked and original.topic_name != self.topic_name:  # Додаємо перевірку is_topic_locked
+                    raise ValidationError("Неможливо змінити затверджену тему")
+            except Request.DoesNotExist:
+                pass
+
+        # Існуюча логіка для слотів
+        if not self.slot:
             student_stream_code = self.extract_stream_from_academic_group()
-            print(f"Extracted stream code: {student_stream_code}")
             if not student_stream_code:
                 raise ValidationError("Student academic group is missing or invalid.")
 
-            # Find the corresponding Stream object
             try:
                 stream = Stream.objects.get(stream_code=student_stream_code)
-                print(f"Found stream: {stream}")
             except Stream.DoesNotExist:
                 raise ValidationError(f"No stream found with code: {student_stream_code}")
 
-            # Find an available slot for this teacher in this stream
             available_slot = Slot.objects.filter(
                 teacher_id=self.teacher_id,
                 stream_id=stream
             ).filter(occupied__lt=models.F('quota')).first()
-            
-            print(f"Available slot found: {available_slot}")
 
             if not available_slot:
                 raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
 
-            # Assign the found slot
             self.slot = available_slot
 
-        # Handle slot availability when request status changes
-        if self.pk:  # Check if the request already exists
+        # Обробка зміни статусу для слотів
+        if self.pk:
             old_request = Request.objects.get(pk=self.pk)
             if old_request.request_status != self.request_status:
-                # Save all changes first (including teacher_theme)
                 super().save(*args, **kwargs)
                 
-                # Then update the slot count, which will now count this request
                 if self.request_status == 'Активний':
                     self.slot.update_occupied_slots(+1)
                 elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
-                    
-                # Return early since we've already saved
                 return
 
+        # Встановлення навчального року
         if not self.academic_year:
             current_year = timezone.now().year
             month = timezone.now().month
-            if month >= 9:  # Якщо після вересня
+            if month >= 9:
                 self.academic_year = f"{current_year}/{str(current_year + 1)[-2:]}"
             else:
                 self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
@@ -290,66 +324,82 @@ class TeacherTheme(models.Model):
     theme = models.CharField(max_length=100)
     theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)  # ✅ Додаємо це поле
+    is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
-    streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')  # Зв'язок з потоками
+    streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')
 
-    
     def __str__(self):
         status = "🟢" if self.is_active else "🔴"
         return f"{status} {self.theme}"
-    
-    def deactivate(self):
-        """Логічна деактивація теми"""
-        self.is_active = False
-        self.is_deleted = True  # ✅ Синхронізуємо поля
-        self.save()
-    
-    def activate(self):
-        """Активація теми"""
-        self.is_active = True
-        self.is_deleted = False  # ✅ Синхронізуємо поля
-        self.save()
-    
+
     def can_be_deleted(self):
         """Перевіряє чи можна фізично видалити тему"""
-        # Перевіряємо чи тема використовується в активних запитах
+        # Перевіряємо чи тема використовується тільки в завершених запитах
         active_requests = Request.objects.filter(
             teacher_theme=self,
             request_status__in=['Очікує', 'Активний']
         ).exists()
+        
+        # Можна видалити якщо немає активних запитів
         return not active_requests
-    
+
+    def force_delete(self):
+        """Фізично видаляє тему незалежно від статусу"""
+        super().delete()
+
+    def delete(self, force=False, *args, **kwargs):
+        """
+        Видаляє тему з перевіркою можливості видалення
+        Args:
+            force (bool): Якщо True, видаляє тему незалежно від статусу
+        """
+        if force or self.can_be_deleted():
+            return super().delete(*args, **kwargs)
+        self.soft_delete()
+        return False
+
+    def soft_delete(self):
+        """Логічне видалення теми"""
+        self.is_deleted = True
+        self.is_active = False
+        self.save()
+
+    def activate(self):
+        """Активація теми"""
+        self.is_active = True
+        self.is_deleted = False
+        self.save()
+
+    def deactivate(self):
+        """Деактивація теми"""
+        print(f"Before deactivate: is_active={self.is_active}, is_deleted={self.is_deleted}")
+        self.is_active = False
+        self.is_deleted = False
+        print(f"After setting values: is_active={self.is_active}, is_deleted={self.is_deleted}")
+        self.save()
+        self.refresh_from_db()  # Перечитуємо з бази
+        print(f"After save: is_active={self.is_active}, is_deleted={self.is_deleted}")
+
     def get_active_requests_count(self):
         """Повертає кількість активних запитів для цієї теми"""
         return Request.objects.filter(
             teacher_theme=self,
             request_status__in=['Очікує', 'Активний']
         ).count()
-    
+
     def get_streams_display(self):
         """Повертає список потоків у вигляді рядка"""
         streams = self.streams.all()
         if streams:
             return ', '.join([stream.stream_code for stream in streams])
         return 'Без потоку'
-    
+
     @classmethod
     def get_active_themes(cls):
         """Повертає лише активні теми"""
         return cls.objects.filter(is_active=True)
-    
-    @classmethod
-    def get_available_themes(cls, teacher=None):
-        """Повертає доступні (активні і не зайняті) теми"""
-        queryset = cls.objects.filter(is_active=True, is_occupied=False)
-        if teacher:
-            queryset = queryset.filter(teacher_id=teacher)
-        return queryset
-    
+
     class Meta:
-        verbose_name = "Тема викладача"
-        verbose_name_plural = "Теми викладачів"
         ordering = ['teacher_id__teacher_id__last_name', 'theme']
 
 class StudentTheme(models.Model):

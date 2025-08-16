@@ -81,7 +81,7 @@
                       <div class="form-group">
                         <label>Потік</label>
                         <input type="text" 
-                               value="{{ slot.stream_id.stream_year }} {{ slot.stream_id.stream_name }}" 
+                               value="{{ slot.stream_id.stream_code }}" 
                                readonly 
                                class="stream-input">
                       </div>
@@ -102,7 +102,7 @@
                           <label for="streamSelect">Виберіть потік:</label>
                           <select id="streamSelect" class="form-control">
                             {% for stream in available_streams %}
-                            <option value="{{ stream.id }}">{{ stream.stream_year }} {{ stream.stream_name }}</option>
+                            <option value="{{ stream.id }}">{{ stream.stream_code }}</option>
                             {% endfor %}
                           </select>
                         </div>
@@ -651,7 +651,13 @@ async function saveNewTheme(button) {
             showMessage(data.message || 'Тему успішно створено!', 'success');
             
             // Створити нову картку для збереженої теми
-            const newCard = createThemeCard(data.theme_id, themeName, themeDescription, selectedStreams, true);
+            const newCard = createThemeCard(
+                data.theme.id,  // Використовуємо ID з відповіді сервера
+                data.theme.theme,
+                data.theme.description,
+                data.theme.streams || [],
+                data.theme.is_active
+            );
             
             // Замінити тимчасову картку на постійну
             const container = themeCard.parentNode;
@@ -691,7 +697,7 @@ function createThemeCard(themeId, themeName, themeDescription, streamIds, isActi
         const checkbox = streamItem.querySelector('input[type="checkbox"]');
         const label = streamItem.querySelector('label');
         const streamId = parseInt(checkbox.value);
-        const streamCode = label.textContent;
+        const streamCode = label.textContent;  // Тут вже використовується stream_code
         const isChecked = streamIds.includes(streamId);
         
         streamsHTML += `

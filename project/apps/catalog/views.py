@@ -20,6 +20,8 @@ from .templatetags.catalog_extras import get_profile_picture_url
 
 import re
 import logging
+from django.db import transaction
+from django.views.decorators.http import require_POST
 
 class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     """
@@ -790,3 +792,23 @@ def delete_comment(request, pk):
         comment.delete()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+
+@login_required
+@require_POST 
+def delete_theme(request, theme_id):
+    """
+    Видаляє тему викладача з перевіркою можливості видалення
+    """
+    theme = get_object_or_404(TeacherTheme, id=theme_id, teacher_id__teacher_id=request.user)
+    try:
+        if not theme.can_be_deleted():
+            return JsonResponse({
+                'error': 'Неможливо видалити тему, яка використовується в активних або очікуючих запитах'
+            }, status=400)
+        
+        theme.delete(force=True) 
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error deleting theme {theme_id}: {str(e)}")
+        return JsonResponse({'error': f'Помилка при видаленні теми: {str(e)}'}, status=500)

@@ -97,7 +97,7 @@
     <!-- Tab Contents -->
     {% if user_profile.role == 'Викладач' %}
     <div id="info-section" class="tab-content">
-        {% include 'profile/info.html' with themes=themes slots=slots %}
+        {% include 'profile/info.html' with themes_by_stream=themes_by_stream slots=slots %}
     </div>
     {% endif %}
 
