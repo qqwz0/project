@@ -16,8 +16,9 @@
  
     <h2 class="edit-title">Редагувати профіль</h2>
 
+    <!-- Django messages for non-AJAX requests -->
     {% if messages %}
-    <div class="messages">
+    <div class="messages" id="django-messages">
         {% for message in messages %}
             <div class="message {{ message.tags }}">
                 {{ message }}
@@ -63,6 +64,12 @@
                         {{ form.course }}
                         <div class="error-message" id="course-error"></div>
                     </div>
+
+                    <div class="form-group full-width">
+                        <label for="{{ form.education_level.id_for_label }}">Освітній рівень</label>
+                        {{ form.education_level }}
+                        <div class="error-message" id="education_level-error"></div>
+                    </div>
                 </div>
 
                 <div class="contacts">
@@ -100,50 +107,164 @@ document.addEventListener('DOMContentLoaded', function() {
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePreview = document.getElementById('profile-preview');
     
+    // Convert Django error messages to toast notifications on page load
+    const djangoMessages = document.getElementById('django-messages');
+    if (djangoMessages) {
+        const errorMessages = djangoMessages.querySelectorAll('.message.error');
+        if (errorMessages.length > 0) {
+            // Hide Django messages
+            djangoMessages.style.display = 'none';
+            
+            // Show user-friendly toast error message
+            const errorTexts = Array.from(errorMessages).map(msg => msg.textContent.trim());
+            let userMessage;
+            if (errorTexts.length === 1) {
+                userMessage = errorTexts[0];
+            } else {
+                userMessage = `Будь ласка, виправте наступні помилки:\n${errorTexts.join('\n')}`;
+            }
+            showErrorMessage(userMessage);
+        }
+    }
+    
     function clearErrors() {
         document.querySelectorAll('.error-message').forEach(error => {
             error.textContent = '';
         });
     }
 
-    function displayErrors(errors) {
-        clearErrors();
-        Object.keys(errors).forEach(field => {
-            const errorElement = document.getElementById(`${field}-error`);
-            if (errorElement) {
-                errorElement.textContent = errors[field].join(' ');
-            }
-        });
+    function showSuccessMessage(message) {
+        // Create toast notification at top of page
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification success';
+        toast.textContent = message;
+        
+        // Style the toast
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #DEF7EC;
+            color: #03543F;
+            border: 1px solid #31C48D;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Show with animation
+        setTimeout(() => toast.style.opacity = '1', 10);
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
     }
 
-    function showSuccessMessage(message) {
-        const messagesContainer = document.querySelector('.messages');
-        if (!messagesContainer) {
-            const newMessagesContainer = document.createElement('div');
-            newMessagesContainer.className = 'messages';
-            document.querySelector('.edit-title').insertAdjacentElement('afterend', newMessagesContainer);
-        }
+    function showErrorMessage(message) {
+        // Create toast notification at top of page
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification error';
+        toast.textContent = message;
         
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message success';
-        messageElement.textContent = message;
+        // Style the toast
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #F87171;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            white-space: pre-line;
+            max-width: 400px;
+            text-align: center;
+        `;
         
-        document.querySelector('.messages').innerHTML = '';
-        document.querySelector('.messages').appendChild(messageElement);
+        document.body.appendChild(toast);
         
+        // Show with animation
+        setTimeout(() => toast.style.opacity = '1', 10);
+        
+        // Hide after 5 seconds
         setTimeout(() => {
-            messageElement.style.opacity = '0';
-            setTimeout(() => messageElement.remove(), 300);
-        }, 3000);
+            toast.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 5000);
+    }
+
+    function displayErrors(errors) {
+        clearErrors();
+        
+        // Create user-friendly error message
+        let errorMessages = [];
+        Object.keys(errors).forEach(field => {
+            const errorElement = document.getElementById(`${field}-error`);
+            const fieldErrors = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
+            
+            if (errorElement) {
+                errorElement.textContent = fieldErrors.join(' ');
+            }
+            
+            // Add to summary with user-friendly names
+            const fieldName = getFieldDisplayName(field);
+            fieldErrors.forEach(error => {
+                errorMessages.push(`${fieldName}: ${error}`);
+            });
+        });
+        
+        // Show user-friendly error message
+        if (errorMessages.length > 0) {
+            let userMessage;
+            if (errorMessages.length === 1) {
+                userMessage = errorMessages[0];
+            } else {
+                // Create a more friendly message for multiple errors
+                userMessage = `Будь ласка, виправте наступні помилки:\n${errorMessages.join('\n')}`;
+        }
+            showErrorMessage(userMessage);
+        }
+    }
+
+    function getFieldDisplayName(fieldName) {
+        const fieldNames = {
+            'first_name': "Ім'я",
+            'last_name': 'Прізвище',
+            'patronymic': 'По-батькові',
+            'academic_group': 'Академічна група',
+            'course': 'Курс',
+            'education_level': 'Освітній рівень',
+            'additional_email': 'Додаткова електронна скринька',
+            'phone_number': 'Номер телефону'
+        };
+        return fieldNames[fieldName] || fieldName;
     }
 
     function updateGroupNumber() {
         if (!groupInput.value) return;
         
         const course = courseInput.value;
-        const currentGroup = groupInput.value;
+        const currentGroup = groupInput.value.toUpperCase();
         
-        const match = currentGroup.match(/ФЕ[ЇСМЛП]-(\d)/);
+        // Updated regex to match our validation pattern
+        const match = currentGroup.match(/^ФЕ[СЛІПМ]-(\d)/);
         if (match) {
             const newGroup = currentGroup.replace(/-\d/, `-${course}`);
             groupInput.value = newGroup;
@@ -151,8 +272,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function validateAndSyncCourse() {
-        const group = groupInput.value;
-        const match = group.match(/ФЕ[ЇСМЛП]-(\d)/);
+        const group = groupInput.value.toUpperCase();
+        groupInput.value = group; // Update to uppercase
+        
+        // Updated regex to match our validation pattern
+        const match = group.match(/^ФЕ[СЛІПМ]-(\d)/);
         
         if (match) {
             const groupCourse = parseInt(match[1]);
@@ -192,6 +316,12 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         clearErrors();
         
+        // Hide Django messages when using AJAX
+        const djangoMessages = document.getElementById('django-messages');
+        if (djangoMessages) {
+            djangoMessages.style.display = 'none';
+        }
+        
         const formData = new FormData(form);
         
         fetch(form.action, {
@@ -206,17 +336,21 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showSuccessMessage(data.message || 'Профіль успішно оновлено');
+                // Don't redirect - stay on the same page like teacher profile
+                // setTimeout(() => {
+                //     window.location.href = data.redirect_url || '/users/profile/';
+                // }, 1500);
             } else {
                 if (data.errors) {
                     displayErrors(data.errors);
                 } else if (data.message) {
-                    alert(data.message);
+                    showErrorMessage(data.message);
                 }
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.');
+            showErrorMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.');
         });
     });
 });

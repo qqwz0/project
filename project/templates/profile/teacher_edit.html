@@ -6,7 +6,7 @@
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
-            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю">
+            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" id="profile-preview">
         </div>
         <div class="profile-title">
             <h1>{{ user.get_full_name }}</h1>
@@ -27,9 +27,8 @@
     {% endif %}
 
     <div class="form-content">
-        <form method="post" class="edit-form" id="teacherProfileForm">
+        <form method="post" class="edit-form" id="teacherProfileForm" enctype="multipart/form-data">
             {% csrf_token %}
-            <input type="hidden" name="themes_data" id="themes-data" value="[]">
     
             <div class="form-sections teacher-sections">
                 <!-- LEFT COLUMN: Особиста інформація + Місця -->
@@ -136,19 +135,145 @@
                       <div class="error-message" id="phone_number-error"></div>
                     </div>
                   </div>
+                <!-- ТЕМИ -->
                   <div class="themes-section">
-                    <h3>Теми робіт</h3>
-                    <div id="themes-container">
+                    <h3>Управління темами робіт</h3>
+                    
+                    <!-- Кнопка додавання нової теми -->
+                    <div class="add-theme-container">
+                        <button type="button" class="add-theme-btn" onclick="addNewTheme()">
+                            <i class="plus-icon">+</i>
+                            Додати нову тему
+                        </button>
+                    </div>
+
+                    <!-- Контейнер карток тем -->
+                    <div id="themes-grid" class="themes-grid">
                         {% for theme in existing_themes %}
-                        <div class="theme-item">
-                            <input type="text" value="{{ theme.theme }}" readonly>
-                            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
+                        <div class="theme-card" data-theme-id="{{ theme.id }}" data-active="{{ theme.is_active|yesno:'true,false' }}">
+                            <!-- Заголовок теми -->
+                            <div class="theme-title-container">
+                                <h4 class="theme-title" title="{{ theme.theme }}">{{ theme.theme }}</h4>
+                            </div>
+                            
+                            <!-- Статус та кількість запитів -->
+                            <div class="theme-status-container">
+                                <div class="status-indicator {% if theme.is_active and not theme.is_deleted %}active{% else %}inactive{% endif %}">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">{% if theme.is_active and not theme.is_deleted %}Активна{% else %}Неактивна{% endif %}</span>
+                                </div>
+                                <div class="requests-count">
+                                    Запитів: {{ theme.get_active_requests_count }}
+                                </div>
+                            </div>
+                            
+                            <!-- Опис теми -->
+                            {% if theme.theme_description %}
+                            <div class="theme-description">
+                                {{ theme.theme_description|truncatechars:120 }}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Потоки -->
+                            <div class="theme-streams-container">
+                                <label class="streams-label">Потоки:</label>
+                                <div class="streams-list" data-theme-id="{{ theme.id }}">
+                                    {% for stream in theme.streams.all %}
+                                        <div class="stream-item">
+                                            <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
+                                                   value="{{ stream.id }}" checked 
+                                                   onchange="updateThemeStreams({{ theme.id }})">
+                                            <label for="stream-{{ theme.id }}-{{ stream.id }}">{{ stream.stream_code }}</label>
+                                        </div>
+                                    {% endfor %}
+                                    {% for stream in all_streams %}
+                                        {% if stream not in theme.streams.all %}
+                                        <div class="stream-item">
+                                            <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
+                                                   value="{{ stream.id }}" 
+                                                   onchange="updateThemeStreams({{ theme.id }})">
+                                            <label for="stream-{{ theme.id }}-{{ stream.id }}">{{ stream.stream_code }}</label>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Кнопки дій -->
+                            <div class="theme-actions">
+                                <button type="button" class="action-btn edit-btn" onclick="editTheme({{ theme.id }})" title="Редагувати">
+                                    <i class="icon">✏️</i>
+                                    Редагувати
+                                </button>
+                                {% if theme.is_active and not theme.is_deleted %}
+                                    <button type="button" class="action-btn deactivate-btn" onclick="toggleThemeStatus({{ theme.id }}, false)" title="Деактивувати">
+                                        <i class="icon">⏸️</i>
+                                        Деактивувати
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="action-btn activate-btn" onclick="toggleThemeStatus({{ theme.id }}, true)" title="Активувати">
+                                        <i class="icon">▶️</i>
+                                        Активувати
+                                    </button>
+                                {% endif %}
+                                <button type="button" class="action-btn delete-btn" onclick="deleteThemeWithValidation({{ theme.id }})" title="Видалити">
+                                    <i class="icon">🗑️</i>
+                                    Видалити
+                                </button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="no-themes-message">
+                            <p>У вас поки немає тем. Додайте першу тему за допомогою кнопки вище.</p>
                         </div>
                         {% endfor %}
                     </div>
-                    <div class="theme-input-container">
-                        <input type="text" id="new-theme" placeholder="Введіть тему">
-                        <button type="button" class="add-theme" onclick="addTheme()">+</button>
+                </div>
+
+                <!-- Шаблон для нової теми -->
+                <div id="new-theme-template" style="display: none;">
+                    <div class="theme-card new-theme">
+                        <div class="theme-title-container">
+                            <input type="text" class="theme-title-input" placeholder="Назва теми" maxlength="100">
+                        </div>
+                        
+                        <div class="theme-status-container">
+                            <div class="status-indicator active">
+                                <span class="status-dot"></span>
+                                <span class="status-text">Активна</span>
+                            </div>
+                            <div class="requests-count">
+                                Запитів: 0
+                            </div>
+                        </div>
+                        
+                        <div class="theme-description-container">
+                            <textarea class="theme-description-input" placeholder="Опис теми (необов'язково)" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="theme-streams-container">
+                            <label class="streams-label">Оберіть потоки:</label>
+                            <div class="streams-list">
+                                {% for stream in all_streams %}
+                                <div class="stream-item">
+                                    <input type="checkbox" id="new-stream-{{ stream.id }}" value="{{ stream.id }}">
+                                    <label for="new-stream-{{ stream.id }}">{{ stream.stream_code }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="theme-actions">
+                            <button type="button" class="action-btn save-btn" onclick="saveNewTheme(this)">
+                                <i class="icon">💾</i>
+                                Зберегти
+                            </button>
+                            <button type="button" class="action-btn cancel-btn" onclick="cancelNewTheme(this)">
+                                <i class="icon">❌</i>
+                                Скасувати
+                            </button>
+                        </div>
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -161,49 +286,865 @@
         </form>
     </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>
-// --- Глобальні функції для тем ---
-let themes = [];
+// --- Глобальні функції для розширеного управління темами ---
 
-// Load existing themes (серверний рендер)
-{% for theme in existing_themes %}
-themes.push({
-    theme: "{{ theme.theme|escapejs }}",
-    description: ""
-});
-{% endfor %}
+// Функція для отримання CSRF токену
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
 
-window.addTheme = function() {
-    const input = document.getElementById('new-theme');
-    const theme = input.value.trim();
-    if (theme) {
-        themes.push({
-            theme: theme,
-            description: ""
-        });
-        const container = document.getElementById('themes-container');
-        const themeDiv = document.createElement('div');
-        themeDiv.className = 'theme-item';
-        themeDiv.innerHTML = `
-            <input type="text" value="${theme}" readonly>
-            <button type="button" class="remove-theme" onclick="removeTheme(this)">×</button>
-        `;
-        container.appendChild(themeDiv);
-        input.value = '';
-        document.getElementById('themes-data').value = JSON.stringify(themes);
+// Функція для показу красивих toast повідомлень
+function showMessage(message, type = 'success') {
+    // Видаляємо старі toast'и
+    document.querySelectorAll('.toast-message').forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-message toast-${type}`;
+    
+    // Іконки для різних типів повідомлень
+    const icons = {
+        'success': '✅',
+        'error': '❌',
+        'info': 'ℹ️',
+        'warning': '⚠️'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-text">${message}</span>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    // Додаємо стилі прямо в елемент
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 500px;
+        background: ${type === 'error' ? '#fee' : type === 'warning' ? '#fef3cd' : type === 'info' ? '#d1ecf1' : '#d4edda'};
+        border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'warning' ? '#faeeba' : type === 'info' ? '#bee5eb' : '#c3e6cb'};
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInRight 0.3s ease-out;
+        font-family: 'Inter', sans-serif;
+    `;
+    
+    toast.querySelector('.toast-content').style.cssText = `
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        gap: 10px;
+    `;
+    
+    toast.querySelector('.toast-icon').style.cssText = `
+        font-size: 18px;
+        flex-shrink: 0;
+    `;
+    
+    toast.querySelector('.toast-text').style.cssText = `
+        color: ${type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : type === 'info' ? '#0c5460' : '#155724'};
+        font-size: 14px;
+        line-height: 1.4;
+        flex-grow: 1;
+    `;
+    
+    toast.querySelector('.toast-close').style.cssText = `
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #aaa;
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    `;
+    
+    // Додаємо анімацію
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .toast-message.hiding {
+            animation: slideOutRight 0.3s ease-in forwards;
+        }
+    `;
+    
+    if (!document.querySelector('#toast-styles')) {
+        style.id = 'toast-styles';
+        document.head.appendChild(style);
     }
-};
+    
+    document.body.appendChild(toast);
+    
+    // Автоматично видалити через 5 секунд
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('hiding');
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+}
 
-window.removeTheme = function(button) {
-    const themeDiv = button.closest('.theme-item');
-    const themeText = themeDiv.querySelector('input').value;
-    themes = themes.filter(t => t.theme !== themeText);
-    themeDiv.remove();
-    document.getElementById('themes-data').value = JSON.stringify(themes);
-};
+// Функція для показу красивого модального підтвердження
+function showConfirmDialog(title, message, onConfirm, onCancel = null) {
+    // Видаляємо старі діалоги
+    document.querySelectorAll('.confirm-dialog').forEach(dialog => dialog.remove());
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+    
+    dialog.innerHTML = `
+        <div class="confirm-overlay" onclick="closeConfirmDialog()"></div>
+        <div class="confirm-modal">
+            <div class="confirm-header">
+                <h3>${title}</h3>
+            </div>
+            <div class="confirm-body">
+                <p>${message}</p>
+            </div>
+            <div class="confirm-footer">
+                <button class="confirm-btn confirm-cancel" onclick="closeConfirmDialog()">Скасувати</button>
+                <button class="confirm-btn confirm-ok" onclick="confirmAction()">OK</button>
+            </div>
+        </div>
+    `;
+    
+    // Додаємо стилі
+    dialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease-out;
+    `;
+    
+    const overlay = dialog.querySelector('.confirm-overlay');
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+    `;
+    
+    const modal = dialog.querySelector('.confirm-modal');
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        min-width: 400px;
+        max-width: 500px;
+        position: relative;
+        animation: scaleIn 0.2s ease-out;
+    `;
+    
+    const header = dialog.querySelector('.confirm-header');
+    header.style.cssText = `
+        padding: 20px 24px 16px;
+        border-bottom: 1px solid #e5e7eb;
+    `;
+    
+    const headerTitle = dialog.querySelector('.confirm-header h3');
+    headerTitle.style.cssText = `
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+    `;
+    
+    const body = dialog.querySelector('.confirm-body');
+    body.style.cssText = `
+        padding: 20px 24px;
+    `;
+    
+    const bodyText = dialog.querySelector('.confirm-body p');
+    bodyText.style.cssText = `
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #4b5563;
+    `;
+    
+    const footer = dialog.querySelector('.confirm-footer');
+    footer.style.cssText = `
+        padding: 16px 24px 20px;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    `;
+    
+    const buttons = dialog.querySelectorAll('.confirm-btn');
+    buttons.forEach(button => {
+        button.style.cssText = `
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        `;
+    });
+    
+    const cancelBtn = dialog.querySelector('.confirm-cancel');
+    cancelBtn.style.cssText += `
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #d1d5db;
+    `;
+    
+    const okBtn = dialog.querySelector('.confirm-ok');
+    okBtn.style.cssText += `
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+    `;
+    
+    // Додаємо анімації
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .confirm-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .confirm-cancel:hover {
+            background: #e5e7eb !important;
+        }
+        .confirm-ok:hover {
+            background: #b91c1c !important;
+        }
+    `;
+    
+    if (!document.querySelector('#confirm-styles')) {
+        style.id = 'confirm-styles';
+        document.head.appendChild(style);
+    }
+    
+    // Зберегти callback функції
+    window.currentConfirmAction = onConfirm;
+    window.currentCancelAction = onCancel;
+    
+    document.body.appendChild(dialog);
+    
+    // Фокус на OK кнопці
+    okBtn.focus();
+}
 
+// Закрити діалог підтвердження
+function closeConfirmDialog() {
+    const dialog = document.querySelector('.confirm-dialog');
+    if (dialog) {
+        if (window.currentCancelAction) {
+            window.currentCancelAction();
+        }
+        dialog.style.animation = 'fadeOut 0.2s ease-in';
+        setTimeout(() => dialog.remove(), 200);
+    }
+    window.currentConfirmAction = null;
+    window.currentCancelAction = null;
+}
+
+// Підтвердити дію
+function confirmAction() {
+    if (window.currentConfirmAction) {
+        window.currentConfirmAction();
+    }
+    closeConfirmDialog();
+}
+
+// Додати нову тему
+function addNewTheme() {
+    const template = document.getElementById('new-theme-template');
+    const container = document.getElementById('themes-grid');
+    const noThemes = container.querySelector('.no-themes-message');
+    
+    if (noThemes) {
+        noThemes.remove();
+    }
+    
+    const newTheme = template.innerHTML;
+    container.insertAdjacentHTML('beforeend', newTheme);
+    
+    // Фокус на поле введення назви
+    const newThemeElement = container.lastElementChild;
+    const themeInput = newThemeElement.querySelector('.theme-title-input');
+    themeInput.focus();
+}
+
+// Зберегти нову тему
+async function saveNewTheme(button) {
+    const themeCard = button.closest('.theme-card');
+    const themeName = themeCard.querySelector('.theme-title-input').value.trim();
+    const themeDescription = themeCard.querySelector('.theme-description-input').value.trim();
+    
+    if (!themeName) {
+        showMessage('Назва теми не може бути порожньою', 'error');
+        return;
+    }
+    
+    // Відключити кнопку під час збереження
+    button.disabled = true;
+    button.innerHTML = '<i class="icon">⏳</i> Збереження...';
+    
+    // Отримати вибрані потоки
+    const selectedStreams = [];
+    themeCard.querySelectorAll('.streams-list input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedStreams.push(parseInt(checkbox.value));
+    });
+    
+    try {
+        const requestData = {
+            'theme': themeName,
+            'description': themeDescription,
+            'stream_ids': selectedStreams
+        };
+        
+        const response = await fetch('/users/teacher-theme/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(data.message || 'Тему успішно створено!', 'success');
+            
+            // Створити нову картку для збереженої теми
+            const newCard = createThemeCard(data.theme_id, themeName, themeDescription, selectedStreams, true);
+            
+            // Замінити тимчасову картку на постійну
+            const container = themeCard.parentNode;
+            container.replaceChild(newCard, themeCard);
+            
+        } else {
+            showMessage(data.error || 'Помилка при створенні теми', 'error');
+            
+            // Відновити кнопку
+            button.disabled = false;
+            button.innerHTML = '<i class="icon">💾</i> Зберегти';
+        }
+        
+    } catch (error) {
+        showMessage('Помилка при створенні теми: ' + error.message, 'error');
+        
+        // Відновити кнопку
+        button.disabled = false;
+        button.innerHTML = '<i class="icon">💾</i> Зберегти';
+    }
+}
+
+// Створити HTML для картки теми
+function createThemeCard(themeId, themeName, themeDescription, streamIds, isActive) {
+    const card = document.createElement('div');
+    card.className = 'theme-card';
+    card.dataset.themeId = themeId;
+    card.dataset.active = isActive ? 'true' : 'false';
+    
+    // Створити HTML для потоків на основі template
+    let streamsHTML = '';
+    
+    // Берємо потоки з шаблону нової теми
+    const templateStreams = document.querySelectorAll('#new-theme-template .stream-item');
+    
+    templateStreams.forEach(streamItem => {
+        const checkbox = streamItem.querySelector('input[type="checkbox"]');
+        const label = streamItem.querySelector('label');
+        const streamId = parseInt(checkbox.value);
+        const streamCode = label.textContent;
+        const isChecked = streamIds.includes(streamId);
+        
+        streamsHTML += `
+            <div class="stream-item">
+                <input type="checkbox" id="stream-${themeId}-${streamId}" 
+                       value="${streamId}" ${isChecked ? 'checked' : ''} 
+                       onchange="updateThemeStreams(${themeId})">
+                <label for="stream-${themeId}-${streamId}">${streamCode}</label>
+            </div>
+        `;
+    });
+    
+    card.innerHTML = `
+        <div class="theme-title-container">
+            <h4 class="theme-title" title="${themeName}">${themeName}</h4>
+        </div>
+        
+        <div class="theme-status-container">
+            <div class="status-indicator ${isActive ? 'active' : 'inactive'}">
+                <span class="status-dot"></span>
+                <span class="status-text">${isActive ? 'Активна' : 'Неактивна'}</span>
+            </div>
+            <div class="requests-count">
+                Запитів: 0
+            </div>
+        </div>
+        
+        ${themeDescription ? `<div class="theme-description">${themeDescription}</div>` : ''}
+        
+        <div class="theme-streams-container">
+            <label class="streams-label">Потоки:</label>
+            <div class="streams-list" data-theme-id="${themeId}">
+                ${streamsHTML}
+            </div>
+        </div>
+        
+        <div class="theme-actions">
+            <button type="button" class="action-btn edit-btn" onclick="editTheme(${themeId})" title="Редагувати">
+                <i class="icon">✏️</i>
+                Редагувати
+            </button>
+            <button type="button" class="action-btn ${isActive ? 'deactivate-btn' : 'activate-btn'}" onclick="toggleThemeStatus(${themeId}, ${!isActive})" title="${isActive ? 'Деактивувати' : 'Активувати'}">
+                <i class="icon">${isActive ? '⏸️' : '▶️'}</i>
+                ${isActive ? 'Деактивувати' : 'Активувати'}
+            </button>
+            <button type="button" class="action-btn delete-btn" onclick="deleteThemeWithValidation(${themeId})" title="Видалити">
+                <i class="icon">🗑️</i>
+                Видалити
+            </button>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Скасувати створення нової теми
+function cancelNewTheme(button) {
+    const themeCard = button.closest('.theme-card');
+    themeCard.remove();
+    
+    // Показати "немає тем" якщо це була єдина тема
+    const container = document.getElementById('themes-grid');
+    if (container.children.length === 0) {
+        container.innerHTML = `
+            <div class="no-themes-message">
+                <p>У вас поки немає тем. Додайте першу тему за допомогою кнопки вище.</p>
+            </div>
+        `;
+    }
+}
+
+// Редагувати тему
+function editTheme(themeId) {
+    const themeCard = document.querySelector(`[data-theme-id="${themeId}"]`);
+    if (!themeCard) return;
+    
+    const titleContainer = themeCard.querySelector('.theme-title-container');
+    const descriptionDiv = themeCard.querySelector('.theme-description');
+    const actionsDiv = themeCard.querySelector('.theme-actions');
+    
+    // Зберегти оригінальні значення
+    const originalTitle = themeCard.querySelector('.theme-title').textContent;
+    const originalDescription = descriptionDiv ? descriptionDiv.textContent.trim() : '';
+    const originalActions = actionsDiv.innerHTML;
+    
+    // Перетворити заголовок на поле введення
+    titleContainer.innerHTML = `<input type="text" class="theme-title-input" value="${originalTitle}" maxlength="100">`;
+    
+    // Перетворити опис на textarea або створити поле якщо його немає
+    if (descriptionDiv) {
+        descriptionDiv.innerHTML = `<textarea class="theme-description-input" rows="3">${originalDescription}</textarea>`;
+    } else {
+        const descriptionContainer = document.createElement('div');
+        descriptionContainer.className = 'theme-description-container';
+        descriptionContainer.innerHTML = `<textarea class="theme-description-input" placeholder="Додати опис теми..." rows="3">${originalDescription}</textarea>`;
+        themeCard.querySelector('.theme-status-container').parentNode.insertBefore(descriptionContainer, themeCard.querySelector('.theme-streams-container'));
+    }
+    
+    // Змінити кнопки
+    actionsDiv.innerHTML = `
+        <button type="button" class="action-btn save-btn" onclick="saveThemeChanges(${themeId})">
+            <i class="icon">💾</i>
+            Зберегти
+        </button>
+        <button type="button" class="action-btn cancel-btn" onclick="cancelThemeEdit(${themeId}, this)">
+            <i class="icon">❌</i>
+            Скасувати
+        </button>
+    `;
+    
+    // Зберегти оригінальні дані
+    themeCard.dataset.originalTitle = originalTitle;
+    themeCard.dataset.originalDescription = originalDescription;
+    themeCard.dataset.originalActions = originalActions;
+    
+    // Фокус на поле назви
+    titleContainer.querySelector('.theme-title-input').focus();
+}
+
+// Зберегти зміни теми
+function saveThemeChanges(themeId) {
+    const card = document.querySelector(`[data-theme-id="${themeId}"]`);
+    if (!card) return;
+    
+    const titleInput = card.querySelector('.theme-title-input');
+    const descInput = card.querySelector('.theme-description-input');
+    const saveBtn = card.querySelector('.save-btn');
+    
+    if (!titleInput) {
+        showMessage('Помилка: поле назви не знайдено', 'error');
+        return;
+    }
+    
+    const newTitle = titleInput.value.trim();
+    const newDescription = descInput ? descInput.value.trim() : '';
+    
+    if (!newTitle) {
+        showMessage('Назва теми не може бути порожньою', 'error');
+        titleInput.focus();
+        return;
+    }
+    
+    // Показуємо стан завантаження
+    const originalBtnContent = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="icon">⏳</i> Збереження...';
+    
+    // Відправляємо запит на сервер
+    fetch(`/users/teacher-theme/update/${themeId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            theme: newTitle,
+            description: newDescription
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Спочатку видалимо всі тимчасові елементи редагування
+            const descriptionContainer = card.querySelector('.theme-description-container');
+            if (descriptionContainer) {
+                descriptionContainer.remove();
+            }
+            
+            // Відновити заголовок до нормального стану
+            const titleContainer = card.querySelector('.theme-title-container');
+            titleContainer.innerHTML = `<h4 class="theme-title" title="${newTitle}">${newTitle}</h4>`;
+            
+            // Обробити опис
+            let descriptionDiv = card.querySelector('.theme-description');
+            
+            if (newDescription && newDescription.trim()) {
+                // Якщо є новий опис
+                if (descriptionDiv) {
+                    // Оновити існуючий
+                    descriptionDiv.textContent = newDescription;
+                } else {
+                    // Створити новий div для опису
+                    descriptionDiv = document.createElement('div');
+                    descriptionDiv.className = 'theme-description';
+                    descriptionDiv.textContent = newDescription;
+                    card.querySelector('.theme-status-container').parentNode.insertBefore(descriptionDiv, card.querySelector('.theme-streams-container'));
+                }
+            } else {
+                // Якщо опис порожній, видалити існуючий div
+                if (descriptionDiv) {
+                    descriptionDiv.remove();
+                }
+            }
+            
+            // Тепер відновити оригінальні кнопки (без викликаexitEditMode)
+            const actionsDiv = card.querySelector('.theme-actions');
+            actionsDiv.innerHTML = card.dataset.originalActions;
+            
+            // Очистити тимчасові дані
+            delete card.dataset.originalTitle;
+            delete card.dataset.originalDescription;
+            delete card.dataset.originalActions;
+            
+            showMessage(data.message || 'Тему успішно оновлено', 'success');
+        } else {
+            showMessage(data.error || 'Помилка при оновленні теми', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Сталася помилка при оновленні теми', 'error');
+    })
+    .finally(() => {
+        // Відновлюємо стан кнопки
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnContent;
+        }
+    });
+}
+
+// Скасувати редагування теми
+function cancelThemeEdit(themeId, button) {
+    const themeCard = button.closest('.theme-card');
+    if (!themeCard) return;
+    
+    const originalTitle = themeCard.dataset.originalTitle;
+    const originalDescription = themeCard.dataset.originalDescription;
+    
+    // Відновити оригінальний заголовок
+    const titleContainer = themeCard.querySelector('.theme-title-container');
+    titleContainer.innerHTML = `<h4 class="theme-title" title="${originalTitle}">${originalTitle}</h4>`;
+    
+    // Відновити оригінальний опис
+    const descriptionContainer = themeCard.querySelector('.theme-description-container');
+    if (descriptionContainer) {
+        descriptionContainer.remove();
+    }
+    
+    let descriptionDiv = themeCard.querySelector('.theme-description');
+    if (originalDescription && originalDescription.trim()) {
+        if (!descriptionDiv) {
+            descriptionDiv = document.createElement('div');
+            descriptionDiv.className = 'theme-description';
+            themeCard.querySelector('.theme-status-container').parentNode.insertBefore(descriptionDiv, themeCard.querySelector('.theme-streams-container'));
+        }
+        descriptionDiv.textContent = originalDescription;
+    } else if (descriptionDiv) {
+        descriptionDiv.remove();
+    }
+    
+    exitEditMode(themeCard);
+}
+
+// Вийти з режиму редагування
+function exitEditMode(themeCard) {
+    const actionsDiv = themeCard.querySelector('.theme-actions');
+    
+    // Відновити оригінальні кнопки
+    actionsDiv.innerHTML = themeCard.dataset.originalActions;
+    
+    // Очистити тимчасові дані
+    delete themeCard.dataset.originalTitle;
+    delete themeCard.dataset.originalDescription;
+    delete themeCard.dataset.originalActions;
+}
+
+// Перемкнути статус теми (активна/неактивна)
+async function toggleThemeStatus(themeId, activate) {
+    const themeCard = document.querySelector(`[data-theme-id="${themeId}"]`);
+    const actionButton = themeCard.querySelector(activate ? '.activate-btn' : '.deactivate-btn');
+    
+    // Зберегти оригінальний вміст кнопки
+    const originalContent = actionButton.innerHTML;
+    const originalDisabled = actionButton.disabled;
+    
+    // Показати loading
+    actionButton.disabled = true;
+    actionButton.innerHTML = '<i class="icon">⏳</i> Обробка...';
+    
+    try {
+        const endpoint = activate ? 
+            `/users/teacher-theme/activate/${themeId}/` : 
+            `/users/teacher-theme/deactivate/${themeId}/`;
+            
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(data.message || `Тему ${activate ? 'активовано' : 'деактивовано'}!`, 'success');
+            
+            // Оновити UI
+            const statusIndicator = themeCard.querySelector('.status-indicator');
+            const statusText = statusIndicator.querySelector('.status-text');
+            
+            if (activate) {
+                statusIndicator.className = 'status-indicator active';
+                statusText.textContent = 'Активна';
+                actionButton.onclick = () => toggleThemeStatus(themeId, false);
+                actionButton.innerHTML = '<i class="icon">⏸️</i> Деактивувати';
+                actionButton.className = 'action-btn deactivate-btn';
+                actionButton.title = 'Деактивувати';
+            } else {
+                statusIndicator.className = 'status-indicator inactive';
+                statusText.textContent = 'Неактивна';
+                actionButton.onclick = () => toggleThemeStatus(themeId, true);
+                actionButton.innerHTML = '<i class="icon">▶️</i> Активувати';
+                actionButton.className = 'action-btn activate-btn';
+                actionButton.title = 'Активувати';
+            }
+            
+            themeCard.dataset.active = activate ? 'true' : 'false';
+            actionButton.disabled = false;
+            
+        } else {
+            showMessage(data.message || 'Помилка при зміні статусу теми', 'error');
+            
+            // Відновити кнопку
+            actionButton.disabled = originalDisabled;
+            actionButton.innerHTML = originalContent;
+        }
+        
+    } catch (error) {
+        showMessage('Помилка при зміні статусу теми: ' + error.message, 'error');
+        
+        // Відновити кнопку
+        actionButton.disabled = originalDisabled;
+        actionButton.innerHTML = originalContent;
+    }
+}
+
+// Видалити тему з валідацією
+async function deleteThemeWithValidation(themeId) {
+    const themeCard = document.querySelector(`[data-theme-id="${themeId}"]`);
+    const themeName = themeCard.querySelector('.theme-title').textContent;
+    const requestsCountText = themeCard.querySelector('.requests-count').textContent;
+    const requestsCount = parseInt(requestsCountText.replace(/[^0-9]/g, '')) || 0;
+    
+    if (requestsCount > 0) {
+        showMessage(`Неможливо видалити тему "${themeName}". Вона використовується в ${requestsCount} активних запитах.`, 'error');
+        return;
+    }
+    
+    // Показати красивий діалог підтвердження
+    showConfirmDialog(
+        'Підтвердження видалення',
+        `Ви впевнені, що хочете видалити тему "${themeName}"? Цю дію неможливо відмінити.`,
+        async () => {
+            // Функція яка виконається при підтвердженні
+            const deleteButton = themeCard.querySelector('.delete-btn');
+            const originalContent = deleteButton.innerHTML;
+            const originalDisabled = deleteButton.disabled;
+            
+            // Показати loading
+            deleteButton.disabled = true;
+            deleteButton.innerHTML = '<i class="icon">⏳</i> Видалення...';
+            
+            try {
+                const response = await fetch(`/users/teacher-theme/delete/${themeId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message || 'Тему успішно видалено!', 'success');
+                    
+                    // Видалити з UI з анімацією
+                    themeCard.style.transition = 'all 0.3s ease-out';
+                    themeCard.style.transform = 'scale(0.95)';
+                    themeCard.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        themeCard.remove();
+                        
+                        // Показати "немає тем" якщо це була остання тема
+                        const container = document.getElementById('themes-grid');
+                        if (container.children.length === 0) {
+                            container.innerHTML = `
+                                <div class="no-themes-message">
+                                    <p>У вас поки немає тем. Додайте першу тему за допомогою кнопки вище.</p>
+                                </div>
+                            `;
+                        }
+                    }, 300);
+                    
+                } else {
+                    showMessage(data.error || 'Помилка при видаленні теми', 'error');
+                    
+                    // Відновити кнопку
+                    deleteButton.disabled = originalDisabled;
+                    deleteButton.innerHTML = originalContent;
+                }
+                
+            } catch (error) {
+                showMessage('Помилка при видаленні теми: ' + error.message, 'error');
+                
+                // Відновити кнопку
+                deleteButton.disabled = originalDisabled;
+                deleteButton.innerHTML = originalContent;
+            }
+        }
+    );
+}
+
+// Оновити потоки для теми
+async function updateThemeStreams(themeId) {
+    const themeCard = document.querySelector(`[data-theme-id="${themeId}"]`);
+    const selectedStreams = [];
+    
+    themeCard.querySelectorAll('.streams-list input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedStreams.push(parseInt(checkbox.value));
+    });
+    
+    try {
+        const response = await fetch(`/users/teacher-theme/attach-streams/${themeId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                'stream_ids': selectedStreams
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Потоки успішно оновлені!', 'success');
+        } else {
+            showMessage(data.error || 'Помилка при оновленні потоків', 'error');
+        }
+        
+    } catch (error) {
+        showMessage('Помилка при оновленні потоків: ' + error.message, 'error');
+    }
+}
+
+// Ініціалізація при завантаженні сторінки
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('teacherProfileForm');
     const profilePictureInput = document.getElementById('profile-picture-input');
@@ -217,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', function() {
             djangoMessages.style.display = 'none';
             const errorTexts = Array.from(errorMessages).map(msg => msg.textContent.trim());
             let userMessage = errorTexts.length === 1 ? errorTexts[0] : `Будь ласка, виправте наступні помилки:\n${errorTexts.join('\n')}`;
-            showErrorMessage(userMessage);
+            showMessage(userMessage, 'error');
         }
     }
 
@@ -225,44 +1166,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.error-message').forEach(error => {
             error.textContent = '';
         });
-    }
-
-    function showSuccessMessage(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification success';
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background-color: #DEF7EC; color: #03543F; border: 1px solid #31C48D;
-            padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 9999; font-size: 14px; font-weight: 500; opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.style.opacity = '1', 10);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => document.body.removeChild(toast), 300);
-        }, 3000);
-    }
-
-    function showErrorMessage(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification error';
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background-color: #FEF2F2; color: #991B1B; border: 1px solid #F87171;
-            padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 9999; font-size: 14px; font-weight: 500; opacity: 0;
-            transition: opacity 0.3s ease; white-space: pre-line; max-width: 400px; text-align: center;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.style.opacity = '1', 10);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => document.body.removeChild(toast), 5000);
-        }, 5000);
     }
 
     function displayErrors(errors) {
@@ -281,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         if (errorMessages.length > 0) {
             let userMessage = errorMessages.length === 1 ? errorMessages[0] : `Будь ласка, виправте наступні помилки:\n${errorMessages.join('\n')}`;
-            showErrorMessage(userMessage);
+            showMessage(userMessage, 'error');
         }
     }
 
@@ -306,17 +1209,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 profilePreview.src = e.target.result;
             }
             reader.readAsDataURL(file);
-        } else {
-            profilePreview.src = "{% static 'images/default-avatar.jpg' %}";
         }
     }
 
     if (profilePictureInput) {
         profilePictureInput.addEventListener('change', handleProfilePictureChange);
     }
-
-    // Initialize themes data in hidden input
-    document.getElementById('themes-data').value = JSON.stringify(themes);
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -326,9 +1224,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (djangoMessages) {
             djangoMessages.style.display = 'none';
         }
-
-        // Update themes data before creating FormData
-        document.getElementById('themes-data').value = JSON.stringify(themes);
         
         const formData = new FormData(form);
         
@@ -340,123 +1235,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             }
         })
-        .then(response => {
-            if (response.status === 409) { // Conflict
-                return response.json().then(data => {
-                    data.isConflict = true;
-                    return data;
-                });
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showSuccessMessage(data.message || 'Профіль успішно оновлено');
+                showMessage(data.message || 'Профіль успішно оновлено', 'success');
             } else {
-                if (data.isConflict) {
-                    showErrorMessage(data.message || 'Неможливо видалити тему, оскільки вона використовується.');
-                } else if (data.errors) {
+                if (data.errors) {
                     displayErrors(data.errors);
                 } else if (data.message) {
-                    showErrorMessage(data.message);
+                    showMessage(data.message, 'error');
                 }
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showErrorMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.');
+            showMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.', 'error');
         });
     });
 });
 </script>
-{% endblock %}
-
-<style>
-  /* ЗАКОМЕНТОВАНО: стилі для секції квот (буде відновлено пізніше)
-  .quota-section {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-  }
-
-  .slot-row {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    align-items: flex-end;
-  }
-
-  .quota-input {
-    width: 80px;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-  }
-
-  .stream-input {
-    width: 200px;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background-color: #e9ecef;
-  }
-
-  .add-stream-btn {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .add-stream-btn:hover {
-    background-color: #218838;
-  }
-
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-  }
-
-  .modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    border-radius: 8px;
-    width: 60%;
-    max-width: 500px;
-    position: relative;
-  }
-
-  .close-modal {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    position: absolute;
-    right: 20px;
-    top: 10px;
-  }
-
-  .close-modal:hover,
-  .close-modal:focus {
-    color: black;
-    text-decoration: none;
-  }
-  */
-</style>
 {% endblock %}

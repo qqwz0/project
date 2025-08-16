@@ -157,7 +157,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'uk'
 
-TIME_ZONE =  'Europe/Kiev'
+TIME_ZONE = 'Europe/Kyiv'  # ✅ Правильна назва для Києва
 
 USE_I18N = True
 
