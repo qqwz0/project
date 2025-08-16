@@ -851,9 +851,10 @@ def teacher_profile_edit(request):
                     
                     form.save()
                     
-                    messages.success(request, "Профіль успішно оновлено")
+                    # Handle themes
+                    new_themes_data = request.POST.get('themes_data', '[]')
+                    logger.debug(f"Themes data received: {new_themes_data}")
                     
-
                     try:
                         new_themes = json.loads(new_themes_data)
                         new_theme_texts = {item['theme'] for item in new_themes}
@@ -911,21 +912,17 @@ def teacher_profile_edit(request):
                             ),
                             'user': request.user,
                             'user_profile': request.user  # Додаємо user_profile в контекст
-
-                    
-                    # For regular requests, stay on the same page like teacher profile
-                    return render(request, 'profile/teacher_edit.html', {
-                        'form': form,
-                        'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile),  # Показуємо всі теми для редагування
-                        'slots': Slot.objects.filter(teacher_id=teacher_profile),
-                        'available_streams': Stream.objects.exclude(
-                            id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
-                        ),
-                        'all_streams': Stream.objects.all(),  # Всі потоки для селектора в темах
-                        'user': request.user,
-                        'user_profile': request.user  # Додаємо user_profile в контекст
-                    })
-                    
+                        })
+                        
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON Decode Error: {str(e)} - Data: {new_themes_data}")
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': False,
+                                'message': 'Помилка при збереженні тем'
+                            }, status=400)
+                        messages.error(request, "Помилка при збереженні тем")
+                        
             except Exception as e:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -944,7 +941,6 @@ def teacher_profile_edit(request):
         form = TeacherProfileForm(instance=teacher_profile, user=request.user)
     
     existing_themes = TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False)
-
     slots = Slot.objects.filter(teacher_id=teacher_profile)
     
     # Get all available streams that the teacher doesn't already have
@@ -957,7 +953,6 @@ def teacher_profile_edit(request):
         'existing_themes': existing_themes,
         'slots': slots,
         'available_streams': available_streams,
-        'all_streams': Stream.objects.all(),  # Всі потоки для селектора в темах
         'user': request.user,
         'user_profile': request.user  # Додаємо user_profile в контекст
     })
