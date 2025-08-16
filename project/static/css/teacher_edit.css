@@ -1,0 +1,236 @@
+/* === TEACHER EDIT STYLES - FLEXBOX LAYOUT === */
+
+body {
+    --teacher-edit-loaded: true;
+}
+
+html body main.profile-main div.profile-content div.edit-profile-container {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+}
+
+html body main.profile-main div.profile-content div.form-content {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+/* FLEXBOX LAYOUT ДЛЯ ДВОХ КОЛОНОК */
+html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ЛІВА І ПРАВА КОЛОНКИ */
+html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div {
+    flex: 1;
+    min-width: 300px;
+    max-width: 50%;
+    box-sizing: border-box;
+}
+
+/* ЛІВА КОЛОНКА - РІВНА З ПРАВОЮ */
+html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:first-child {
+    flex: 1; /* Особиста інформація 50% */
+    max-width: 50%;
+}
+
+/* ПРАВА КОЛОНКА - РІВНА З ЛІВОЮ */
+html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:last-child {
+    flex: 1; /* Контакти + теми 50% */
+    max-width: 50%;
+}
+
+/* ULTRA-SPECIFIC ДЛЯ ОСОБИСТОЇ ІНФОРМАЦІЇ */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info {
+    padding: 32px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.contacts {
+    padding: 32px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* THEMES SECTION - STICKY HEADER + SCROLLABLE LIST */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+    display: flex;
+    flex-direction: column;
+    height: 600px; /* Збільшена висота для зручності перегляду */
+    background: #F9FAFB;
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* Сховуємо зовнішній overflow */
+}
+
+/* STICKY HEADER З ЗАГОЛОВКОМ */
+html body main.profile-main div.profile-content div.themes-section h3 {
+    font-size: 16px;
+    margin: 0;
+    padding: 20px 20px 16px 20px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+    flex-shrink: 0; /* Не стискається */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* STICKY КНОПКА ДОДАТИ */
+html body main.profile-main div.profile-content .add-theme-container {
+    padding: 0 20px 16px 20px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+    flex-shrink: 0; /* Не стискається */
+    position: sticky;
+    top: 60px; /* Під заголовком */
+    z-index: 9;
+}
+
+/* СКРОЛЮВАНИЙ СПИСОК ТЕМ - ПО ОДНІЙ У СТОВПЧИК */
+html body main.profile-main div.profile-content .themes-grid {
+    display: flex;
+    flex-direction: column; /* По одній темі у стовпчик */
+    gap: 16px;
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1; /* Займає всю доступну висоту */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* КАРТКА ТЕМИ - ПОВНА ШИРИНА */
+html body main.profile-main div.profile-content .theme-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    box-sizing: border-box;
+    width: 100%; /* Повна ширина контейнера */
+    flex-shrink: 0; /* Не стискається */
+}
+
+/* ULTRA-SPECIFIC ДЛЯ FORM-ROW */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info div.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    width: 100%;
+    min-width: 0;
+}
+
+/* ULTRA-SPECIFIC ДЛЯ FORM-GROUP */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info div.form-group {
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+}
+
+/* ULTRA-SPECIFIC ДЛЯ INPUT TA SELECT */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info input,
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info select {
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #D1D5DB;
+    min-width: 0;
+}
+
+/* ULTRA-SPECIFIC ДЛЯ LABEL */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info label {
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 8px;
+    font-weight: 500;
+    display: block;
+}
+
+/* ULTRA-SPECIFIC ДЛЯ H3 */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections h3 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #1A1A1A;
+}
+
+/* Покращений скролбар */
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section::-webkit-scrollbar {
+    width: 4px;
+}
+
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
+
+html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Покращений скролбар ДЛЯ THEMES-GRID */
+html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
+
+html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Адаптивність */
+@media (max-width: 1200px) {
+    html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:first-child,
+    html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:last-child {
+        flex: 1;
+        max-width: 100%;
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 1024px) {
+    html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+        height: 500px; /* Трохи менша висота на мобільних, але все одно комфортна */
+    }
+} 

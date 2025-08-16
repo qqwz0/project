@@ -252,7 +252,7 @@ class Request(models.Model):
         if self.pk:  # Check if the request already exists
             old_request = Request.objects.get(pk=self.pk)
             if old_request.request_status != self.request_status:
-                # First save the request status change
+                # Save all changes first (including teacher_theme)
                 super().save(*args, **kwargs)
                 
                 # Then update the slot count, which will now count this request
@@ -286,13 +286,70 @@ class Request(models.Model):
         return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
     
 class TeacherTheme(models.Model):
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE, related_name='themes')
     theme = models.CharField(max_length=100)
-    theme_description = models.TextField()
+    theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)  # ✅ Додаємо це поле
+    is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
+    streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')  # Зв'язок з потоками
     
     def __str__(self):
-        return self.theme
+        status = "🟢" if self.is_active else "🔴"
+        return f"{status} {self.theme}"
+    
+    def deactivate(self):
+        """Логічна деактивація теми"""
+        self.is_active = False
+        self.is_deleted = True  # ✅ Синхронізуємо поля
+        self.save()
+    
+    def activate(self):
+        """Активація теми"""
+        self.is_active = True
+        self.is_deleted = False  # ✅ Синхронізуємо поля
+        self.save()
+    
+    def can_be_deleted(self):
+        """Перевіряє чи можна фізично видалити тему"""
+        # Перевіряємо чи тема використовується в активних запитах
+        active_requests = Request.objects.filter(
+            teacher_theme=self,
+            request_status__in=['Очікує', 'Активний']
+        ).exists()
+        return not active_requests
+    
+    def get_active_requests_count(self):
+        """Повертає кількість активних запитів для цієї теми"""
+        return Request.objects.filter(
+            teacher_theme=self,
+            request_status__in=['Очікує', 'Активний']
+        ).count()
+    
+    def get_streams_display(self):
+        """Повертає список потоків у вигляді рядка"""
+        streams = self.streams.all()
+        if streams:
+            return ', '.join([stream.stream_code for stream in streams])
+        return 'Без потоку'
+    
+    @classmethod
+    def get_active_themes(cls):
+        """Повертає лише активні теми"""
+        return cls.objects.filter(is_active=True)
+    
+    @classmethod
+    def get_available_themes(cls, teacher=None):
+        """Повертає доступні (активні і не зайняті) теми"""
+        queryset = cls.objects.filter(is_active=True, is_occupied=False)
+        if teacher:
+            queryset = queryset.filter(teacher_id=teacher)
+        return queryset
+    
+    class Meta:
+        verbose_name = "Тема викладача"
+        verbose_name_plural = "Теми викладачів"
+        ordering = ['teacher_id__teacher_id__last_name', 'theme']
 
 class StudentTheme(models.Model):
     student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
@@ -303,6 +360,11 @@ class StudentTheme(models.Model):
         return self.theme 
 
 class OnlyStudent(models.Model):
+    EDUCATION_LEVELS = [
+        ('bachelor', 'Bachelor'),
+        ('master', 'Master'),
+    ]
+    
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
@@ -310,6 +372,12 @@ class OnlyStudent(models.Model):
                                     related_name='catalog_student_profile')
     speciality = models.CharField(max_length=100)
     course = models.IntegerField()
+    education_level = models.CharField(
+        max_length=50,
+        choices=EDUCATION_LEVELS,
+        blank=True,
+        null=True
+    )
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 

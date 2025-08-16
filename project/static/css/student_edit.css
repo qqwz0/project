@@ -4,10 +4,11 @@
 }
 
 .edit-profile-container {
-    max-width: 1200px;
+    max-width: 1400px; /* Застосовую як в консолі */
     margin: 0 auto;
     padding: 20px;
     font-family: 'Inter', sans-serif;
+    width: 100%; /* Додаю щоб контейнер використовував всю доступну ширину */
 }
 
 .edit-profile-header {
@@ -63,19 +64,19 @@
 }
 
 .profile-title h1 {
-    margin: 0;
-    font-size: 24px;
+    margin: 0 0 5px 0;
+    font-size: 28px;
     color: #1A1A1A;
 }
 
 .profile-title .email {
-    margin: 5px 0 0;
-    color: #666;
+    margin: 0;
+    color: #6B7280;
     font-size: 14px;
 }
 
 .edit-title {
-    font-size: 20px;
+    font-size: 24px;
     color: #1A1A1A;
     margin-bottom: 20px;
 }
@@ -83,24 +84,29 @@
 .form-content {
     background: #FFFFFF;
     border-radius: 12px;
-    padding: 24px;
+    padding: 32px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    width: 100%; /* Додаю для кращого використання простору */
 }
 
 .form-sections {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 32px; /* Збільшив gap з 24px до 32px */
 }
 
 .form-sections.teacher-sections {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 3fr; /* Збільшую другу колонку для тем - 2:3 замість 1:1.2 */
+    gap: 48px; /* Ще більший gap для кращого розділення */
+    align-items: start; /* Вирівнюю по верху */
 }
 
 .personal-info, .contacts {
-    padding: 20px;
+    padding: 28px; /* Збільшую padding */
     background: #F9FAFB;
     border-radius: 8px;
+    width: 100%; /* Повна ширина контейнера */
+    box-sizing: border-box;
 }
 
 h3 {
@@ -109,19 +115,16 @@ h3 {
     margin-bottom: 16px;
 }
 
+/* Покращую spacing в формах */
+.form-group {
+    margin-bottom: 20px; /* Збільшую відступ між полями */
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group.full-width {
-    grid-column: 1 / -1;
+    gap: 20px; /* Збільшую gap між полями в ряду */
+    margin-bottom: 20px; /* Збільшую відступ між рядами */
 }
 
 label {
@@ -131,14 +134,20 @@ label {
     margin-bottom: 8px;
 }
 
+/* Покращую поля введення */
 input, select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 12px 16px; /* Збільшую padding для кращого вигляду */
     border: 1px solid #D1D5DB;
     border-radius: 6px;
     font-size: 14px;
     color: #1A1A1A;
     background: #FFFFFF;
+    box-sizing: border-box;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
 }
 
 input:focus, select:focus {
@@ -207,17 +216,46 @@ input:focus, select:focus {
     background: #16A34A;
 }
 
+.messages {
+    margin-bottom: 20px;
+}
+
 .message {
     padding: 12px 16px;
     border-radius: 6px;
     margin-bottom: 16px;
     transition: opacity 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .message.success {
     background-color: #DEF7EC;
     color: #03543F;
     border: 1px solid #31C48D;
+}
+
+.message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
+    white-space: pre-line;
+}
+
+/* Additional specificity for Django messages */
+.messages .message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
+}
+
+/* Force red color for error messages */
+div.message.error,
+.messages .message.error,
+#django-messages .message.error {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #F87171;
 }
 
 .themes-section {
@@ -333,21 +371,175 @@ input:focus, select:focus {
     background: #16A34A;
 }
 
-@media (max-width: 768px) {
+/* Адаптивність для мобільних та планшетів */
+@media (max-width: 1200px) {
     .form-sections.teacher-sections {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1.5fr; /* На середніх екранах трохи менше співвідношення */
+        gap: 32px;
+    }
     }
     
-    .form-row {
+@media (max-width: 1024px) {
+    .form-sections.teacher-sections {
         grid-template-columns: 1fr;
+        gap: 24px;
     }
     
     .edit-profile-container {
+        max-width: 100%;
         padding: 16px;
     }
     
     .form-content {
+        padding: 24px;
+    }
+    
+    .personal-info, .contacts {
+        padding: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .edit-profile-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .profile-title h1 {
+        font-size: 24px;
+    }
+    
+    .edit-title {
+        font-size: 20px;
+    }
+    
+    .form-content {
+        padding: 20px;
+    }
+    
+    .personal-info, .contacts {
+        padding: 20px;
+    }
+    
+    .form-sections {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .edit-profile-container {
+        padding: 12px;
+    }
+    
+    .form-content {
         padding: 16px;
+    }
+    
+    .personal-info, .contacts {
+        padding: 16px;
+    }
+    
+    .profile-title h1 {
+        font-size: 20px;
+    }
+    
+    .edit-title {
+        font-size: 18px;
+    }
+
+    .form-row {
+        gap: 12px;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .save-button,
+    .back-button {
+        width: 100%;
+    }
+
+    .phone-input {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .country-code {
+        padding: 0;
+    }
+
+    /* Quota section adjustments */
+    .slot-row {
+        flex-direction: column;
+    }
+
+    .quota-input,
+    .stream-input {
+        width: 100%;
+    }
+
+    /* Modal adjustments */
+    .modal-content {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .modal-buttons {
+        flex-direction: column;
+    }
+
+    .modal-buttons button {
+        width: 100%;
+    }
+
+    /* Theme section adjustments */
+    .theme-input-container {
+        flex-direction: column;
+    }
+
+    #new-theme {
+        width: 100%;
+    }
+
+    .add-theme {
+        width: 100%;
+        height: 40px;
+        margin-top: 0;
+    }
+
+    .theme-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .theme-item input {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    .edit-profile-container {
+        padding: 12px;
+    }
+
+    .form-content {
+        padding: 12px;
+    }
+
+    h3 {
+        font-size: 15px;
+    }
+
+    label {
+        font-size: 13px;
+    }
+
+    input, select {
+        font-size: 13px;
+        padding: 6px 10px;
     }
 }
 
@@ -464,128 +656,4 @@ input:focus, select:focus {
 
 .modal-buttons button:hover {
     opacity: 0.9;
-}
-
-@media (max-width: 480px) {
-    .edit-profile-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 12px;
-    }
-
-    .profile-image {
-        width: 80px;
-        height: 80px;
-    }
-
-    .profile-title h1 {
-        font-size: 20px;
-    }
-
-    .profile-title .email {
-        font-size: 12px;
-    }
-
-    .edit-title {
-        font-size: 18px;
-        margin-bottom: 16px;
-    }
-
-    .form-content {
-        padding: 16px;
-    }
-
-    .form-row {
-        gap: 12px;
-    }
-
-    .form-buttons {
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .save-button,
-    .back-button {
-        width: 100%;
-    }
-
-    .phone-input {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .country-code {
-        padding: 0;
-    }
-
-    /* Quota section adjustments */
-    .slot-row {
-        flex-direction: column;
-    }
-
-    .quota-input,
-    .stream-input {
-        width: 100%;
-    }
-
-    /* Modal adjustments */
-    .modal-content {
-        width: 90%;
-        padding: 15px;
-    }
-
-    .modal-buttons {
-        flex-direction: column;
-    }
-
-    .modal-buttons button {
-        width: 100%;
-    }
-
-    /* Theme section adjustments */
-    .theme-input-container {
-        flex-direction: column;
-    }
-
-    #new-theme {
-        width: 100%;
-    }
-
-    .add-theme {
-        width: 100%;
-        height: 40px;
-        margin-top: 0;
-    }
-
-    .theme-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .theme-item input {
-        width: 100%;
-    }
-}
-
-@media (max-width: 360px) {
-    .edit-profile-container {
-        padding: 12px;
-    }
-
-    .form-content {
-        padding: 12px;
-    }
-
-    h3 {
-        font-size: 15px;
-    }
-
-    label {
-        font-size: 13px;
-    }
-
-    input, select {
-        font-size: 13px;
-        padding: 6px 10px;
-    }
 }
