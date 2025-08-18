@@ -13,7 +13,8 @@ from .views import (
     AddCommentView,
     DeleteCommentView,
     archived_request_details,
-    delete_theme
+    delete_theme,
+    add_comment
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -33,7 +34,7 @@ urlpatterns = [
     path('file/<int:pk>/download/', DownloadFileView.as_view(), name='download_file'),
     
     # Comments
-    path('file/<int:file_id>/comment/', AddCommentView.as_view(), name='add_comment'),
+    path('file/<int:file_id>/comment/', add_comment, name='add_comment'),
     path('comment/<int:pk>/delete/', DeleteCommentView.as_view(), name='delete_comment'),
     path('archived-request-details/<int:request_id>/', archived_request_details, name='archived_request_details'),
     

@@ -430,6 +430,12 @@ class CompleteRequestView(View):
             req.completion_date = timezone.now()
             req.grade = request.POST.get('grade')
             req.save()
+            
+            # Free the teacher theme if it exists
+            if req.teacher_theme:
+                req.teacher_theme.is_occupied = False
+                req.teacher_theme.save()
+            
             if req.slot:
                 req.slot.get_available_slots()
             messages.success(request, 'Роботу завершено')
@@ -766,24 +772,74 @@ from django.http import JsonResponse
 
 @login_required
 def add_comment(request, file_id):
-    file = get_object_or_404(RequestFile, id=file_id)
-    if request.method == 'POST':
-        form = FileCommentForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.file = file
-            comment.author = request.user
-            comment.save()
-            return JsonResponse({
-                'status': 'success',
-                'comment': {
-                    'id': comment.id,
-                    'text': comment.text,
-                    'author': comment.author.get_full_name(),
-                    'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+    """Обробляє POST-запит для додавання коментаря до файлу"""
+    try:
+        file = RequestFile.objects.get(pk=file_id)
+        course_request = file.request
+        
+        if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
+            else:
+                messages.error(request, 'Немає прав доступу для додавання коментаря')
+                return redirect('profile')
+        
+        text = request.POST.get('text')
+        if not text and not request.FILES.get('attachment'):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Коментар не може бути порожнім, додайте текст або прикріпіть файл'}, status=400)
+            else:
+                messages.error(request, 'Коментар не може бути порожнім, додайте текст або прикріпіть файл')
+                return redirect('profile')
+        
+        comment = FileComment(
+            file=file,
+            author=request.user,
+            text=text or ''  
+        )
+        
+        attachment = request.FILES.get('attachment')
+        if attachment:
+            comment.attachment = attachment
+        
+        comment.save()
+            
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            response_data = {
+                'success': True,
+                'comment_id': comment.id,
+                'text': comment.text,
+                'author': comment.author.get_full_name(),
+                'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+            }
+            
+            if comment.attachment:
+                response_data['attachment'] = {
+                    'name': comment.get_attachment_filename(),
+                    'url': comment.attachment.url
                 }
-            })
-    return JsonResponse({'status': 'error'}, status=400)
+            
+            return JsonResponse(response_data)
+        else:
+            messages.success(request, 'Коментар успішно додано')
+            return redirect('profile')
+        
+    except RequestFile.DoesNotExist:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Файл не знайдено'}, status=404)
+        else:
+            messages.error(request, 'Файл не знайдено')
+            return redirect('profile')
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        else:
+            messages.error(request, f'Помилка при додаванні коментаря: {str(e)}')
+            return redirect('profile')
 
 @login_required
 def delete_comment(request, pk):

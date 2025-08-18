@@ -184,7 +184,7 @@ function showEditDescription(fileId) {
     
     if (newDescription !== null) {
         $.ajax({
-            url: `/catalog/file/${fileId}/update-description/`,
+            url: `/file/${fileId}/update-description/`,
             type: 'POST',
             data: {
                 description: newDescription,
@@ -227,7 +227,7 @@ function updateDescription(fileId, event) {
     const textSpan = document.getElementById(`description-${fileId}`);
     
     $.ajax({
-        url: `/catalog/file/${fileId}/update-description/`,
+        url: `/file/${fileId}/update-description/`,
         type: 'POST',
         data: {
             description: newDescription
@@ -266,7 +266,7 @@ $(document).ready(function() {
         var requestId = '{{ request.id }}';
         
         $.ajax({
-            url: `/catalog/request/${requestId}/upload-file/`,
+            url: `/request/${requestId}/upload-file/`,
             type: 'POST',
             data: formData,
             processData: false,

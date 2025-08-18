@@ -1074,6 +1074,11 @@ def complete_request(request, request_id):
         req.completion_date = timezone.now()
         req.save()
         
+        # Free the teacher theme if it exists
+        if req.teacher_theme:
+            req.teacher_theme.is_occupied = False
+            req.teacher_theme.save()
+        
         messages.success(request, "Роботу успішно завершено")
         return JsonResponse({"success": True})
         

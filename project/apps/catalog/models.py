@@ -295,6 +295,12 @@ class Request(models.Model):
                     self.slot.update_occupied_slots(+1)
                 elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
+                
+                # Free teacher theme when request is completed
+                if self.request_status == 'Завершено' and self.teacher_theme:
+                    self.teacher_theme.is_occupied = False
+                    self.teacher_theme.save()
+                
                 return
 
         # Встановлення навчального року
