@@ -82,7 +82,7 @@
             >
               <div class="profile-message-link">
                 <p>
-                  {{ item.message_text }} {% if item.status == 'відхилив' %}
+                  {{ item.message_text }} {% if item.status == 'відхилив' or item.status == 'скасував' %}
                   <button
                     type="button"
                     class="view-rejection-reason-btn"

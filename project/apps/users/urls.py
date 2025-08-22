@@ -36,4 +36,5 @@ urlpatterns = [
     path('teacher-theme/delete/<int:theme_id>/', views.delete_teacher_theme, name='delete_teacher_theme'),
     path('teacher-theme/attach-streams/<int:theme_id>/', views.attach_theme_to_streams, name='attach_theme_to_streams'),
     path('teacher-theme/update/<int:theme_id>/', views.update_teacher_theme, name='update_teacher_theme'),
+    path('cancel-request/<int:request_id>/', views.cancel_active_request, name='cancel_request')
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

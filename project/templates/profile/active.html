@@ -370,13 +370,22 @@
                 </div>
 
                 <!-- Complete button -->
-                <div class="complete-section">
-                    <div class="section-header" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: flex-end;">
+                <div class="actions-container">
+                    <div class="action-block">
+                        <p>Ця дія перемістить роботу до архіву зі статусом "Відхилено" і буде незворотною.
+
+                        </p>
+                        <button onclick="showCancelModal('{{ request.id }}')" class="cancel-button">
+                            <i class="fas fa-times-circle" style="margin-right: 8px; font-size: 18px;"></i> Скасувати роботу
+                        </button>
                     </div>
-                    <p style="margin-bottom: 15px; color: #4B5563; font-size: 14px;">Після натискання на кнопку "Завершити роботу" ви зможете виставити фінальну оцінку та перенести роботу до архіву.</p>
-                    <button onclick="showCompleteModal('{{ request.id }}')" class="complete-button">
-                        <i class="fas fa-check-circle" style="margin-right: 8px; font-size: 18px;"></i> Завершити роботу
-                    </button>
+
+                    <div class="action-block align-right">
+                        <p>Після натискання на кнопку "Завершити роботу" ви зможете виставити фінальну оцінку та перенести роботу до архіву.</p>
+                        <button onclick="showCompleteModal('{{ request.id }}')" class="complete-button">
+                            <i class="fas fa-check-circle" style="margin-right: 8px; font-size: 18px;"></i> Завершити роботу
+                        </button>
+                    </div>
                 </div>
             </div>
         {% endfor %}
@@ -414,6 +423,21 @@
                 </div>
             </form>
         </div>
+    </div>
+</div>
+<!-- Cancel modal -->
+<div id="cancelModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeCancelModal()">&times;</span>
+        <h3>Скасувати активну роботу</h3>
+        <form id="cancelForm" onsubmit="handleCancelSubmit(event)">
+            <input type="hidden" id="cancelRequestId" name="requestId">
+            <div class="form-group">
+                <label for="cancelReason">Причина скасування:</label>
+                <textarea id="cancelReason" name="cancelReason" rows="4" cols="30"></textarea>
+            </div>
+            <button type="submit" class="request-button reject modal-reject-btn">Скасувати роботу</button>
+        </form>
     </div>
 </div>
 
@@ -963,5 +987,59 @@ document.addEventListener('keydown', function(event) {
         closeEditThemeModal();
     }
 });
+
+function showCancelModal(requestId) {
+    const modal = document.getElementById('cancelModal');
+    document.getElementById('cancelRequestId').value = requestId;
+    modal.style.display = 'block';
+}
+
+function closeCancelModal() {
+    const modal = document.getElementById('cancelModal');
+    modal.style.display = 'none';
+    document.getElementById('cancelForm').reset();
+}
+
+function handleCancelSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const requestId = form.querySelector('#cancelRequestId').value;
+    const reason = form.querySelector('#cancelReason').value.trim();
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Скасування...';
+
+    fetch(`/users/cancel-request/${requestId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `rejected_reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeCancelModal();
+            window.location.reload();
+        } else {
+            alert('Помилка: ' + (data.error || 'Не вдалося скасувати роботу.'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Сталася помилка. Спробуйте ще раз.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
 </script>
 

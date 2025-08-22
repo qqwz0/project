@@ -1974,3 +1974,40 @@ def _group_teacher_themes_by_stream(teacher_profile):
     
     return sorted_themes_by_stream
 
+@login_required
+def cancel_active_request(request, request_id):
+    """
+    Complete a request with status canceled.
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"})
+
+    try:
+        req = Request.objects.get(id=request_id)
+        
+        # Only allow the teacher to cancel the request
+        if req.teacher_id.teacher_id != request.user:
+            return JsonResponse({"success": False, "error": "У вас немає прав для скасування цього запиту"})
+            
+        
+        rejected_reason = request.POST.get("rejected_reason")
+
+        # Update request status
+        req.request_status = "Скасовано"
+        req.rejected_reason = rejected_reason if rejected_reason else "Викладач не вказав причину скасування"
+        req.completion_date = timezone.now()
+        req.save()
+        
+        # Free the teacher theme if it exists
+        if req.teacher_theme:
+            req.teacher_theme.is_occupied = False
+            req.teacher_theme.save()
+
+        messages.success(request, "Роботу успішно скасовано")
+        return JsonResponse({"success": True})
+        
+    except Request.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Запит не знайдено"})
+    except Exception as e:
+        logger.error(f"Error completing request {request_id}: {str(e)}")
+        return JsonResponse({"success": False, "error": "Сталася помилка при обробці запиту"})
