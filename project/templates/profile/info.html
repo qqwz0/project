@@ -33,8 +33,8 @@
                         {{ stream_name }}
                     </h3>
                     <ul class="themes-list" style="margin: 0; padding-left: 1rem;">
-                        {% for theme in themes %}
-                            <!-- Theme Item -->
+                {% for theme in themes %}
+                    <!-- Theme Item -->
                             <li class="theme-item mb-2" style="list-style-type: none; position: relative;">
                                 <div style="display: flex; align-items: flex-start;">
                                     <div>
@@ -44,9 +44,9 @@
                                         {% endif %}
                                     </div>
                                 </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    </li>
+                {% endfor %}
+            </ul>
                 </div>
             {% endfor %}
         {% else %}

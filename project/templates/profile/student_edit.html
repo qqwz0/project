@@ -58,18 +58,6 @@
                         {{ form.academic_group }}
                         <div class="error-message" id="academic_group-error"></div>
                     </div>
-
-                    <div class="form-group full-width">
-                        <label for="{{ form.course.id_for_label }}">Курс</label>
-                        {{ form.course }}
-                        <div class="error-message" id="course-error"></div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="{{ form.education_level.id_for_label }}">Освітній рівень</label>
-                        {{ form.education_level }}
-                        <div class="error-message" id="education_level-error"></div>
-                    </div>
                 </div>
 
                 <div class="contacts">
@@ -102,7 +90,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('studentProfileForm');
-    const courseInput = document.querySelector('input[name="course"]');
     const groupInput = document.querySelector('input[name="academic_group"]');
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePreview = document.getElementById('profile-preview');
@@ -249,41 +236,10 @@ document.addEventListener('DOMContentLoaded', function() {
             'last_name': 'Прізвище',
             'patronymic': 'По-батькові',
             'academic_group': 'Академічна група',
-            'course': 'Курс',
-            'education_level': 'Освітній рівень',
             'additional_email': 'Додаткова електронна скринька',
             'phone_number': 'Номер телефону'
         };
         return fieldNames[fieldName] || fieldName;
-    }
-
-    function updateGroupNumber() {
-        if (!groupInput.value) return;
-        
-        const course = courseInput.value;
-        const currentGroup = groupInput.value.toUpperCase();
-        
-        // Updated regex to match our validation pattern
-        const match = currentGroup.match(/^ФЕ[СЛІПМ]-(\d)/);
-        if (match) {
-            const newGroup = currentGroup.replace(/-\d/, `-${course}`);
-            groupInput.value = newGroup;
-        }
-    }
-
-    function validateAndSyncCourse() {
-        const group = groupInput.value.toUpperCase();
-        groupInput.value = group; // Update to uppercase
-        
-        // Updated regex to match our validation pattern
-        const match = group.match(/^ФЕ[СЛІПМ]-(\d)/);
-        
-        if (match) {
-            const groupCourse = parseInt(match[1]);
-            if (groupCourse >= 1 && groupCourse <= 4) {
-                courseInput.value = groupCourse;
-            }
-        }
     }
 
     function handleProfilePictureChange(event) {
@@ -299,18 +255,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    if (profilePictureInput) {
     profilePictureInput.addEventListener('change', handleProfilePictureChange);
-
-    courseInput.addEventListener('change', function() {
-        const course = parseInt(this.value);
-        if (course >= 1 && course <= 4) {
-            updateGroupNumber();
         }
-    });
 
+    // Простіша валідація тільки для групи (конвертація в верхній регістр)
+    if (groupInput) {
     groupInput.addEventListener('input', function() {
-        validateAndSyncCourse();
+            this.value = this.value.toUpperCase();
     });
+    }
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -337,9 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showSuccessMessage(data.message || 'Профіль успішно оновлено');
                 // Don't redirect - stay on the same page like teacher profile
-                // setTimeout(() => {
-                //     window.location.href = data.redirect_url || '/users/profile/';
-                // }, 1500);
             } else {
                 if (data.errors) {
                     displayErrors(data.errors);

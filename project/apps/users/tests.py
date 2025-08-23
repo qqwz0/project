@@ -2,7 +2,7 @@ from django.test import TestCase, TransactionTestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import transaction
-from apps.catalog.models import OnlyTeacher, OnlyStudent, Request, Stream, Slot, TeacherTheme, StudentTheme
+from apps.catalog.models import OnlyTeacher, OnlyStudentNew, Request, Stream, Slot, TeacherTheme, StudentTheme, Group
 from apps.users.forms import StudentProfileForm
 from threading import Thread
 import time
@@ -14,20 +14,36 @@ class StudentGroupValidationTestCase(TestCase):
     def setUp(self):
         # Create test student user
         self.student_user = User.objects.create_user(
-            email='student.validation@test.com',
-            first_name='Студент',
-            last_name='Валідація',
+            email='student@test.com',
+            first_name='Тест',
+            last_name='Студент',
             role='Студент',
             academic_group='ФЕС-21'  # Початкова група
         )
         
+        # Створюємо тестову групу для тестів
+        from apps.catalog.models import Faculty, Specialty
+        faculty, _ = Faculty.objects.get_or_create(code='ФЕ', defaults={'name': 'Тестовий факультет'})
+        specialty, _ = Specialty.objects.get_or_create(
+            code='126', 
+            faculty=faculty,
+            education_level='bachelor',
+            defaults={'name': 'Тестова спеціальність'}
+        )
+        from apps.catalog.models import Stream
+        stream, _ = Stream.objects.get_or_create(
+            stream_code='ФЕС-2',
+            defaults={'specialty': specialty, 'year_of_entry': 2024}
+        )
+        test_group, _ = Group.objects.get_or_create(
+            group_code='ФЕС-21',
+            defaults={'stream': stream}
+        )
+        
         # Create or get student profile
-        self.student_profile, _ = OnlyStudent.objects.get_or_create(
+        self.student_profile, _ = OnlyStudentNew.objects.get_or_create(
             student_id=self.student_user,
-            defaults={
-                'course': 2,
-                'speciality': 'Тестова спеціальність'
-            }
+            defaults={'group': test_group}
         )
 
     def test_valid_group_format_saves_correctly(self):
@@ -230,7 +246,7 @@ class RequestApprovalTestCase(TransactionTestCase):
             defaults={'academic_level': 'Доцент'}
         )
         
-        self.student_profile, _ = OnlyStudent.objects.get_or_create(
+        self.student_profile, _ = OnlyStudentNew.objects.get_or_create(
             student_id=self.student_user,
             defaults={
                 'course': 2,
@@ -455,7 +471,7 @@ class TeacherProfileThemeEditTestCase(TestCase):
         
         # Отримання профілів (сигнали мали б їх створити)
         self.teacher_profile = OnlyTeacher.objects.get(teacher_id=self.teacher_user)
-        self.student_profile = OnlyStudent.objects.get_or_create(
+        self.student_profile = OnlyStudentNew.objects.get_or_create(
             student_id=self.student_user,
             defaults={'course': 2, 'speciality': 'Тестова'}
         )[0]
@@ -599,3 +615,4 @@ class TeacherProfileThemeEditTestCase(TestCase):
                 teacher_id=self.teacher_profile,
                 theme=new_theme_text,
             ).exists()
+        )

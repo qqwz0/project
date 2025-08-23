@@ -15,8 +15,8 @@ from apps.catalog.models import (
     Stream,
     Slot,
     OnlyTeacher,
-    TeacherTheme,
     OnlyStudent,
+    TeacherTheme,
     Request,
     StudentTheme,
 )
@@ -526,28 +526,19 @@ class OnlyTeacherAdmin(admin.ModelAdmin):
     @admin.display(description='Академічний рівень')
     def get_academic_level(self, obj):
         return obj.academic_level
-    
-class OnlyStudentForm(forms.ModelForm):
-    class Meta:
-        model = OnlyStudent
-        fields = ['course']  # редагується тільки курс
-        labels = {
-            'course': 'Курс',
-        }
 
+@admin.register(OnlyStudent)
 class OnlyStudentAdmin(admin.ModelAdmin):
-    form = OnlyStudentForm
-
-    list_display = ('get_full_name', 'get_course')
+    list_display = ('get_full_name', 'get_group', 'get_course', 'get_specialty')
+    list_filter = ('group__stream__specialty__faculty', 'group__stream')
     search_fields = (
         'student_id__last_name',
-        'student_id__first_name',
+        'student_id__first_name', 
         'student_id__patronymic',
+        'group__group_code'
     )
-
-
     readonly_fields = ('student_id',)
-    fields = ('student_id', 'course')  # лише ці два поля видно
+    fields = ('student_id', 'group', 'additional_email', 'phone_number')
 
     def has_add_permission(self, request):
         return False
@@ -555,19 +546,25 @@ class OnlyStudentAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-    def has_change_permission(self, request, obj=None):
-        return True
-
     @admin.display(description='ПІБ студента')
     def get_full_name(self, obj):
         return obj.student_id.get_full_name_with_patronymic()
+
+    @admin.display(description='Група')
+    def get_group(self, obj):
+        return obj.group.group_code
 
     @admin.display(description='Курс')
     def get_course(self, obj):
         return obj.course
 
+    @admin.display(description='Спеціальність')
+    def get_specialty(self, obj):
+        return obj.specialty.name
+
     def view_on_site(self, obj):
         return reverse('profile_detail', args=[obj.student_id.pk])
+
     
 @admin.register(StudentTheme)
 class StudentThemeAdmin(admin.ModelAdmin):
@@ -923,7 +920,7 @@ class RequestAdmin(admin.ModelAdmin):
 admin.site.register(Stream, StreamAdmin)
 
 admin.site.register(OnlyTeacher, OnlyTeacherAdmin)
-admin.site.register(OnlyStudent, OnlyStudentAdmin)
+
 admin.site.register(Request, RequestAdmin)
 
 # Реєструємо модель TeacherTheme в адмінці з новою конфігурацією

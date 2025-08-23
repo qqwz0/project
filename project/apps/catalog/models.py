@@ -29,6 +29,8 @@ class OnlyTeacher(models.Model):
     academic_level = models.CharField(max_length=50, choices=ACADEMIC_LEVELS, default='Асистент')
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    profile_link = models.URLField(blank=True, null=True, verbose_name="Посилання на профіль",
+                                  help_text="Посилання на особистий сайт, LinkedIn, ResearchGate тощо")
     
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
@@ -42,8 +44,18 @@ def create_only_teacher(sender, instance, created, **kwargs):
         OnlyTeacher.objects.get_or_create(teacher_id=instance)
 
 class Stream(models.Model):
-    specialty_name = models.CharField(max_length=100)
     stream_code = models.CharField(max_length=100, unique=True)
+    specialty = models.ForeignKey('Specialty', on_delete=models.CASCADE,
+                                 related_name='streams',
+                                 verbose_name="Спеціальність",
+                                 null=True, blank=True)  # Тимчасово nullable для міграції
+    year_of_entry = models.IntegerField(verbose_name="Рік вступу",
+                                       help_text="Рік, коли потік почав навчання",
+                                       default=2020)  # Тимчасовий default
+    
+    # Залишаємо specialty_name для зворотної сумісності під час міграції
+    specialty_name = models.CharField(max_length=100, blank=True, null=True,
+                                     help_text="Застаріле поле, буде видалено після міграції")
     
     def bachelors_or_masters(self):
         if self.stream_code.endswith('м'):
@@ -82,12 +94,13 @@ class Stream(models.Model):
                 raise ValidationError({
                     'stream_code': "Код потоку для бакалаврів не може бути більшим за 4 (наприклад, ФЕІ-4)."
                 })
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return  f"{self.stream_code} ({self.bachelors_or_masters()})"
+        return f"{self.stream_code} ({self.bachelors_or_masters()})"
 
 class Slot(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
@@ -189,11 +202,12 @@ class Request(models.Model):
         ('Завершено', 'Завершено'),
     ]
     student_id = models.ForeignKey('users.CustomUser', 
-                                   on_delete=models.CASCADE, 
+                                   on_delete=models.SET_NULL, 
+                                   null=True,
                                    limit_choices_to={'role': 'Студент'}, 
                                    unique=False,
                                    related_name='users_student_requests')
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.SET_NULL, null=True)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
     motivation_text = models.TextField(
         blank=True,
@@ -295,7 +309,7 @@ class Request(models.Model):
                     self.slot.update_occupied_slots(+1)
                 elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                     self.slot.update_occupied_slots(-1)
-                
+                    
                 # Free teacher theme when request is completed
                 if self.request_status == 'Завершено' and self.teacher_theme:
                     self.teacher_theme.is_occupied = False
@@ -323,21 +337,23 @@ class Request(models.Model):
         return teacher_theme_name, student_themes_list
 
     def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
+        student_name = f"{self.student_id.first_name} {self.student_id.last_name}" if self.student_id else "Видалений студент"
+        teacher_name = f"{self.teacher_id.teacher_id.first_name} {self.teacher_id.teacher_id.last_name}" if self.teacher_id and self.teacher_id.teacher_id else "Видалений викладач"
+        return f"{student_name} - {teacher_name}"    
     
 class TeacherTheme(models.Model):
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE, related_name='themes')
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.SET_NULL, null=True, related_name='themes')
     theme = models.CharField(max_length=100)
     theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')
-
+    
     def __str__(self):
         status = "🟢" if self.is_active else "🔴"
         return f"{status} {self.theme}"
-
+    
     def can_be_deleted(self):
         """Перевіряє чи можна фізично видалити тему"""
         # Перевіряємо чи тема використовується тільки в завершених запитах
@@ -348,7 +364,7 @@ class TeacherTheme(models.Model):
         
         # Можна видалити якщо немає активних запитів
         return not active_requests
-
+    
     def force_delete(self):
         """Фізично видаляє тему незалежно від статусу"""
         super().delete()
@@ -392,19 +408,19 @@ class TeacherTheme(models.Model):
             teacher_theme=self,
             request_status__in=['Очікує', 'Активний']
         ).count()
-
+    
     def get_streams_display(self):
         """Повертає список потоків у вигляді рядка"""
         streams = self.streams.all()
         if streams:
             return ', '.join([stream.stream_code for stream in streams])
         return 'Без потоку'
-
+    
     @classmethod
     def get_active_themes(cls):
         """Повертає лише активні теми"""
         return cls.objects.filter(is_active=True)
-
+    
     class Meta:
         ordering = ['teacher_id__teacher_id__last_name', 'theme']
 
@@ -416,30 +432,118 @@ class StudentTheme(models.Model):
     def __str__(self):
         return self.theme 
 
+ 
+
 class OnlyStudent(models.Model):
-    EDUCATION_LEVELS = [
-        ('bachelor', 'Bachelor'),
-        ('master', 'Master'),
-    ]
-    
+    """
+    Нова модель студента з нормалізованою структурою
+    Студент належить до групи, а група - до потоку
+    """
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
                                     limit_choices_to={'role': 'student'},
-                                    related_name='catalog_student_profile')
-    speciality = models.CharField(max_length=100)
-    course = models.IntegerField()
-    education_level = models.CharField(
-        max_length=50,
-        choices=EDUCATION_LEVELS,
-        blank=True,
-        null=True
-    )
-    additional_email = models.EmailField(blank=True, null=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-
+                                    related_name='catalog_student_profile_new')
+    group = models.ForeignKey('Group', on_delete=models.CASCADE,
+                             related_name='students',
+                             verbose_name="Група")
+    additional_email = models.EmailField(blank=True, null=True, verbose_name="Додатковий email")
+    phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Телефон")
+    
+    class Meta:
+        verbose_name = "Студент"
+        verbose_name_plural = "Студенти"
+    
+    @property
+    def specialty(self):
+        """Повертає спеціальність через групу -> потік -> спеціальність"""
+        return self.group.stream.specialty
+    
+    @property
+    def faculty(self):
+        """Повертає факультет через групу -> потік -> спеціальність -> факультет"""
+        return self.group.stream.specialty.faculty
+    
+    @property
+    def education_level(self):
+        """Повертає рівень освіти зі спеціальності"""
+        return self.group.stream.specialty.education_level
+    
+    @property
+    def course(self):
+        """Вираховує курс на основі року вступу потоку"""
+        from datetime import datetime
+        current_year = datetime.now().year
+        return current_year - self.group.stream.year_of_entry + 1
+    
     def __str__(self):
-        return f"Student: {self.student_id.get_full_name()}" 
+        return f"Student: {self.student_id.get_full_name()} ({self.group.group_code})"
+
+# Нові моделі для нормалізації структури
+class Faculty(models.Model):
+    """
+    Факультети - найвищий рівень в ієрархії
+    """
+    name = models.CharField(max_length=150, unique=True, verbose_name="Назва факультету")
+    code = models.CharField(max_length=10, unique=True, verbose_name="Код факультету", 
+                           help_text="Наприклад: ФЕС, ФЕП, ФЕЛ, ФЕІ, ФЕМ")
+    short_name = models.CharField(max_length=50, unique=True, verbose_name="Коротка назва англійською",
+                                 help_text="Наприклад: electronics, philosophy, mechanics")
+    
+    class Meta:
+        verbose_name = "Факультет"
+        verbose_name_plural = "Факультети"
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class Specialty(models.Model):
+    """
+    Спеціальності - належать факультету
+    """
+    EDUCATION_LEVELS = [
+        ('bachelor', 'Бакалавр'),
+        ('master', 'Магістр'),
+        ('phd', 'Доктор філософії'),
+    ]
+    
+    name = models.CharField(max_length=150, verbose_name="Назва спеціальності")
+    code = models.CharField(max_length=20, verbose_name="Код спеціальності",
+                           help_text="Наприклад: 121, 122, 123")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, 
+                               related_name='specialties',
+                               verbose_name="Факультет")
+    education_level = models.CharField(max_length=50, choices=EDUCATION_LEVELS,
+                                     verbose_name="Рівень освіти")
+    
+    class Meta:
+        verbose_name = "Спеціальність"
+        verbose_name_plural = "Спеціальності"
+        unique_together = ['code', 'faculty', 'education_level']
+        ordering = ['faculty', 'name']
+    
+    def __str__(self):
+        return f"{self.code} - {self.name} ({self.get_education_level_display()})"
+
+class Group(models.Model):
+    """
+    Групи - належать потоку
+    """
+    group_code = models.CharField(max_length=50, unique=True, 
+                                 verbose_name="Код групи",
+                                 help_text="Наприклад: ІМ-21, ПМ-31")
+    stream = models.ForeignKey('Stream', on_delete=models.CASCADE,
+                              related_name='groups',
+                              verbose_name="Потік")
+    
+    class Meta:
+        verbose_name = "Група"
+        verbose_name_plural = "Групи"
+        ordering = ['group_code']
+    
+    def __str__(self):
+        return self.group_code
 
 class RequestFile(models.Model):
     """
@@ -447,7 +551,7 @@ class RequestFile(models.Model):
     """
     request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to='request_files/%Y/%m/%d/')
-    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     version = models.IntegerField(default=1)  
     description = models.TextField(blank=True)  
@@ -469,7 +573,7 @@ class FileComment(models.Model):
     Model for storing comments on request files.
     """
     file = models.ForeignKey(RequestFile, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    author = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     text = models.TextField()
     attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

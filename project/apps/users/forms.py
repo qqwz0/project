@@ -5,7 +5,8 @@ import re  # Regular expressions
 from apps.catalog.models import (
     OnlyTeacher, 
     OnlyStudent,
-    TeacherTheme
+    TeacherTheme,
+    Specialty  # Додано для EDUCATION_LEVELS
 )
 from .models import CustomUser
 
@@ -231,22 +232,7 @@ class StudentProfileForm(forms.ModelForm):
         max_length=10,
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    course = forms.IntegerField(
-        label="Курс",
-        min_value=1,
-        max_value=4,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-input',
-            'min': 1,
-            'max': 4
-        })
-    )
-    education_level = forms.ChoiceField(
-        label="Освітній рівень",
-        choices=[('', 'Оберіть рівень')] + OnlyStudent.EDUCATION_LEVELS,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
+    # Поля course та education_level видалені - тепер автоматично визначаються через групу
     additional_email = forms.EmailField(
         label="Додаткова електронна скринька",
         required=False,
@@ -266,7 +252,7 @@ class StudentProfileForm(forms.ModelForm):
 
     class Meta:
         model = OnlyStudent
-        fields = ['course', 'education_level', 'additional_email', 'phone_number']
+        fields = ['additional_email', 'phone_number']  # Видалено course та education_level
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -278,31 +264,13 @@ class StudentProfileForm(forms.ModelForm):
             
         instance = kwargs.get('instance')
         if instance:
-            self.fields['course'].initial = instance.course
-            self.fields['education_level'].initial = instance.education_level
+            # Видалено course та education_level - вони тепер автоматично визначаються
             self.fields['additional_email'].initial = instance.additional_email
             self.fields['phone_number'].initial = instance.phone_number
 
     def clean(self):
         cleaned_data = super().clean()
-        course = cleaned_data.get('course')
-        academic_group = cleaned_data.get('academic_group')
-
-        if course and academic_group:
-            # Перевіряємо, чи співпадає курс з першою цифрою в номері групи
-            match = re.match(r'^ФЕ[СЛІПМ]-(\d)', academic_group)
-            if match:
-                group_course = int(match.group(1))
-                if group_course != course:
-                    raise ValidationError({
-                        'academic_group': 'Перша цифра в номері групи повинна відповідати вашому курсу',
-                        'course': 'Курс повинен відповідати першій цифрі в номері групи'
-                    })
-            else:
-                raise ValidationError({
-                    'academic_group': 'Неправильний формат групи. Приклад: ФЕС-21'
-                })
-
+        # Видалено валідацію course vs academic_group - тепер курс автоматично визначається
         return cleaned_data
 
     def clean_academic_group(self):

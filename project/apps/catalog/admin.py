@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import OnlyTeacher, OnlyStudent, Request, TeacherTheme, Slot
+from .models import OnlyTeacher, Request, TeacherTheme, Slot
 
 admin.site.register(OnlyTeacher)
 # admin.site.register(OnlyStudent)

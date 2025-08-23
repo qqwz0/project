@@ -41,7 +41,7 @@ SECRET_KEY = 'django-insecure--*0y!pkpe_l=*snlfntykk*&@s0^4d)ks6+=j8$t2(s^!me^cw
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # This was the root cause of all file upload issues.
-DEBUG = False # Temporarily enable for debugging
+DEBUG = True # Temporarily enable for debugging
 
 ALLOWED_HOSTS = [
     'project-mddj.onrender.com',
@@ -172,6 +172,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# Media files (Uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Cloudinary settings for media files.
 # The library will automatically use the CLOUDINARY_URL environment variable from Render.

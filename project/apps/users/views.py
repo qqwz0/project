@@ -37,7 +37,7 @@ from PIL import Image
 
 from apps.catalog.models import (FileComment, OnlyStudent, OnlyTeacher,
                                  Request, RequestFile, Slot, Stream,
-                                 StudentTheme, TeacherTheme)
+                                 StudentTheme, TeacherTheme, Group)
 
 from .forms import (CropProfilePictureForm, ProfilePictureUploadForm,
                     RegistrationForm, StudentProfileForm, TeacherProfileForm)
@@ -325,14 +325,14 @@ def handle_registration_callback(request, code):
                 # Визначаємо курс з номера групи
                 course = 1  # Значення за замовчуванням
                 if group:
-                    match = re.match(r"^ФЕ[ЇСМЛП]-(\d)", group)
+                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', group)
                     if match:
                         course = int(match.group(1))
-
+                
                 OnlyStudent.objects.create(
                     student_id=user,
                     course=course,  # Використовуємо визначений курс
-                    speciality="Не вказано",  # Значення за замовчуванням
+                    speciality="Не вказано"  # Значення за замовчуванням
                 )
             elif derived_role == "Викладач":
                 academic_level = job_title if job_title != "" else "Викладач"
@@ -497,15 +497,21 @@ def fake_student_login(request):
             is_active=True,
             password=make_password("fake_password"),
         )
-    OnlyStudent.objects.get_or_create(
+    
+    # Знаходимо групу для студента
+    try:
+        group_obj = Group.objects.get(group_code="ФЕС-21")
+        OnlyStudent.objects.get_or_create(
         student_id=user,
         defaults={
-            "speciality": "Не вказано",
-            "course": 2,
+                "group": group_obj,
             "additional_email": "student.test@lnu.edu.ua",
             "phone_number": "+380991234568",
         },
     )
+    except Group.DoesNotExist:
+        logger.warning("Group ФЕС-21 not found for fake student")
+    
     auth_login(request, user)
     return redirect("profile")
 
@@ -525,15 +531,21 @@ def fake_student_login_2(request):
             is_active=True,
             password=make_password("fake_password"),
         )
-    OnlyStudent.objects.get_or_create(
+    
+    # Знаходимо групу для студента
+    try:
+        group_obj = Group.objects.get(group_code="ФЕС-22")
+        OnlyStudent.objects.get_or_create(
         student_id=user,
         defaults={
-            "speciality": "Не вказано",
-            "course": 3,
+                "group": group_obj,
             "additional_email": "student2.test@lnu.edu.ua",
             "phone_number": "+380991234569",
         },
     )
+    except Group.DoesNotExist:
+        logger.warning("Group ФЕС-22 not found for fake student 2")
+    
     auth_login(request, user)
     return redirect("profile")
 
@@ -664,11 +676,10 @@ def profile(request: HttpRequest, user_id=None):
         student_course = None
         if user_profile.academic_group:
             import re
-
-            match = re.match(r"^ФЕ[ЇСМЛП]-(\d)", user_profile.academic_group)
+            match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', user_profile.academic_group)
             if match:
                 student_course = int(match.group(1))
-        context["student_course"] = student_course
+        context['student_course'] = student_course
 
     return render(request, "profile/profile.html", context)
 
@@ -944,9 +955,9 @@ def teacher_profile_edit(request):
                     request.user.save()
 
                     form.save()
-
+                    
                     messages.success(request, "Профіль успішно оновлено")
-
+                    
                     # Handle themes
                     new_themes_data = request.POST.get("themes_data", "[]")
                     logger.debug(f"Themes data received: {new_themes_data}")
@@ -1031,25 +1042,17 @@ def teacher_profile_edit(request):
                         )
 
                     # For regular requests, stay on the same page
-                    return render(
-                        request,
-                        "profile/teacher_edit.html",
-                        {
-                            "form": form,
-                            "existing_themes": TeacherTheme.objects.filter(
-                                teacher_id=teacher_profile, is_deleted=False
-                            ),
-                            "slots": Slot.objects.filter(teacher_id=teacher_profile),
-                            "available_streams": Stream.objects.exclude(
-                                id__in=Slot.objects.filter(
-                                    teacher_id=teacher_profile
-                                ).values_list("stream_id_id", flat=True)
-                            ),
-                            "all_streams": Stream.objects.all(),
-                            "user": request.user,
-                            "user_profile": request.user,
-                        },
-                    )
+                    return render(request, 'profile/teacher_edit.html', {
+                        'form': form,
+                        'existing_themes': TeacherTheme.objects.filter(teacher_id=teacher_profile, is_deleted=False),
+                        'slots': Slot.objects.filter(teacher_id=teacher_profile),
+                        'available_streams': Stream.objects.exclude(
+                            id__in=Slot.objects.filter(teacher_id=teacher_profile).values_list('stream_id_id', flat=True)
+                        ),
+                        'all_streams': Stream.objects.all(),
+                        'user': request.user,
+                        'user_profile': request.user
+                    })
             except Exception as e:
                 logger.error(f"Error processing profile: {str(e)}")
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -1078,20 +1081,15 @@ def teacher_profile_edit(request):
     existing_stream_ids = slots.values_list("stream_id_id", flat=True)
     available_streams = Stream.objects.exclude(id__in=existing_stream_ids)
 
-    return render(
-        request,
-        "profile/teacher_edit.html",
-        {
-            "form": form,
-            "existing_themes": existing_themes,
-            "slots": slots,
-            "available_streams": available_streams,
-            "all_streams": Stream.objects.all(),  # Всі потоки для селектора в темах
-            "user": request.user,
-            "user_profile": request.user,
-        },
-    )
-
+    return render(request, 'profile/teacher_edit.html', {
+        'form': form,
+        'existing_themes': existing_themes,
+        'slots': slots,
+        'available_streams': available_streams,
+        'all_streams': Stream.objects.all(),  # Всі потоки для селектора в темах
+        'user': request.user,
+        'user_profile': request.user
+    })
 
 def teacher_requests(request):
     return render(
@@ -1104,16 +1102,18 @@ def teacher_requests(request):
 def student_profile_edit(request):
     if request.user.role != "Студент":
         messages.error(request, "Доступ заборонено")
-        return redirect("profile")
-
+        return redirect('profile')
+        
     student_profile, created = OnlyStudent.objects.get_or_create(
-        student_id=request.user, defaults={"course": 1, "speciality": "Не вказано"}
+        student_id=request.user,
+        defaults={
+            'course': 1,
+            'speciality': 'Не вказано'
+        }
     )
-
-    if request.method == "POST":
-        form = StudentProfileForm(
-            request.POST, instance=student_profile, user=request.user
-        )
+    
+    if request.method == 'POST':
+        form = StudentProfileForm(request.POST, instance=student_profile, user=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -1123,16 +1123,12 @@ def student_profile_edit(request):
                     request.user.patronymic = form.cleaned_data["patronymic"]
                     request.user.academic_group = form.cleaned_data["academic_group"]
                     request.user.save()
-
+                    
                     # Update student profile fields
-                    student_profile.course = form.cleaned_data["course"]
-                    student_profile.education_level = form.cleaned_data.get(
-                        "education_level"
-                    )
-                    student_profile.additional_email = form.cleaned_data[
-                        "additional_email"
-                    ]
-                    student_profile.phone_number = form.cleaned_data["phone_number"]
+                    student_profile.course = form.cleaned_data['course']
+                    student_profile.education_level = form.cleaned_data.get('education_level')
+                    student_profile.additional_email = form.cleaned_data['additional_email']
+                    student_profile.phone_number = form.cleaned_data['phone_number']
                     student_profile.save()
 
                     messages.success(request, "Профіль успішно оновлено")
