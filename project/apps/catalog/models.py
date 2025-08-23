@@ -485,8 +485,6 @@ class Faculty(models.Model):
     Факультети - найвищий рівень в ієрархії
     """
     name = models.CharField(max_length=150, unique=True, verbose_name="Назва факультету")
-    code = models.CharField(max_length=10, unique=True, verbose_name="Код факультету", 
-                           help_text="Наприклад: ФЕС, ФЕП, ФЕЛ, ФЕІ, ФЕМ")
     short_name = models.CharField(max_length=50, unique=True, verbose_name="Коротка назва англійською",
                                  help_text="Наприклад: electronics, philosophy, mechanics")
     
@@ -496,7 +494,7 @@ class Faculty(models.Model):
         ordering = ['name']
     
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return self.name
 
 class Specialty(models.Model):
     """

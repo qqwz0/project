@@ -322,18 +322,28 @@ def handle_registration_callback(request, code):
             logger.info("New user registered: %s", email)
             # Створюємо профіль в залежності від ролі
             if derived_role == "Студент":
-                # Визначаємо курс з номера групи
-                course = 1  # Значення за замовчуванням
-                if group:
-                    match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', group)
-                    if match:
-                        course = int(match.group(1))
-                
-                OnlyStudent.objects.create(
-                    student_id=user,
-                    course=course,  # Використовуємо визначений курс
-                    speciality="Не вказано"  # Значення за замовчуванням
-                )
+                try:
+                    from apps.catalog.models import Group
+                    group_obj = Group.objects.get(group_code=group)
+                    OnlyStudent.objects.create(
+                        student_id=user,
+                        group=group_obj
+                    )
+                    logger.info(f"Created OnlyStudent for user {email} with group {group}")
+                except Group.DoesNotExist:
+                    logger.error(f"Group {group} not found for user {email}")
+                    try:
+                        fallback_group = Group.objects.first()
+                        if fallback_group:
+                            OnlyStudent.objects.create(
+                                student_id=user,
+                                group=fallback_group
+                            )
+                            logger.warning(f"Created OnlyStudent for user {email} with fallback group {fallback_group.group_code}")
+                        else:
+                            logger.error("No groups available in database")
+                    except Exception as e:
+                        logger.error(f"Failed to create OnlyStudent for {email}: {e}")
             elif derived_role == "Викладач":
                 academic_level = job_title if job_title != "" else "Викладач"
                 logger.debug(f"Setting academic_level to: {academic_level}")
@@ -636,7 +646,19 @@ def profile(request: HttpRequest, user_id=None):
         )
     else:  # Student
         # Get or create student profile
-        student_profile = get_object_or_404(OnlyStudent, student_id=user_profile)
+        try:
+            student_profile = OnlyStudent.objects.get(student_id=user_profile)
+        except OnlyStudent.DoesNotExist:
+            from apps.catalog.models import Group
+            fallback_group = Group.objects.first()
+            if fallback_group:
+                student_profile = OnlyStudent.objects.create(
+                    student_id=user_profile,
+                    group=fallback_group
+                )
+            else:
+                messages.error(request, "Помилка: немає доступних груп в системі")
+                return redirect('login')
 
         # Get all requests for the student
         all_requests = (
@@ -1107,8 +1129,7 @@ def student_profile_edit(request):
     student_profile, created = OnlyStudent.objects.get_or_create(
         student_id=request.user,
         defaults={
-            'course': 1,
-            'speciality': 'Не вказано'
+            'group': Group.objects.first()  # Fallback to first available group
         }
     )
     
@@ -1125,8 +1146,6 @@ def student_profile_edit(request):
                     request.user.save()
                     
                     # Update student profile fields
-                    student_profile.course = form.cleaned_data['course']
-                    student_profile.education_level = form.cleaned_data.get('education_level')
                     student_profile.additional_email = form.cleaned_data['additional_email']
                     student_profile.phone_number = form.cleaned_data['phone_number']
                     student_profile.save()
