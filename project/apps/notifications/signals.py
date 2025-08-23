@@ -171,13 +171,21 @@ def send_notification_on_request_status_changed(sender, instance, **kwargs):
             channel_layer = get_channel_layer()
             student_user = instance.student_id
             teacher_user = instance.teacher_id.teacher_id
-            status_text = "відхилив" if instance.request_status == "Відхилено" else "прийняв"
+            if instance.request_status == "Відхилено":
+                status_text = "відхилив"
+            elif instance.request_status == "Скасовано":
+                status_text = "скасував"
+            else:
+                status_text = "прийняв"
             teacher_name = f"{teacher_user.first_name} {teacher_user.last_name}"
             emoji = "✅" if status_text == "прийняв" else "❌"
             message = f"{teacher_name} {status_text} ваш запит! {emoji}"
-            rejected_reason = instance.rejected_reason if status_text == "відхилив" else None
+            rejected_reason = instance.rejected_reason if status_text == "відхилив" or status_text == "скасував" else None
             time = get_now_str()
-            notification = f"{teacher_name} відповів на ваш запит"
+            if status_text != 'скасував':
+                notification = f"{teacher_name} відповів на ваш запит"
+            else:
+                notification = f"{teacher_name} скасував ваш запит"
             profile_url = f"{settings.BASE_URL}{reverse('profile')}"
             catalog_url = f"{settings.BASE_URL}{reverse('teachers_catalog')}"
             context = {
