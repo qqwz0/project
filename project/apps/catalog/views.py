@@ -1,95 +1,120 @@
+import logging
+import re
 from urllib import request
-from django.shortcuts import get_object_or_404, redirect, render
-from django.views import View
-from django.http import JsonResponse, HttpResponseForbidden, FileResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError
+
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .forms import RequestForm, FilteringSearchingForm, RequestFileForm, FileCommentForm
-from .models import OnlyTeacher, Slot, TeacherTheme, StudentTheme, Stream, Request, RequestFile, FileComment
-from django.core.exceptions import ValidationError 
-from django.views.generic import ListView, DetailView, FormView, TemplateView
-from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
-from django.contrib import messages
-from django.db.models import Max, Q
-from django.utils import timezone
-from django.template.loader import render_to_string
-from .utils import HtmxModalFormAccessMixin, FileAccessMixin
-from django.templatetags.static import static
-from .templatetags.catalog_extras import get_profile_picture_url
-
-import re
-import logging
+from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Max, Q
+from django.http import (
+    FileResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseNotFound,
+    HttpResponseServerError,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views import View
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView, FormView, ListView, TemplateView
+
+from .forms import FileCommentForm, FilteringSearchingForm, RequestFileForm, RequestForm
+from .models import (
+    FileComment,
+    OnlyTeacher,
+    Request,
+    RequestFile,
+    Slot,
+    Stream,
+    StudentTheme,
+    TeacherTheme,
+)
+from .templatetags.catalog_extras import get_profile_picture_url
+from .utils import FileAccessMixin, HtmxModalFormAccessMixin
+
 
 class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     """
     Displays the teachers catalog page with filtering and searching capabilities.
-    
+
     This view combines TemplateView and FormView to render a catalog of teachers
     that can be filtered and searched by various criteria.
-    
+
     Attributes:
         template_name (str): Path to the template that renders the catalog.
         form_class: Form class for filtering and searching teachers.
-    
+
     Methods:
         get: Handles GET requests to display the teachers catalog with the filter form.
     """
-    template_name = 'catalog/teachers_catalog.html'
+
+    template_name = "catalog/teachers_catalog.html"
     form_class = FilteringSearchingForm
-        
+
     def dispatch(self, request, *args, **kwargs):
         # Дозволяємо доступ лише студентам
-        if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'Студент':
-            from django.urls import reverse
+        if (
+            not request.user.is_authenticated
+            or getattr(request.user, "role", None) != "Студент"
+        ):
             from django.shortcuts import redirect
-            return redirect('profile')
+            from django.urls import reverse
+
+            return redirect("profile")
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = self.get_form()
-        context['user_profile'] = self.request.user
+        context["form"] = self.get_form()
+        context["user_profile"] = self.request.user
         return context
-    
+
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teachers catalog.
         """
         return self.render_to_response(self.get_context_data())
-    
-class TeachersListView(LoginRequiredMixin ,ListView):    
+
+
+class TeachersListView(LoginRequiredMixin, ListView):
     """
     API view that provides a list of teachers with their available slots.
-    
+
     This view extends Django's ListView to return JSON data containing
     teacher information and availability slots. It handles filtering based on
     the authenticated student's academic group.
-    
+
     Attributes:
         model (Model): The OnlyTeacher model class.
         context_object_name (str): Name for the context variable containing the data.
-    
+
     Methods:
         get: Returns JSON data with teacher information and available slots.
     """
+
     model = OnlyTeacher
-    context_object_name = 'data'
-    
+    context_object_name = "data"
+
     def get(self, request, *args, **kwargs):
         """
         Returns a JSON response with teacher data and their available slots.
-        
+
         For authenticated students, slots are filtered by the student's academic group.
         Each teacher entry includes personal information and availability data.
-        
+
         Args:
             request (HttpRequest): The HTTP request object.
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
-            
+
         Returns:
             JsonResponse: JSON data containing teachers and their available slots.
                 Format:
@@ -118,51 +143,57 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                 ]
         """
         try:
-            teachers = OnlyTeacher.objects.select_related('teacher_id').all()
+            teachers = OnlyTeacher.objects.select_related("teacher_id").all()
             slots = Slot.filter_by_available_slots()
             data = []
             is_matched = False
             has_active = False
             already_requested_set = set()
 
-            if request.user.is_authenticated and request.user.role == 'Студент':
+            if request.user.is_authenticated and request.user.role == "Студент":
                 user = request.user
-                has_active = True if Request.objects.filter(
-                    student_id=user,
-                    request_status='Активний'
-                ).exists() else False
-                
+                has_active = (
+                    True
+                    if Request.objects.filter(
+                        student_id=user, request_status="Активний"
+                    ).exists()
+                    else False
+                )
+
                 # --- Фільтрація за кафедрою для 3+ курсу ---
                 # Витягуємо курс з academic_group (наприклад, ФЕС-33 -> 3)
                 course = None
                 is_master = "М" in user.academic_group.upper()
                 if user.academic_group:
-                    match = re.match(r'^ФЕ[ЇСМЛПІ]-(\d)', user.academic_group)
+                    match = re.match(r"^ФЕ[ЇСМЛПІ]-(\d)", user.academic_group)
                     if match:
                         course = int(match.group(1))
-                
+
                 # Оновлена, більш точна умова фільтрації
                 if user.department and ((course and course >= 3) or is_master):
-                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
-                
+                    teachers = teachers.filter(
+                        teacher_id__department__iexact=user.department.strip()
+                    )
+
                 teacher_ids = [t.pk for t in teachers]
                 # ---
 
                 teacher_ids = [t.pk for t in teachers]
                 already_requested_qs = Request.objects.filter(
-                    student_id=user,
-                    teacher_id__in=teacher_ids,
-                    request_status='Очікує'
-                ).values_list('teacher_id', flat=True)
+                    student_id=user, teacher_id__in=teacher_ids, request_status="Очікує"
+                ).values_list("teacher_id", flat=True)
                 already_requested_set = set(already_requested_qs)
-                match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
+                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
                 if match:
-                    user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                    user_stream = (
+                        match.group(1)
+                        + "-"
+                        + match.group(2)
+                        + ("м" if is_master else "")
+                    )
 
                     # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
-                    slots = slots.filter(
-                        stream_id__stream_code__iexact=user_stream
-                    )
+                    slots = slots.filter(stream_id__stream_code__iexact=user_stream)
 
                     is_matched = True
 
@@ -180,79 +211,86 @@ class TeachersListView(LoginRequiredMixin ,ListView):
                     photo_url = get_profile_picture_url(teacher.teacher_id)
                 except Exception as e:
                     print(f"Error getting profile picture URL: {str(e)}")
-                    photo_url = static('images/default-avatar.jpg')
+                    photo_url = static("images/default-avatar.jpg")
 
-                data.append({
-                    'has_active': has_active,
-                    'teacher': {
-                        'id': teacher.pk,
-                        'academic_level': teacher.academic_level,
-                        'photo': photo_url,
-                        'url': teacher.get_absolute_url(),
-                        'already_requested': already_requested,
-                        'teacher_id': {
-                            'first_name': teacher.teacher_id.first_name,
-                            'last_name': teacher.teacher_id.last_name,
-                            'department': teacher.teacher_id.department,
-                            'full_name': full_name
-                        }
-                    },
-                    'free_slots': [
-                        {
-                            'stream_id': {
-                                'stream_code': slot.stream_id.stream_code
+                data.append(
+                    {
+                        "has_active": has_active,
+                        "teacher": {
+                            "id": teacher.pk,
+                            "academic_level": teacher.academic_level,
+                            "photo": photo_url,
+                            "url": teacher.get_absolute_url(),
+                            "already_requested": already_requested,
+                            "teacher_id": {
+                                "first_name": teacher.teacher_id.first_name,
+                                "last_name": teacher.teacher_id.last_name,
+                                "department": teacher.teacher_id.department,
+                                "full_name": full_name,
                             },
-                            'get_available_slots': slot.get_available_slots()
-                        }
-                        for slot in free_slots
-                    ],
-                    'is_matched': is_matched
-                })
+                        },
+                        "free_slots": [
+                            {
+                                "stream_id": {
+                                    "stream_code": slot.stream_id.stream_code
+                                },
+                                "get_available_slots": slot.get_available_slots(),
+                            }
+                            for slot in free_slots
+                        ],
+                        "is_matched": is_matched,
+                    }
+                )
 
             return JsonResponse(data, safe=False)
         except Exception as e:
             import traceback
+
             print("Error in TeachersListView:", str(e))
             print(traceback.format_exc())
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
 
-class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView, FormView):
+
+class TeacherModalView(
+    HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView, FormView
+):
     """
     Manages the teacher detail view, form submission, and saves student requests.
     """
+
     model = OnlyTeacher
-    template_name = 'catalog/teacher_modal.html'
-    context_object_name = 'teacher'
+    template_name = "catalog/teacher_modal.html"
+    context_object_name = "teacher"
     form_class = RequestForm
-    success_url = reverse_lazy('teachers_catalog')
+    success_url = reverse_lazy("teachers_catalog")
     success_message = "Запит успішно відправлено. Очікуйте підтвердження від викладача."
-    
+
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teacher modal.
         """
         self.object = self.get_object()
         return super().get(request, *args, **kwargs)
-    
+
     def post(self, request, *args, **kwargs):
         """
         Handles POST requests to process the form data.
         """
         self.object = self.get_object()
         return super().post(request, *args, **kwargs)
-    
+
     def get_success_message(self, cleaned_data):
         """
         Returns the success message defined in the class.
         """
         return super().get_success_message(cleaned_data)
-    
+
     def get_form_kwargs(self):
         """
         Passes the teacher instance to the form via 'teacher_id'.
         """
         kwargs = super().get_form_kwargs()
-        kwargs['teacher_id'] = self.get_object()
+        kwargs["teacher_id"] = self.get_object()
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -261,43 +299,43 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         """
         context = super().get_context_data(**kwargs)
         teacher = self.get_object()
-        
+
         # Fetch available slots for this teacher.
         slots = Slot.filter_by_available_slots().filter(teacher_id=teacher)
         print(f"All available slots for teacher {teacher}: {slots.count()}")
         is_matched = False
-        
+
         # Filter slots by user's academic group if the user is a student.
         user = self.request.user
-        is_master =  "М" in user.academic_group.upper()
-        match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', user.academic_group)
+        is_master = "М" in user.academic_group.upper()
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
         if match:
-            user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+            user_stream = (
+                match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
+            )
             print(f"User stream: {user_stream}")
             # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
-            
-            slots = slots.filter(
-                stream_id__stream_code__iexact=user_stream
-            )
+
+            slots = slots.filter(stream_id__stream_code__iexact=user_stream)
             print(f"Available slots for stream {user_stream}: {slots.count()}")
             is_matched = True
-        
-        context['free_slots'] = slots
-        context['is_matched'] = is_matched
-        
+
+        context["free_slots"] = slots
+        context["is_matched"] = is_matched
+
         # Use the template tag to get profile picture URL
-        context['photo'] = get_profile_picture_url(teacher.teacher_id)
-            
+        context["photo"] = get_profile_picture_url(teacher.teacher_id)
+
         return context
-    
+
     def form_invalid(self, form):
         """
         Handles invalid form submissions. Returns JSON for XMLHttpRequests.
         """
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "errors": form.errors}, status=400)
         return super().form_invalid(form)
-    
+
     def form_valid(self, form):
         """
         Processes valid form data. Creates a request, saves themes, and returns JSON for XMLHttpRequests.
@@ -306,14 +344,13 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
             # First try to assign the slot and save the request
             req = form.save(commit=False)
             self.assign_request_fields(form)
-            
+
             # Get and validate the teacher theme if selected
-            teacher_theme_text = form.cleaned_data.get('teacher_themes')
+            teacher_theme_text = form.cleaned_data.get("teacher_themes")
             if teacher_theme_text:
                 try:
                     teacher_theme = TeacherTheme.objects.get(
-                        theme=teacher_theme_text, 
-                        teacher_id=self.get_object()
+                        theme=teacher_theme_text, teacher_id=self.get_object()
                     )
                     if not teacher_theme.is_occupied and not teacher_theme.is_deleted:
                         req.teacher_theme = teacher_theme
@@ -324,45 +361,44 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
                         raise ValidationError("Обрана тема вже зайнята")
                 except TeacherTheme.DoesNotExist:
                     raise ValidationError("Обрана тема не існує")
-            
+
             # Save the request after theme assignment
             req.save()
             print(f"Request created with ID: {req.id}")
 
             # Save student themes
-            student_themes = form.cleaned_data.get('student_themes', [])
+            student_themes = form.cleaned_data.get("student_themes", [])
             if isinstance(student_themes, str):
                 student_themes = [student_themes]
-            
+
             for theme in student_themes:
                 if theme and isinstance(theme, str):
                     student_theme = StudentTheme.objects.create(
-                        student_id=self.request.user,
-                        request=req,
-                        theme=theme.strip()
+                        student_id=self.request.user, request=req, theme=theme.strip()
                     )
                     print(f"Student theme added: {student_theme.theme}")
-                        
+
             messages.success(self.request, self.get_success_message(form.cleaned_data))
-            
-            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                response = JsonResponse({
-                    'success': True,
-                    'message': self.get_success_message(form.cleaned_data)
-                })
+
+            if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
+                response = JsonResponse(
+                    {
+                        "success": True,
+                        "message": self.get_success_message(form.cleaned_data),
+                    }
+                )
                 # Add HTMX redirect header to refresh the page
-                response['HX-Redirect'] = reverse_lazy('profile')
+                response["HX-Redirect"] = reverse_lazy("profile")
                 return response
             return super().form_valid(form)
-        
+
         except ValidationError as e:
             print(f"Validation error: {str(e)}")
             messages.error(self.request, str(e))
-            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'errors': {'__all__': e.messages}
-                }, status=400)
+            if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": False, "errors": {"__all__": e.messages}}, status=400
+                )
             return self.form_invalid(form)
 
     def assign_request_fields(self, form):
@@ -372,265 +408,331 @@ class TeacherModalView(HtmxModalFormAccessMixin, SuccessMessageMixin, DetailView
         """
         form.instance.student_id = self.request.user
         form.instance.teacher_id = self.get_object()
-        form.instance.request_status = 'Очікує'
-        
+        form.instance.request_status = "Очікує"
+
         is_master = "М" in self.request.user.academic_group.upper()
-        student_stream_code = form.instance.extract_stream_from_academic_group() + ('м' if is_master else '')
-        curse = student_stream_code.split('-')[1] if student_stream_code else None
-        
-        if curse and curse == '4':
-            form.instance.work_type = 'Дипломна'
+        student_stream_code = form.instance.extract_stream_from_academic_group() + (
+            "м" if is_master else ""
+        )
+        curse = student_stream_code.split("-")[1] if student_stream_code else None
+
+        if curse and curse == "4":
+            form.instance.work_type = "Дипломна"
         elif is_master:
-            form.instance.work_type = 'Магістерська'
+            form.instance.work_type = "Магістерська"
         else:
-            form.instance.work_type = 'Курсова'  
-        
+            form.instance.work_type = "Курсова"
+
         if student_stream_code:
             try:
                 # Get a single Stream object instead of a QuerySet
                 stream = Stream.objects.get(stream_code=student_stream_code)
-                    
+
                 # Get all slots for this teacher and stream
                 available_slots = Slot.objects.filter(
-                    teacher_id=form.instance.teacher_id,
-                    stream_id=stream
+                    teacher_id=form.instance.teacher_id, stream_id=stream
                 )
-                
+
                 # Find first slot that has space
                 available_slot = None
                 for slot in available_slots:
                     if slot.occupied < slot.quota:
                         available_slot = slot
                         break
-                
+
                 if available_slot:
                     form.instance.slot = available_slot
                 else:
-                    raise ValidationError(f"Немає вільних місць у викладача для потоку {stream.stream_code}")
+                    raise ValidationError(
+                        f"На жаль, вільних місць для {stream.stream_code} нема :("
+                    )
             except Stream.DoesNotExist:
                 raise ValidationError(f"Потік не знайдено: {student_stream_code}")
+
 
 class AcceptRequestView(View):
     def post(self, request, pk):
         req = get_object_or_404(Request, pk=pk)
-        if request.user.role == 'Викладач' and req.teacher_id.teacher_id == request.user:
-            req.request_status = 'Активний'
+        if (
+            request.user.role == "Викладач"
+            and req.teacher_id.teacher_id == request.user
+        ):
+            req.request_status = "Активний"
             req.save()
             if req.slot:
                 req.slot.get_available_slots()
-            messages.success(request, 'Запит прийнято')
-            return JsonResponse({'success': True})
-        return JsonResponse({'success': False}, status=403)
+            messages.success(request, "Запит прийнято")
+            return JsonResponse({"success": True})
+        return JsonResponse({"success": False}, status=403)
+
 
 class CompleteRequestView(View):
     def post(self, request, pk):
         req = get_object_or_404(Request, pk=pk)
-        if request.user.role == 'Викладач' and req.teacher_id.teacher_id == request.user:
-            req.request_status = 'Завершено'
+        if (
+            request.user.role == "Викладач"
+            and req.teacher_id.teacher_id == request.user
+        ):
+            req.request_status = "Завершено"
             req.completion_date = timezone.now()
-            req.grade = request.POST.get('grade')
+            req.grade = request.POST.get("grade")
             req.save()
-            
+
             # Free the teacher theme if it exists
             if req.teacher_theme:
                 req.teacher_theme.is_occupied = False
                 req.teacher_theme.save()
-            
+
             if req.slot:
                 req.slot.get_available_slots()
-            messages.success(request, 'Роботу завершено')
-            return JsonResponse({'success': True})
-        return JsonResponse({'success': False}, status=403)
+            messages.success(request, "Роботу завершено")
+            return JsonResponse({"success": True})
+        return JsonResponse({"success": False}, status=403)
+
 
 @login_required
 def archived_request_details(request, request_id):
-    logger = logging.getLogger('django')
-    logger.error(f'[ARCHIVE DEBUG] request.user.id={request.user.id}, request.user.role={getattr(request.user, "role", None)}')
+    logger = logging.getLogger("django")
+    logger.error(
+        f'[ARCHIVE DEBUG] request.user.id={request.user.id}, request.user.role={getattr(request.user, "role", None)}'
+    )
     try:
-        req = Request.objects.select_related(
-            'student_id', 'teacher_id__teacher_id', 'teacher_theme'
-        ).prefetch_related(
-            'files__comments__author'
-        ).get(id=request_id, request_status='Завершено')
-        logger.error(f'[ARCHIVE DEBUG] req.student_id.id={getattr(req.student_id, "id", None)}, req.teacher_id.teacher_id.id={getattr(req.teacher_id.teacher_id, "id", None)}')
+        req = (
+            Request.objects.select_related(
+                "student_id", "teacher_id__teacher_id", "teacher_theme"
+            )
+            .prefetch_related("files__comments__author")
+            .get(id=request_id, request_status="Завершено")
+        )
+        logger.error(
+            f'[ARCHIVE DEBUG] req.student_id.id={getattr(req.student_id, "id", None)}, req.teacher_id.teacher_id.id={getattr(req.teacher_id.teacher_id, "id", None)}'
+        )
         # Check access permissions
-        if request.user.role == 'Студент' and req.student_id != request.user:
-            logger.error(f'[ARCHIVE DEBUG] 403: student_id mismatch (req.student_id={req.student_id.id}, user={request.user.id})')
-            return JsonResponse({'error': 'Forbidden'}, status=403)
-        if request.user.role == 'Викладач' and req.teacher_id.teacher_id != request.user:
-            logger.error(f'[ARCHIVE DEBUG] 403: teacher_id mismatch (req.teacher_id.teacher_id={req.teacher_id.teacher_id.id}, user={request.user.id})')
-            return JsonResponse({'error': 'Forbidden'}, status=403)
+        if request.user.role == "Студент" and req.student_id != request.user:
+            logger.error(
+                f"[ARCHIVE DEBUG] 403: student_id mismatch (req.student_id={req.student_id.id}, user={request.user.id})"
+            )
+            return JsonResponse({"error": "Forbidden"}, status=403)
+        if (
+            request.user.role == "Викладач"
+            and req.teacher_id.teacher_id != request.user
+        ):
+            logger.error(
+                f"[ARCHIVE DEBUG] 403: teacher_id mismatch (req.teacher_id.teacher_id={req.teacher_id.teacher_id.id}, user={request.user.id})"
+            )
+            return JsonResponse({"error": "Forbidden"}, status=403)
         files_data = []
         for file in req.files.all():
             comments_data = []
             for comment in file.comments.all():
-                comments_data.append({
-                    'author': comment.author.get_full_name(),
-                    'text': comment.text,
-                    'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
-                })
-            
-            files_data.append({
-                'id': file.id,
-                'file_url': file.file.url,
-                'file_name': file.get_filename(),
-                'description': file.description,
-                'uploaded_at': file.uploaded_at.strftime('%d.%m.%Y %H:%M'),
-                'uploaded_by': file.uploaded_by.get_full_name(),
-                'comments': comments_data,
-            })
-        
+                comments_data.append(
+                    {
+                        "author": comment.author.get_full_name(),
+                        "text": comment.text,
+                        "created_at": comment.created_at.strftime("%d.%m.%Y %H:%M"),
+                    }
+                )
+
+            files_data.append(
+                {
+                    "id": file.id,
+                    "file_url": file.file.url,
+                    "file_name": file.get_filename(),
+                    "description": file.description,
+                    "uploaded_at": file.uploaded_at.strftime("%d.%m.%Y %H:%M"),
+                    "uploaded_by": file.uploaded_by.get_full_name(),
+                    "comments": comments_data,
+                }
+            )
+
         response_data = {
-            'student': {
-                'name': req.student_id.get_full_name(),
-                'group': req.student_id.academic_group,
+            "student": {
+                "name": req.student_id.get_full_name(),
+                "group": req.student_id.academic_group,
             },
-            'teacher': {
-                'name': req.teacher_id.teacher_id.get_full_name(),
+            "teacher": {
+                "name": req.teacher_id.teacher_id.get_full_name(),
             },
-            'theme': req.teacher_theme.theme if req.teacher_theme else 'Тема не вказана',
-            'grade': req.grade,
-            'completion_date': req.completion_date.strftime('%d.%m.%Y'),
-            'files': files_data
+            "theme": (
+                req.teacher_theme.theme if req.teacher_theme else "Тема не вказана"
+            ),
+            "grade": req.grade,
+            "completion_date": req.completion_date.strftime("%d.%m.%Y"),
+            "files": files_data,
         }
-        
+
         return JsonResponse(response_data)
 
     except Request.DoesNotExist:
-        logger.error(f'[ARCHIVE DEBUG] 404: Request.DoesNotExist for id={request_id}')
-        return JsonResponse({'error': 'Request not found'}, status=404)
+        logger.error(f"[ARCHIVE DEBUG] 404: Request.DoesNotExist for id={request_id}")
+        return JsonResponse({"error": "Request not found"}, status=404)
     except Exception as e:
-        logger.error(f'[ARCHIVE DEBUG] 500: {str(e)}')
-        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+        logger.error(f"[ARCHIVE DEBUG] 500: {str(e)}")
+        return JsonResponse({"error": "An unexpected error occurred"}, status=500)
+
 
 def get_requests_data(request):
-    if request.user.role == 'Викладач':
-        pending_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            teacher_id__teacher_id=request.user,
-             request_status='Очікує'
+    if request.user.role == "Викладач":
+        pending_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(teacher_id__teacher_id=request.user, request_status="Очікує")
         )
-        active_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            teacher_id__teacher_id=request.user,
-            request_status='Активний'
+        active_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(teacher_id__teacher_id=request.user, request_status="Активний")
         )
-        archived_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            teacher_id__teacher_id=request.user,
-            request_status='Завершено'
+        archived_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(teacher_id__teacher_id=request.user, request_status="Завершено")
         )
     else:  # Student
-        pending_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            student_id=request.user,
-            request_status='Очікує'
+        pending_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(student_id=request.user, request_status="Очікує")
         )
-        active_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            student_id=request.user,
-            request_status='Активний'
+        active_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(student_id=request.user, request_status="Активний")
         )
-        archived_requests = Request.objects.select_related(
-            'student_id', 'teacher_id', 'teacher_theme', 'slot'
-        ).prefetch_related('student_themes').filter(
-            student_id=request.user,
-            request_status='Завершено'
+        archived_requests = (
+            Request.objects.select_related(
+                "student_id", "teacher_id", "teacher_theme", "slot"
+            )
+            .prefetch_related("student_themes")
+            .filter(student_id=request.user, request_status="Завершено")
         )
-    
+
     print(f"Found pending requests: {pending_requests.count()}")
     print(f"Found active requests: {active_requests.count()}")
     print(f"Found archived requests: {archived_requests.count()}")
-    
+
     # Get files for active requests
     active_request_files = {}
     for request_obj in active_requests:
-        files = RequestFile.objects.filter(request=request_obj).select_related('uploaded_by')
-        active_request_files[str(request_obj.id)] = list(files)  # Convert QuerySet to list and use string key
-    
+        files = RequestFile.objects.filter(request=request_obj).select_related(
+            "uploaded_by"
+        )
+        active_request_files[str(request_obj.id)] = list(
+            files
+        )  # Convert QuerySet to list and use string key
+
     return {
-        'pending_requests': pending_requests,
-        'active_requests': active_requests,
-        'archived_requests': archived_requests,
-        'active_request_files': active_request_files,
+        "pending_requests": pending_requests,
+        "active_requests": active_requests,
+        "archived_requests": archived_requests,
+        "active_request_files": active_request_files,
     }
+
 
 def load_tab_content(request, tab_name):
     try:
         data = get_requests_data(request)
-        
-        data.update({
-            'user': request.user,
-            'request': request, 
-        })
-        
-        template_name = f'profile/{tab_name}.html'
+
+        data.update(
+            {
+                "user": request.user,
+                "request": request,
+            }
+        )
+
+        template_name = f"profile/{tab_name}.html"
         html = render_to_string(template_name, data, request=request)
-        return JsonResponse({'html': html})
+        return JsonResponse({"html": html})
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 def reject_request(request, request_id):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             req = Request.objects.get(id=request_id)
             if request.user == req.teacher_id.teacher_id:
-                req.request_status = 'Відхилено'
+                req.request_status = "Відхилено"
                 req.save()
-                messages.success(request, 'Запит успішно відхилено')
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True})
-                return redirect('profile')
+                messages.success(request, "Запит успішно відхилено")
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"success": True})
+                return redirect("profile")
         except Request.DoesNotExist:
-            messages.error(request, 'Запит не знайдено')
+            messages.error(request, "Запит не знайдено")
         except Exception as e:
-            messages.error(request, f'Помилка при відхиленні запиту: {str(e)}')
-    
-    return redirect('profile')
+            messages.error(request, f"Помилка при відхиленні запиту: {str(e)}")
+
+    return redirect("profile")
+
 
 class UploadFileView(View):
     def post(self, request, request_id):
         try:
             course_request = Request.objects.get(pk=request_id)
-            
-            if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'error', 'message': 'Немає прав доступу'}, status=403)
-                return HttpResponseForbidden('Немає прав доступу')
-            
-            if course_request.request_status != 'Активний':
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'error', 'message': 'Файли можна додавати тільки до активних запитів'}, status=400)
-                return HttpResponseBadRequest('Файли можна додавати тільки до активних запитів')
-            
+
+            if (
+                request.user != course_request.student_id
+                and request.user != course_request.teacher_id.teacher_id
+            ):
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"status": "error", "message": "Немає прав доступу"}, status=403
+                    )
+                return HttpResponseForbidden("Немає прав доступу")
+
+            if course_request.request_status != "Активний":
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "message": "Файли можна додавати тільки до активних запитів",
+                        },
+                        status=400,
+                    )
+                return HttpResponseBadRequest(
+                    "Файли можна додавати тільки до активних запитів"
+                )
+
             form = RequestFileForm(request.POST, request.FILES)
             if form.is_valid():
                 file = form.save(commit=False)
                 file.request = course_request
                 file.uploaded_by = request.user
-                
-                latest_version = RequestFile.objects.filter(request=course_request).aggregate(Max('version'))['version__max']
+
+                latest_version = RequestFile.objects.filter(
+                    request=course_request
+                ).aggregate(Max("version"))["version__max"]
                 file.version = (latest_version or 0) + 1
-                
+
                 file.save()
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'success'})
-                return redirect('profile')
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'message': 'Помилка у формі'}, status=400)
-            return HttpResponseBadRequest('Помилка у формі')
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"status": "success"})
+                return redirect("profile")
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"status": "error", "message": "Помилка у формі"}, status=400
+                )
+            return HttpResponseBadRequest("Помилка у формі")
         except Request.DoesNotExist:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'message': 'Запит не знайдено'}, status=404)
-            return HttpResponseNotFound('Запит не знайдено')
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"status": "error", "message": "Запит не знайдено"}, status=404
+                )
+            return HttpResponseNotFound("Запит не знайдено")
         except Exception as e:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"status": "error", "message": str(e)}, status=500)
             return HttpResponseServerError(str(e))
 
 
@@ -638,28 +740,24 @@ class DeleteFileView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             file = RequestFile.objects.get(pk=pk)
-            
-            if not (request.user == file.uploaded_by or request.user == file.request.teacher_id.teacher_id):
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'У вас немає прав для видалення цього файлу'
-                })
-            
+
+            if not (
+                request.user == file.uploaded_by
+                or request.user == file.request.teacher_id.teacher_id
+            ):
+                return JsonResponse(
+                    {
+                        "status": "error",
+                        "message": "У вас немає прав для видалення цього файлу",
+                    }
+                )
+
             file.delete()
-            return JsonResponse({
-                'success': True,
-                'message': 'Файл успішно видалено'
-            })
+            return JsonResponse({"success": True, "message": "Файл успішно видалено"})
         except RequestFile.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Файл не знайдено'
-            })
+            return JsonResponse({"success": False, "error": "Файл не знайдено"})
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            })
+            return JsonResponse({"success": False, "error": str(e)})
 
 
 class DownloadFileView(FileAccessMixin, View):
@@ -667,16 +765,22 @@ class DownloadFileView(FileAccessMixin, View):
         try:
             file = RequestFile.objects.get(pk=pk)
             course_request = file.request
-            
-            if not (request.user == file.uploaded_by or request.user == course_request.student_id or request.user == course_request.teacher_id.teacher_id):
-                return HttpResponseForbidden('Немає прав доступу')
-            
+
+            if not (
+                request.user == file.uploaded_by
+                or request.user == course_request.student_id
+                or request.user == course_request.teacher_id.teacher_id
+            ):
+                return HttpResponseForbidden("Немає прав доступу")
+
             response = FileResponse(file.file)
-            response['Content-Disposition'] = f'attachment; filename="{file.get_filename()}"'
+            response["Content-Disposition"] = (
+                f'attachment; filename="{file.get_filename()}"'
+            )
             return response
-            
+
         except RequestFile.DoesNotExist:
-            return HttpResponseNotFound('Файл не знайдено')
+            return HttpResponseNotFound("Файл не знайдено")
 
 
 class AddCommentView(FileAccessMixin, View):
@@ -685,90 +789,111 @@ class AddCommentView(FileAccessMixin, View):
         try:
             file = RequestFile.objects.get(pk=file_id)
             course_request = file.request
-            
-            if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
+
+            if (
+                request.user != course_request.student_id
+                and request.user != course_request.teacher_id.teacher_id
+            ):
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"success": False, "error": "Немає прав доступу"}, status=403
+                    )
                 else:
-                    messages.error(request, 'Немає прав доступу для додавання коментаря')
-                    return redirect('profile')
-            
-            text = request.POST.get('text')
-            if not text and not request.FILES.get('attachment'):
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': 'Коментар не може бути порожнім, додайте текст або прикріпіть файл'}, status=400)
+                    messages.error(
+                        request, "Немає прав доступу для додавання коментаря"
+                    )
+                    return redirect("profile")
+
+            text = request.POST.get("text")
+            if not text and not request.FILES.get("attachment"):
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "Коментар не може бути порожнім, додайте текст або прикріпіть файл",
+                        },
+                        status=400,
+                    )
                 else:
-                    messages.error(request, 'Коментар не може бути порожнім, додайте текст або прикріпіть файл')
-                    return redirect('profile')
-            
-            comment = FileComment(
-                file=file,
-                author=request.user,
-                text=text or ''  
-            )
-            
-            attachment = request.FILES.get('attachment')
+                    messages.error(
+                        request,
+                        "Коментар не може бути порожнім, додайте текст або прикріпіть файл",
+                    )
+                    return redirect("profile")
+
+            comment = FileComment(file=file, author=request.user, text=text or "")
+
+            attachment = request.FILES.get("attachment")
             if attachment:
                 comment.attachment = attachment
-            
+
             comment.save()
-                
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 response_data = {
-                    'success': True,
-                    'comment_id': comment.id,
-                    'text': comment.text,
-                    'author': comment.author.get_full_name(),
-                    'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+                    "success": True,
+                    "comment_id": comment.id,
+                    "text": comment.text,
+                    "author": comment.author.get_full_name(),
+                    "created_at": comment.created_at.strftime("%d.%m.%Y %H:%M"),
                 }
-                
+
                 if comment.attachment:
-                    response_data['attachment'] = {
-                        'name': comment.get_attachment_filename(),
-                        'url': comment.attachment.url
+                    response_data["attachment"] = {
+                        "name": comment.get_attachment_filename(),
+                        "url": comment.attachment.url,
                     }
-                
+
                 return JsonResponse(response_data)
             else:
-                messages.success(request, 'Коментар успішно додано')
-                return redirect('profile')
-            
+                messages.success(request, "Коментар успішно додано")
+                return redirect("profile")
+
         except RequestFile.DoesNotExist:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Файл не знайдено'}, status=404)
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": False, "error": "Файл не знайдено"}, status=404
+                )
             else:
-                messages.error(request, 'Файл не знайдено')
-                return redirect('profile')
-                
+                messages.error(request, "Файл не знайдено")
+                return redirect("profile")
+
         except Exception as e:
             import traceback
+
             traceback.print_exc()
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": str(e)}, status=500)
             else:
-                messages.error(request, f'Помилка при додаванні коментаря: {str(e)}')
-                return redirect('profile')
+                messages.error(request, f"Помилка при додаванні коментаря: {str(e)}")
+                return redirect("profile")
 
 
 class DeleteCommentView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             comment = FileComment.objects.get(pk=pk)
-            
+
             if request.user != comment.author:
-                return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
-            
+                return JsonResponse(
+                    {"success": False, "error": "Немає прав доступу"}, status=403
+                )
+
             comment.delete()
-            return JsonResponse({'success': True})
-            
+            return JsonResponse({"success": True})
+
         except FileComment.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Коментар не знайдено'}, status=404)
+            return JsonResponse(
+                {"success": False, "error": "Коментар не знайдено"}, status=404
+            )
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
+
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+
 
 @login_required
 def add_comment(request, file_id):
@@ -776,95 +901,117 @@ def add_comment(request, file_id):
     try:
         file = RequestFile.objects.get(pk=file_id)
         course_request = file.request
-        
-        if request.user != course_request.student_id and request.user != course_request.teacher_id.teacher_id:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Немає прав доступу'}, status=403)
+
+        if (
+            request.user != course_request.student_id
+            and request.user != course_request.teacher_id.teacher_id
+        ):
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": False, "error": "Немає прав доступу"}, status=403
+                )
             else:
-                messages.error(request, 'Немає прав доступу для додавання коментаря')
-                return redirect('profile')
-        
-        text = request.POST.get('text')
-        if not text and not request.FILES.get('attachment'):
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Коментар не може бути порожнім, додайте текст або прикріпіть файл'}, status=400)
+                messages.error(request, "Немає прав доступу для додавання коментаря")
+                return redirect("profile")
+
+        text = request.POST.get("text")
+        if not text and not request.FILES.get("attachment"):
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Коментар не може бути порожнім, додайте текст або прикріпіть файл",
+                    },
+                    status=400,
+                )
             else:
-                messages.error(request, 'Коментар не може бути порожнім, додайте текст або прикріпіть файл')
-                return redirect('profile')
-        
-        comment = FileComment(
-            file=file,
-            author=request.user,
-            text=text or ''  
-        )
-        
-        attachment = request.FILES.get('attachment')
+                messages.error(
+                    request,
+                    "Коментар не може бути порожнім, додайте текст або прикріпіть файл",
+                )
+                return redirect("profile")
+
+        comment = FileComment(file=file, author=request.user, text=text or "")
+
+        attachment = request.FILES.get("attachment")
         if attachment:
             comment.attachment = attachment
-        
+
         comment.save()
-            
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             response_data = {
-                'success': True,
-                'comment_id': comment.id,
-                'text': comment.text,
-                'author': comment.author.get_full_name(),
-                'created_at': comment.created_at.strftime('%d.%m.%Y %H:%M')
+                "success": True,
+                "comment_id": comment.id,
+                "text": comment.text,
+                "author": comment.author.get_full_name(),
+                "created_at": comment.created_at.strftime("%d.%m.%Y %H:%M"),
             }
-            
+
             if comment.attachment:
-                response_data['attachment'] = {
-                    'name': comment.get_attachment_filename(),
-                    'url': comment.attachment.url
+                response_data["attachment"] = {
+                    "name": comment.get_attachment_filename(),
+                    "url": comment.attachment.url,
                 }
-            
+
             return JsonResponse(response_data)
         else:
-            messages.success(request, 'Коментар успішно додано')
-            return redirect('profile')
-        
+            messages.success(request, "Коментар успішно додано")
+            return redirect("profile")
+
     except RequestFile.DoesNotExist:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Файл не знайдено'}, status=404)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "error": "Файл не знайдено"}, status=404
+            )
         else:
-            messages.error(request, 'Файл не знайдено')
-            return redirect('profile')
-            
+            messages.error(request, "Файл не знайдено")
+            return redirect("profile")
+
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
         else:
-            messages.error(request, f'Помилка при додаванні коментаря: {str(e)}')
-            return redirect('profile')
+            messages.error(request, f"Помилка при додаванні коментаря: {str(e)}")
+            return redirect("profile")
+
 
 @login_required
 def delete_comment(request, pk):
     comment = get_object_or_404(FileComment, pk=pk)
     if comment.author == request.user or request.user.is_staff:
         comment.delete()
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        return JsonResponse({"status": "success"})
+    return JsonResponse({"status": "error", "message": "Unauthorized"}, status=403)
+
 
 @login_required
-@require_POST 
+@require_POST
 def delete_theme(request, theme_id):
     """
     Видаляє тему викладача з перевіркою можливості видалення
     """
-    theme = get_object_or_404(TeacherTheme, id=theme_id, teacher_id__teacher_id=request.user)
+    theme = get_object_or_404(
+        TeacherTheme, id=theme_id, teacher_id__teacher_id=request.user
+    )
     try:
         if not theme.can_be_deleted():
-            return JsonResponse({
-                'error': 'Неможливо видалити тему, яка використовується в активних або очікуючих запитах'
-            }, status=400)
-        
-        theme.delete(force=True) 
-        return JsonResponse({'success': True})
+            return JsonResponse(
+                {
+                    "error": "Неможливо видалити тему, яка використовується в активних або очікуючих запитах"
+                },
+                status=400,
+            )
+
+        theme.delete(force=True)
+        return JsonResponse({"success": True})
 
     except Exception as e:
         logger.error(f"Error deleting theme {theme_id}: {str(e)}")
-        return JsonResponse({'error': f'Помилка при видаленні теми: {str(e)}'}, status=500)
+        return JsonResponse(
+            {"error": f"Помилка при видаленні теми: {str(e)}"}, status=500
+        )

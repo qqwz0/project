@@ -173,7 +173,7 @@ class RequestForm(forms.ModelForm):
         
         # Check if either teacher theme or student theme is provided
         if not teacher_theme and not student_themes:
-            raise forms.ValidationError('Ви повинні вибрати запропоновану тему або ввести власну.')
+            raise forms.ValidationError('Ви повинні обрати запропоновану тему або ввести власну.')
         
         # Limit the number of student themes to three
         if len(student_themes) > 3:
