@@ -1,9 +1,66 @@
+:root {
+  --font-sans: var(--font-geist);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* CSS variables for supervisor card text styling */
+  --supervisor-name-color: #111827;
+  --supervisor-position-color: #6b7280;
+  --supervisor-department-color: #2563eb;
+  --supervisor-places-label-color: #111827;
+  --supervisor-places-badge-bg: #cbdbff;
+  --supervisor-places-badge-color: #1d4ed8;
+
+  --supervisor-name-size: 1.25rem;
+  --supervisor-position-size: 0.875rem;
+  --supervisor-department-size: 0.875rem;
+  --supervisor-places-size: 0.875rem;
+  --supervisor-places-badge-size: 0.75rem;
+}
+
+.supervisor-name {
+  font-size: var(--supervisor-name-size);
+  font-weight: 600;
+  color: var(--supervisor-name-color);
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.supervisor-position {
+  font-size: var(--supervisor-position-size);
+  font-weight: 500;
+  color: var(--supervisor-position-color);
+}
+
+.supervisor-department {
+  font-size: var(--supervisor-department-size);
+  font-weight: 500;
+  color: var(--supervisor-department-color);
+  line-height: 1.5;
+}
+
+.supervisor-places-label {
+  font-size: var(--supervisor-places-size);
+  font-weight: 500;
+  color: var(--supervisor-places-label-color);
+}
+
+.supervisor-places-badge {
+  font-size: var(--supervisor-places-badge-size);
+  font-weight: 500;
+  background-color: var(--supervisor-places-badge-bg);
+  color: var(--supervisor-places-badge-color);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .teacher-info {
-  width: 100%;
+  /* width: 100%; */
   padding: 1rem; /* 25px */
   background-color: #ffffff;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1), 
-              0px -2px 5px rgba(0, 0, 0, 0.05); /* Top and bottom shadow */
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1), 0px -2px 5px rgba(0, 0, 0, 0.05); /* Top and bottom shadow */
   margin-top: 1rem; /* 35px */
   transition: all 0.3s ease;
   border-radius: 0.9375rem; /* 15px */
@@ -11,8 +68,7 @@
 }
 
 .teacher-info:hover {
-  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.15),
-              0px -3px 8px rgba(0, 0, 0, 0.08); /* Stronger hover effect */
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.15), 0px -3px 8px rgba(0, 0, 0, 0.08); /* Stronger hover effect */
   transform: translateY(-2px);
 }
 
@@ -43,7 +99,7 @@
 }
 
 .teacher-details {
-  flex: 1; 
+  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -63,13 +119,6 @@
   margin-top: -0.5rem;
 }
 
-.teacher-details p{
-  margin: 0;
-  padding: 0.125rem 0; /* 2px 0 */
-  font-family: var(--default-font);
-  font-size: 1.125rem; /* 18px */
-  color: #a3a3a3;
-}
 .teacher-details ul {
   margin: 0.3125rem 0; /* 5px 0 */
   padding-left: 1.25rem; /* 20px */
@@ -80,18 +129,22 @@
   margin: 0.3125rem 0;
   padding-left: 1.25rem;
   list-style: none;
-  font-family: var(--default-font); 
+  font-family: var(--default-font);
 }
 
 .teacher-details li {
   margin: 0.125rem 0; /* 2px 0 */
 }
 
+.teacher-details p {
+  margin: 0;
+}
+
 .teacher-photo img {
   width: 100%;
   height: 9.375rem; /* 150px */
   object-fit: cover;
-  border-radius: 50%; 
+  border-radius: 50%;
 }
 
 .teacher-card .single-slot {
@@ -131,17 +184,10 @@
 p.single-slot {
   color: #2c3e50;
   font-weight: 500;
-  margin-bottom: 0.5rem; /* 8px */
 }
 
 .multiple-slots {
   margin-top: 0.5rem; /* 8px */
-}
-
-.multiple-slots p {
-  color: #2c3e50;
-  font-weight: 500;
-  margin-bottom: 0.5rem; /* 8px */
 }
 
 .multiple-slots ul {
@@ -157,7 +203,7 @@ p.single-slot {
   padding: 0.375rem 0.625rem; /* 6px 10px */
   margin: 0.25rem 0; /* 4px 0 */
   border-radius: 0.25rem; /* 4px */
-  box-shadow: 0.0625rem 0.125rem rgba(0,0,0,0.07);
+  box-shadow: 0.0625rem 0.125rem rgba(0, 0, 0, 0.07);
 }
 
 .multiple-slots li strong {
@@ -169,7 +215,7 @@ p.single-slot {
   font-family: var(--default-font);
   padding: 0.5rem; /* 8px */
   border-radius: 0.25rem; /* 4px */
-  box-shadow: 0.0625rem 0.125rem rgba(0,0,0,0.07);
+  box-shadow: 0.0625rem 0.125rem rgba(0, 0, 0, 0.07);
   text-align: left;
 }
 
@@ -211,7 +257,7 @@ p.single-slot {
 }
 
 .modal-button .arrow-icon {
-  font-size: 2.875rem; 
+  font-size: 2.875rem;
   font-weight: 300;
   color: #fff;
 }
@@ -226,13 +272,13 @@ p.single-slot {
   width: auto;
   min-width: 150px;
   max-width: 220px;
-  background-color: #dc3545; 
+  background-color: #dc3545;
   color: #fff;
   text-align: center;
   border-radius: 6px;
   padding: 8px 10px;
   position: absolute;
-  bottom: 105%; 
+  bottom: 105%;
   left: 20%;
   transform: translateX(-50%);
   transition: opacity 0.2s ease;
@@ -301,10 +347,6 @@ p.single-slot {
     font-size: 0.9rem;
   }
 
-  .teacher-details p {
-    display: none;
-  }
-
   .single-slot {
     display: none !important;
   }
@@ -347,7 +389,6 @@ p.single-slot {
     font-size: 0.95rem;
   }
 
-  .teacher-details p,
   .teacher-details h3 {
     font-size: 0.85rem;
   }

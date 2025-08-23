@@ -5,7 +5,7 @@
       <div class="photo-container">
         <div class="teacher-photo">
           <!-- If a teacher photo is available, display it; otherwise use a default image. -->
-            <img x-bind:src="item.teacher.photo" alt="Teacher photo" onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
+          <img :src="item.teacher.photo || '{% static 'images/default-avatar.jpg' %}'" alt="Teacher photo">
         </div>
       </div>
       <div class="teacher-details">
@@ -14,50 +14,44 @@
           <a 
             :href="`{% url 'profile_detail' 0 %}`.replace('0', item.teacher.id)"
             x-text="`${item.teacher.teacher_id.full_name}`"
-            style="color: inherit; text-decoration: none;"
+            class="supervisor-name"
           ></a>
         </h2>
         <template x-if="item.teacher.academic_level">
-          <p x-text="`${item.teacher.academic_level}`"></p>
+          <p x-text="`${item.teacher.academic_level}`" class="supervisor-position"></p>
         </template>
         <template x-if="item.teacher.academic_level === null">
           <p>Викладач</p>
         </template>  
-        <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`"></h3>
+        <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`" class="supervisor-department"></h3>
 
         <!-- Conditional logic for displaying the number of free slots. -->
-        <template x-if="item.is_matched">
-          <div>
-            <template x-if="item.free_slots.length < 1">
-              <div class="slots-info no-slots">
-                <p><strong>Місць немає</strong></p>
-              </div>
-            </template>
-            <template x-if="item.free_slots.length === 1">
-              <p x-html="`<strong>Місця:</strong> ${item.free_slots[0].get_available_slots}`" class="single-slot"></p>
-            </template>  
+        <div class="slots-container" x-show="item.is_matched || !item.is_matched">
+          <!-- No slots -->
+          <div class="slots-info no-slots" x-show="item.free_slots.length < 1">
+            <p class="supervisor-places-label"><strong>Місць немає</strong></p>
           </div>
-        </template>
-        <template x-if="!item.is_matched">
-          <div>
-          <template x-if="item.free_slots.length < 1">
-            <div class="slots-info no-slots">
-              <p><strong>Місць немає</strong></p>
-            </div>
-          </template>
-            <div x-show="item.free_slots.length >=1" class="slots-info multiple-slots">
-              <p><strong>Загальна кількість місць:</strong></p>
-              <ul>
-                <template x-for="slot in item.free_slots">
-                  <li>
-                    <strong x-text="`${slot.stream_id.stream_code}`"></strong>:
-                    <span x-text="`${slot.get_available_slots}`"></span>
-                  </li>
-                </template>
-              </ul>
-            </div>
+
+          <!-- Single slot -->
+          <div class="slots-info single-slot supervisor-places-label" x-show="item.is_matched && item.free_slots.length === 1">
+            <p><strong>Місць:</strong></p>
+            <p class="supervisor-places-badge" x-text="item.free_slots[0].get_available_slots"></p>
           </div>
-        </template>
+
+          <!-- Multiple slots -->
+          <div class="slots-info multiple-slots supervisor-places-label" x-show="!item.is_matched && item.free_slots.length >= 1">
+            <p><strong>Загальна кількість місць:</strong></p>
+            <ul>
+              <template x-for="slot in item.free_slots" :key="slot.id">
+                <li>
+                  <strong x-text="slot.stream_id.stream_code"></strong>:
+                  <span x-text="slot.get_available_slots"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </div>
+
       </div>
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">

@@ -2,6 +2,9 @@
 {% load static %}
 {% load widget_tweaks %}
 
+<!-- Added modern CSS stylesheet -->
+<link rel="stylesheet" href="{% static 'css/modern-academic-style.css' %}">
+
 <!-- 
 This template displays a list of teachers and highlights their available slots.
 It provides a modal dialog to submit requests. 
@@ -13,7 +16,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
 {% block content %}
 
 <!-- Main container with Alpine.js state management -->
-<div class="main-container" 
+<div class="main-container-catalog" 
   x-data="{ 
      data: [], 
      departments: [], 
@@ -66,10 +69,9 @@ When a user triggers the HX request (via button click), the modal is swapped in 
     <div x-show="showFilters"
         x-transition.opacity.duration.300ms
         class="filter-wrapper"
-        {% comment %} style="display: none" {% endcomment %}
         @click.away="isMobile && (showFilters = false)"
     >
-        <div class="filter-section" @click.outside.window="isMobile && (showFilters = false)">
+        <div class="filter-section shadow-sm" @click.outside.window="isMobile && (showFilters = false)">
         <div class="filter-header">
         <h3>Фільтри</h3>
         <img src="{% static 'images/filters.svg' %}" alt="Filters">
@@ -134,7 +136,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      <!-- No Results Message -->
      <template x-if="!isLoading && filteredData.length === 0">
       <div class="no-results">
-       <h2>Нічого не знайдено!</h2>
+        <div class="search-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+          </svg>
+        </div>
+        <h2>Нічого не знайдено!</h2>
+        <p>Спробуйте змінити критерії пошуку або фільтри.</p>
       </div>
      </template>
 
