@@ -66,7 +66,8 @@ def create_student_profile(user, group_code, email):
 
 
 def create_teacher_profile(user, job_title, department_name):
-    from apps.catalog.models import Department
+    from apps.catalog.models import Department, OnlyTeacher
+
     try:
         department_obj = Department.objects.get(department_name=department_name)
     except Department.DoesNotExist:
@@ -77,10 +78,32 @@ def create_teacher_profile(user, job_title, department_name):
             return
 
     academic_level = job_title if job_title else "Викладач"
+    faculty_short_name = department_obj.faculty.short_name if department_obj.faculty else "unknown"
+
+    # Формуємо базовий profile_link
+    last_name = user.last_name.lower() if user.last_name else user.email.split('.')[1]
+    first_initial = user.first_name[0].lower() if user.first_name else user.email.split('.')[0][0]
+    base_link = f"{last_name}-{first_initial}"
+
+    # Формуємо повне посилання
+    full_url = f"https://{faculty_short_name}.lnu.edu.ua/{base_link}"
+
+    if url_exists(full_url):
+        profile_link = full_url
+    else:
+        profile_link = None
 
     OnlyTeacher.objects.create(
         teacher_id=user,
         academic_level=academic_level,
         department=department_obj,
+        profile_link=profile_link
     )
-    logger.info(f"Created OnlyTeacher for {user.email} with department {department_obj.code}")
+    logger.info(f"Created OnlyTeacher for {user.email} with department {department_obj.department_name} and profile link {profile_link}")
+
+def url_exists(url):
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=5)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False

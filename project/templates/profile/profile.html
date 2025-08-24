@@ -40,7 +40,13 @@
 
                 <!-- Profile Text -->
                 <div class="profile-text">
-                    <h2>{{ user_profile.get_full_name_with_patronymic }}</h2>
+                    <h2>
+                        {{ user_profile.get_full_name_with_patronymic }}
+                        {% if user_profile.role == "Викладач" and teacher_profile.profile_link %}
+                            <a href="{{ teacher_profile.profile_link }}" target="_blank" title="Профіль на сайті факультету" class="fac-profile-link">🔗</a>
+                        {% endif %}
+                    </h2>
+
                     {% if user_profile.role == "Викладач" %}
                         <h3>{{ teacher_profile.academic_level }}</h3>
                         <p>Кафедра: {{ user_profile.department }}</p>

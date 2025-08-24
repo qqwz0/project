@@ -175,11 +175,29 @@ class TeacherProfileForm(forms.ModelForm):
     )
     themes = forms.CharField(required=False, widget=forms.HiddenInput())
     
+    profile_link = forms.URLField(
+        label="Посилання на сторінку на сайті факультету",
+        required=False,
+        widget=forms.URLInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'https://example.com'
+        })
+    )
+
+    academic_level = forms.CharField(
+        label="Посада",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Наприклад: доцент'
+        })
+    )
+
     class Meta:
         model = OnlyTeacher
-        fields = ['academic_level', 'additional_email', 'phone_number', 'themes']
+        fields = ['academic_level', 'additional_email', 'phone_number', 'themes', 'profile_link']
         widgets = {
-            'academic_level': forms.Select(attrs={'class': 'form-select'}),
             'additional_email': forms.EmailInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'пп.ivan.franko@lnu.edu.ua'
@@ -187,7 +205,11 @@ class TeacherProfileForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': '123456789'
-            })
+            }),
+            'profile_link': forms.URLInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'https://example.com'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -198,6 +220,12 @@ class TeacherProfileForm(forms.ModelForm):
             self.fields['last_name'].initial = user.last_name
             self.fields['department'].initial = user.department
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
+
+            instance = kwargs.get('instance')
+            if instance and instance.academic_level:
+                self.fields['academic_level'].initial = instance.academic_level
+            if instance and instance.profile_link:
+                self.fields['profile_link'].initial = instance.profile_link
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get('phone_number', '')

@@ -46,10 +46,9 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    academic_levels = forms.MultipleChoiceField(
-        label='Науковий ступінь',
-        choices=[],
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
+    academic_levels = forms.CharField(
+        label='Посада',
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-input'}),
         required=False
     )
     slots = forms.IntegerField(
