@@ -21,10 +21,13 @@
 
       {% if user.is_authenticated %}
       <div class="icons">
-        {% if user_profile.role == 'Студент' %}
-        <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
-          <i class="fas fa-search"></i>
+        <a href="{% url 'home' %}" title="Home page">
+          <i class="fas fa-home"></i>
         </a>
+        {% if user_profile.role == 'Студент' %}
+          <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
+            <i class="fas fa-search"></i>
+          </a>
         {% endif %}
         <a
           href="#"

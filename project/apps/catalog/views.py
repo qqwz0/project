@@ -1015,3 +1015,6 @@ def delete_theme(request, theme_id):
         return JsonResponse(
             {"error": f"Помилка при видаленні теми: {str(e)}"}, status=500
         )
+
+def home(request):
+    return render(request, "home.html")

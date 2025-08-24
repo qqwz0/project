@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% comment %}
+    <title>Знайд</title>
+    {% endcomment %} {% load static %}
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+    <link rel="stylesheet" href="{% static 'css/header.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/home.css' %}" />
+  </head>
+  <body>
+    {% csrf_token %}
+
+    <!-- Header -->
+    {% include 'header.html' %}
+    <!-- Hero Section -->
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="section-header">
+        <h2 class="section-title">Актуальна інформація</h2>
+        <p class="section-description">
+          Важливі оголошення, документи та відповіді на часті питання для
+          студентів кафедри
+        </p>
+        <div class="section-divider"></div>
+      </div>
+
+      <div class="content-grid">
+        <!-- Announcements Section -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg
+                  class="icon-lg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Оголошення
+              </h3>
+            </div>
+            <div class="card-content">
+              <div class="announcement primary">
+                <h3 class="announcement-title">
+                  Здача курсових робіт - Зимова сесія 2024
+                </h3>
+                <p class="announcement-content">
+                  Термін здачі курсових робіт:
+                  <strong>15 січня 2025 року</strong>
+                </p>
+                <div class="announcement-details">
+                  <h4>Формат здачі:</h4>
+                  <ul>
+                    <li>• PDF файл з повним текстом роботи</li>
+                    <li>• Презентація для захисту (PowerPoint або PDF)</li>
+                    <li>• Презентація в аудиторії 1 о 13:00</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="announcement warning">
+                <h3 class="announcement-title">Друкована версія</h3>
+                <p class="announcement-content">
+                  До уваги студентів! При здачі у дистанційному форматі не
+                  забудьте принести друковану версію курсової роботи до 13
+                  січня.
+                </p>
+              </div>
+
+              <div class="announcement success">
+                <h3 class="announcement-title">Нові вимоги до оформлення</h3>
+                <p class="announcement-content">
+                  З 1 січня 2025 року діють оновлені вимоги до оформлення
+                  курсових робіт. Детальну інформацію дивіться в розділі "Файли
+                  та документи".
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+          <!-- Files Section -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  ></path>
+                  <polyline points="14,2 14,8 20,8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10,9 9,9 8,9"></polyline>
+                </svg>
+                Файли та документи
+              </h3>
+            </div>
+            <a
+              class="file-item"
+              href="https://electronics.lnu.edu.ua/wp-content/uploads/2023_OK_30_kurs_2.pdf"
+              target="_blank"
+            >
+              <div class="file-info">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7,10 12,15 17,10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <div>
+                  <p class="file-name">Методичні вказівки</p>
+                  <p class="file-size">PDF</p>
+                </div>
+              </div>
+            </a>
+
+            <a
+              class="file-item"
+              href="https://electronics.lnu.edu.ua/wp-content/uploads/Diploma_design.pdf"
+              target="_blank"
+            >
+              <div class="file-info">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7,10 12,15 17,10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <div>
+                  <p class="file-name">Правила оформлення робіт</p>
+                  <p class="file-size">PDF</p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <!-- FAQ Section -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              FAQ
+            </h3>
+          </div>
+          <div class="card-content">
+            <div class="faq-item">
+              <h4 class="faq-question">Що таке курсова робота?</h4>
+              <p class="faq-answer">
+                Курcова робота - це одна з форм самостійної роботи здобувача
+                вищої освіти, метою якої є поглиблене дослідження конкретних
+                наукових напрямів тем, що є складовими дисципліни, в межах якої
+                виконується робота. Курсова робота є диференційованим заліком та
+                бал за неї враховується у рейтинг стипендіантів.
+              </p>
+            </div>
+
+            <div class="faq-item">
+              <h4 class="faq-question">Коли я буду писати курсову роботу?</h4>
+              <p class="faq-answer">
+                Курсові слід очікувати студентам бакалаврату: 121 та 126
+                спеціальностей у 3 та 6 семестрах; 122 спеціальності у 3 та 5
+                семестрах; 171 та 176 спеціальностей у 6 та 8 семестрах. Та
+                магістратурі на 122 спеціальності у 2 семестрі.
+              </p>
+            </div>
+
+            <div class="faq-item">
+              <h4 class="faq-question">Що робити при технічних проблемах?</h4>
+              <p class="faq-answer">
+                Звертайтеся до ANASTASIIA.YANYSHYN@lnu.edu.ua.
+              </p>
+            </div>
+
+            <div class="faq-item">
+              <h4 class="faq-question">Коли відбувається захист?</h4>
+              <p class="faq-answer">
+                Захист курсових робіт - 20-25 січня 2025 року.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Add smooth scrolling and other interactions
+      document.addEventListener("DOMContentLoaded", function () {
+        // Add hover effects to file items
+        const fileItems = document.querySelectorAll(".file-item");
+        fileItems.forEach((item) => {
+          item.addEventListener("mouseenter", function () {
+            this.style.transform = "translateY(-1px)";
+            this.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+          });
+
+          item.addEventListener("mouseleave", function () {
+            this.style.transform = "translateY(0)";
+            this.style.boxShadow = "none";
+          });
+        });
+
+        // Add click animation to buttons
+        const clickableElements = document.querySelectorAll(
+          ".file-item, .icon-btn"
+        );
+        clickableElements.forEach((element) => {
+          element.addEventListener("click", function () {
+            this.style.transform = "scale(0.98)";
+            setTimeout(() => {
+              this.style.transform = "";
+            }, 150);
+          });
+        });
+      });
+    </script>
+    ]
+  </body>
+</html>
