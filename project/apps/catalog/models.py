@@ -16,22 +16,19 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
         
 class OnlyTeacher(models.Model):
-    ACADEMIC_LEVELS = [
-        ('Асистент', 'Асистент'),
-        ('Доцент', 'Доцент'),
-        ('Професор', 'Професор'),
-    ]
     teacher_id = models.OneToOneField('users.CustomUser', 
                                       on_delete=models.CASCADE, 
                                       primary_key=True, 
                                       limit_choices_to={'role': 'teacher'},
                                       related_name='catalog_teacher_profile')
-    academic_level = models.CharField(max_length=50, choices=ACADEMIC_LEVELS, default='Асистент')
+    academic_level = models.CharField(max_length=50, default='Викладач')
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     profile_link = models.URLField(blank=True, null=True, verbose_name="Посилання на профіль",
-                                  help_text="Посилання на особистий сайт, LinkedIn, ResearchGate тощо")
-    
+                                  help_text="Посилання на профіль на сторінці факультету")
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Кафедра")
+
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
     
@@ -542,6 +539,26 @@ class Group(models.Model):
     
     def __str__(self):
         return self.group_code
+    
+class Department(models.Model):
+    """
+    Кафедри - належать факультету
+    """
+    department_name = models.CharField(max_length=200, unique=True, 
+                                 verbose_name="Назва кафедри",
+                                 help_text="Наприклад: Кафедра комп'ютерних наук")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, 
+                               related_name='departments',
+                               verbose_name="Факультет")
+    
+    
+    class Meta:
+        verbose_name = "Кафедра"
+        verbose_name_plural = "Кафедри"
+        ordering = ['department_name']
+
+    def __str__(self):
+        return self.department_name
 
 class RequestFile(models.Model):
     """

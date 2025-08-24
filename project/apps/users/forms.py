@@ -104,7 +104,7 @@ class RegistrationForm(forms.Form):
             self.cleaned_data['group'] = group  # Save the updated value back into cleaned_data
             
             # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
-            pattern = r'^ФЕ[СЛІПМ]-[1-4][0-9](ВПК|М)?$'
+            pattern = r'^ФЕ[СЛІПМ]-[1-4][1-9](ВПК|М)?$'
             if not re.match(pattern, group):
                 raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
         

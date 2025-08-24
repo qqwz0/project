@@ -165,7 +165,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                 course = None
                 is_master = "М" in user.academic_group.upper()
                 if user.academic_group:
-                    match = re.match(r"^ФЕ[ЇСМЛПІ]-(\d)", user.academic_group)
+                    match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
                     if match:
                         course = int(match.group(1))
 

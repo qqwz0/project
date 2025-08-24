@@ -42,6 +42,14 @@ from apps.catalog.models import (FileComment, OnlyStudent, OnlyTeacher,
 from .forms import (CropProfilePictureForm, ProfilePictureUploadForm,
                     RegistrationForm, StudentProfileForm, TeacherProfileForm)
 from .models import CustomUser
+from .services.registration_services import (
+    get_access_token,
+    get_user_info,
+    extract_user_data,
+    fail_and_redirect,
+    create_student_profile,
+    create_teacher_profile
+)
 
 # Load environment variables
 load_dotenv()
@@ -229,142 +237,66 @@ def microsoft_callback(request):
 
 
 def handle_registration_callback(request, code):
-    """
-    This function processes the OAuth callback from Microsoft during user registration.
-    It exchanges the authorization code for an access token, fetches user information
-    from Microsoft Graph, and registers the user in the system.
-    Args:
-        request (HttpRequest): The HTTP request object.
-        code (str): The authorization code received from Microsoft.
-    Returns:
-        HttpResponse: A redirect response to the appropriate page based on the outcome.
-    Raises:
-        ValidationError: If there is a validation error during user registration.
-        requests.exceptions.RequestException: If there is an error during the OAuth callback process.
-    """
     logger.debug("Handling registration callback.")
 
-    data = {
-        "client_id": settings.MICROSOFT_CLIENT_ID,
-        "scope": " ".join(settings.MICROSOFT_SCOPES),
-        "code": code,
-        "redirect_uri": settings.MICROSOFT_REDIRECT_URI,
-        "grant_type": "authorization_code",
-        "client_secret": settings.MICROSOFT_CLIENT_SECRET,
-        "state": urlencode(
-            {"action": "login", "csrf": request.session.get("csrf_state")}
-        ),
-    }
-
     try:
-        # Request access token
-        logger.debug("Requesting access token from Microsoft.")
-        token_response = requests.post(MICROSOFT_TOKEN_URL, data=data)
-        token_response.raise_for_status()
-        tokens = token_response.json()
-        access_token = tokens.get("access_token")
-
+        access_token = get_access_token(code, request)
         if not access_token:
-            logger.error("Failed to obtain access token.")
-            messages.error(request, "Не вдалося отримати токен доступу.")
-            return redirect("register")
+            return fail_and_redirect(
+                request,
+                "Не вдалося отримати токен доступу.",
+                "Failed to obtain access token."
+            )
 
-        logger.debug("Access token obtained.")
-
-        # Fetch user info
-        headers = {"Authorization": f"Bearer {access_token}"}
-        logger.debug("Fetching user info from Microsoft Graph.")
-        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
-
-        # Extract user details
-        email = user_info.get("mail") or user_info.get("userPrincipalName")
-        first_name = user_info.get("givenName", "")
-        last_name = user_info.get("surname", "")
-        job_title = user_info.get("jobTitle", "")
-
-        logger.debug(f"Retrieved job title from Microsoft: {job_title}")
+        user_info = get_user_info(access_token)
+        email, first_name, last_name, job_title = extract_user_data(user_info)
 
         derived_role = "Студент" if "Student" in job_title else "Викладач"
-
         submitted_role = request.session.get("role")
         group = request.session.get("group")
         department = request.session.get("department")
 
         if submitted_role != derived_role:
-            logger.error(
-                "Role mismatch. Submitted: %s, Derived: %s",
-                submitted_role,
-                derived_role,
+            return fail_and_redirect(
+                request,
+                "Будь ласка, вкажіть правильну роль.",
+                f"Role mismatch. Submitted: {submitted_role}, Derived: {derived_role}"
             )
-            messages.error(request, "Будь ласка, вкажіть правильну роль.")
-            return redirect("register")
 
-        # Check if user already exists
-        user, created = CustomUser.objects.get_or_create(
-            email=email,
-            defaults={
-                "first_name": first_name,
-                "last_name": last_name,
-                "password": make_password(None),
-                "is_active": True,
-                "role": derived_role,
-                "academic_group": group if derived_role == "Студент" else None,
-                "department": department if derived_role == "Викладач" else None,
-            },
-        )
+        with transaction.atomic():
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "password": make_password(None),
+                    "is_active": True,
+                    "role": derived_role,
+                    "academic_group": group if derived_role == "Студент" else None,
+                    "department": department if derived_role == "Викладач" else None,
+                },
+            )
 
-        if not created:
-            logger.error("User already registered: %s", email)
-            messages.error(request, "Користувач вже зареєстрований.")
-            return redirect("register")
-
-        if created:
-            logger.info("New user registered: %s", email)
-            # Створюємо профіль в залежності від ролі
-            if derived_role == "Студент":
-                try:
-                    from apps.catalog.models import Group
-                    group_obj = Group.objects.get(group_code=group)
-                    OnlyStudent.objects.create(
-                        student_id=user,
-                        group=group_obj
-                    )
-                    logger.info(f"Created OnlyStudent for user {email} with group {group}")
-                except Group.DoesNotExist:
-                    logger.error(f"Group {group} not found for user {email}")
-                    try:
-                        fallback_group = Group.objects.first()
-                        if fallback_group:
-                            OnlyStudent.objects.create(
-                                student_id=user,
-                                group=fallback_group
-                            )
-                            logger.warning(f"Created OnlyStudent for user {email} with fallback group {fallback_group.group_code}")
-                        else:
-                            logger.error("No groups available in database")
-                    except Exception as e:
-                        logger.error(f"Failed to create OnlyStudent for {email}: {e}")
-            elif derived_role == "Викладач":
-                academic_level = job_title if job_title != "" else "Викладач"
-                logger.debug(f"Setting academic_level to: {academic_level}")
-                OnlyTeacher.objects.create(
-                    teacher_id=user,
-                    academic_level="Асистент",  # Значення за замовчуванням
+            if not created:
+                return fail_and_redirect(
+                    request,
+                    "Користувач вже зареєстрований.",
+                    f"User already registered: {email}"
                 )
 
-        # Redirect user to the desired page after registration
+            if derived_role == "Студент":
+                create_student_profile(user, group, email)
+            else:
+                create_teacher_profile(user, job_title, department)
+
         messages.success(request, "Успішно зареєстровано! Будь ласка, увійдіть.")
         return redirect("login")
 
     except ValidationError as e:
-        error_message = str(e)
-        logger.error("Validation error during registration: %s", error_message)
-        messages.error(request, error_message)
-        return redirect("register")
+        return fail_and_redirect(request, str(e), f"Validation error: {e}")
     except requests.exceptions.RequestException as e:
-        logger.error("Error during Microsoft OAuth callback: %s", e)
-        messages.error(request, "Не вдалося завершити автентифікацію.")
-        return redirect("register")
+        return fail_and_redirect(request, "Не вдалося завершити автентифікацію.", str(e))
+
 
 
 def handle_login_callback(request, code):
