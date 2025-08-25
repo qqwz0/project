@@ -644,75 +644,7 @@ def profile(request: HttpRequest, user_id=None):
     return render(request, "profile/profile.html", context)
 
 
-@login_required
-@transaction.atomic
-def approve_request(request, request_id):
-    """
-    Approve a request and update its status to 'Активний'.
-    Automatically cancel all other pending requests from the same student.
-    """
-    if request.method == "POST":
-        try:
-            # Use select_for_update to prevent race conditions
-            req = Request.objects.select_for_update().get(id=request_id)
-
-            # Add debugging logs
-            logger.debug(
-                f"Request ID: {req.id}, Student: {req.student_id}, Teacher: {req.teacher_id}"
-            )
-            logger.debug(f"Current user: {request.user.id} - {request.user}")
-            logger.debug(
-                f"Teacher user: {req.teacher_id.teacher_id.id} - {req.teacher_id.teacher_id}"
-            )
-
-            # Check if the user is the teacher who received the request - use more reliable comparison
-            if req.teacher_id.teacher_id == request.user:
-                student_id = req.student_id
-
-                # Cancel all other pending requests from this student
-                other_pending_requests = Request.objects.filter(
-                    student_id=student_id, request_status="Очікує"
-                ).exclude(id=req.id)
-
-                cancelled_count = other_pending_requests.update(
-                    request_status="Відхилено",
-                    rejected_reason="Автоматично скасовано через прийняття іншого запиту",
-                )
-
-                # Accept the chosen request
-                req.request_status = "Активний"
-                req.save()
-
-                logger.info(
-                    f"Request {req.id} approved. {cancelled_count} other pending requests cancelled for student {student_id.id}"
-                )
-
-                success_message = (
-                    f"Запит успішно підтверджено. {cancelled_count} інших очікуючих запитів автоматично скасовано."
-                    if cancelled_count > 0
-                    else "Запит успішно підтверджено."
-                )
-                messages.success(request, success_message)
-
-                if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                    return JsonResponse({"success": True})
-                return redirect("profile")
-            else:
-                logger.warning(
-                    f"User {request.user.id} attempted to approve request {request_id} belonging to teacher {req.teacher_id.teacher_id.id}"
-                )
-                messages.error(
-                    request, "У вас немає прав для підтвердження цього запиту"
-                )
-        except Request.DoesNotExist:
-            messages.error(request, "Запит не знайдено")
-        except Exception as e:
-            logger.exception(f"Error approving request {request_id}: {str(e)}")
-            messages.error(request, f"Помилка при підтвердженні запиту: {str(e)}")
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"success": False, "error": "Помилка при обробці запиту"})
-    return redirect("profile")
+# approve_request видалено - використовується approve_request_with_theme
 
 
 @login_required
@@ -1584,10 +1516,18 @@ def approve_request_with_theme(request, request_id):
             student_id=student_id, request_status="Очікує"
         ).exclude(id=req.id)
 
-        cancelled_count = other_pending_requests.update(
-            request_status="Відхилено",
-            rejected_reason="Автоматично скасовано через прийняття іншого запиту",
-        )
+        cancelled_count = 0
+        for other_req in other_pending_requests:
+            # Звільняємо тему, якщо вона була зайнята
+            if other_req.teacher_theme:
+                other_req.teacher_theme.is_occupied = False
+                other_req.teacher_theme.save()
+            
+            # Скасовуємо запит
+            other_req.request_status = "Відхилено"
+            other_req.rejected_reason = "Автоматично скасовано через прийняття іншого запиту"
+            other_req.save()
+            cancelled_count += 1
 
         # Assign comment and send_contacts
         req.comment = comment

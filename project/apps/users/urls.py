@@ -13,7 +13,7 @@ urlpatterns = [
     path("profile/", views.profile, name="profile"),
     path('profile/<int:user_id>/', views.profile, name='profile_detail'),  # Чужий профіль
     path('logout/', views.logout_view, name='logout'),
-    path('approve_request/<int:request_id>/', views.approve_request, name='approve_request'),
+
     path('reject_request/<int:request_id>/', views.reject_request, name='reject_request'),
     path('restore_request/<int:request_id>/', views.restore_request, name='restore_request'),
     path('update-profile-picture/', views.update_profile_picture, name='update_profile_picture'),

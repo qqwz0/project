@@ -325,8 +325,8 @@ class Request(models.Model):
             elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
                 self.slot.update_occupied_slots(-1)
                 
-            # Free teacher theme when request is completed
-            if self.request_status == 'Завершено' and self.teacher_theme:
+            # Free teacher theme when request is completed or rejected
+            if self.request_status in ['Завершено', 'Відхилено'] and self.teacher_theme:
                 self.teacher_theme.is_occupied = False
                 self.teacher_theme.save()
     

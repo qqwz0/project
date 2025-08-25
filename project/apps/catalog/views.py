@@ -290,10 +290,11 @@ class TeacherModalView(
     
     def get_form_kwargs(self):
         """
-        Passes the teacher instance to the form via 'teacher_id'.
+        Passes the teacher instance and current user to the form.
         """
         kwargs = super().get_form_kwargs()
         kwargs["teacher_id"] = self.get_object()
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -453,20 +454,7 @@ class TeacherModalView(
                 raise ValidationError(f"Потік не знайдено: {student_stream_code}")
 
 
-class AcceptRequestView(View):
-    def post(self, request, pk):
-        req = get_object_or_404(Request, pk=pk)
-        if (
-            request.user.role == "Викладач"
-            and req.teacher_id.teacher_id == request.user
-        ):
-            req.request_status = "Активний"
-            req.save()
-            if req.slot:
-                req.slot.get_available_slots()
-            messages.success(request, "Запит прийнято")
-            return JsonResponse({"success": True})
-        return JsonResponse({"success": False}, status=403)
+# AcceptRequestView видалено - використовується approve_request_with_theme з users/views.py
 
 
 class CompleteRequestView(View):
@@ -513,10 +501,7 @@ class CompleteRequestView(View):
                     "error": "Необхідно обрати хоча б один файл для збереження в архіві"
                 })
 
-            # Free the teacher theme if it exists
-            if req.teacher_theme:
-                req.teacher_theme.is_occupied = False
-                req.teacher_theme.save()
+            # Theme will be freed automatically in the model when status changes to 'Завершено'
 
             if req.slot:
                 req.slot.get_available_slots()
@@ -743,6 +728,7 @@ def reject_request(request, request_id):
         try:
             req = Request.objects.get(id=request_id)
             if request.user == req.teacher_id.teacher_id:
+                # Змінюємо статус (тема звільниться автоматично в моделі)
                 req.request_status = "Відхилено"
                 req.save()
                 messages.success(request, "Запит успішно відхилено")

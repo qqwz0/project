@@ -6,6 +6,18 @@
 {% block head %}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <style>
+        /* Стилі для неактивних вкладок для студентів */
+        .tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .tab.disabled:hover {
+            background-color: inherit;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -95,8 +107,10 @@
             {% if is_own_profile %}
                 <div class="tab{% if user_profile.role != 'Викладач' %} active{% endif %}" data-tab="requests" onclick="loadTab('requests')">Запити</div>
             {% endif %}
+            {% if is_own_profile or request.user.role == 'Викладач' %}
             <div class="tab" data-tab="active" onclick="loadTab('active')">Активні</div>
             <div class="tab" data-tab="archive" onclick="loadTab('archive')">Архів</div>
+            {% endif %}
         </div>
     </div>
 
@@ -111,6 +125,7 @@
         {% include 'profile/requests.html' with requests=pending_requests %}
     </div>
 
+    {% if is_own_profile or request.user.role == 'Викладач' %}
     <div id="active-section" class="tab-content" style="display: none;">
         {% include 'profile/active.html' with active_requests=active_requests %}
     </div>
@@ -118,6 +133,7 @@
     <div id="archive-section" class="tab-content" style="display: none;">
         {% include 'profile/archive.html' with archived_requests=archived_requests %}
     </div>
+    {% endif %}
 
     <!-- Messages -->
     {% if messages %}
@@ -160,6 +176,7 @@
         </div>
     </div>
 
+    {% if request.user.role == 'Викладач' %}
     <div id="completeModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeCompleteModal()">&times;</span>
@@ -192,6 +209,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -211,10 +229,37 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             const tabs = document.querySelectorAll(".tab");
+            const currentUserRole = "{{ request.user.role }}";
+            const isOwnProfile = {{ is_own_profile|yesno:"true,false" }};
+            
+            // Додаємо клас disabled для заборонених вкладок студентам, які дивляться на чужі профілі
+            if (currentUserRole === 'Студент' && !isOwnProfile) {
+                tabs.forEach(tab => {
+                    const tabName = tab.getAttribute('data-tab');
+                    if (tabName === 'active' || tabName === 'archive') {
+                        tab.classList.add('disabled');
+                    }
+                });
+            }
+            
             tabs.forEach(tab => {
                 tab.addEventListener("click", function () {
+                    const tabName = this.getAttribute('data-tab');
+                    
+                    // Блокуємо доступ студентам до вкладок "Активні" та "Архів" на чужих профілях
+                    if (currentUserRole === 'Студент' && !isOwnProfile && (tabName === 'active' || tabName === 'archive')) {
+                        return; // Не дозволяємо переключитися
+                    }
+                    
                     tabs.forEach(t => t.classList.remove("active"));
                     this.classList.add("active");
+                    
+                    // Показуємо відповідний контент
+                    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+                    const targetSection = document.getElementById(tabName + '-section');
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                    }
                 });
             });
         });
