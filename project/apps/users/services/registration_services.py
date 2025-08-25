@@ -81,8 +81,8 @@ def create_teacher_profile(user, job_title, department_name):
     faculty_short_name = department_obj.faculty.short_name if department_obj.faculty else "unknown"
 
     # Формуємо базовий profile_link
-    last_name = user.last_name.lower() if user.last_name else user.email.split('.')[1]
-    first_initial = user.first_name[0].lower() if user.first_name else user.email.split('.')[0][0]
+    last_name = user.email.split('.')[1]
+    first_initial = user.email.split('.')[0][0]
     base_link = f"{last_name}-{first_initial}"
 
     # Формуємо повне посилання
