@@ -23,7 +23,7 @@ urlpatterns = [
     path('complete_request/<int:request_id>/', views.complete_request, name='complete_request'),
     path('profile/load-tab/<str:tab_name>/', views.load_profile_tab, name='load_profile_tab'),
     path('archived-request-details/<int:request_id>/', views.archived_request_details, name='archived_request_details'),
-    path('catalog/', include('apps.catalog.urls')),
+    path('request-files/<int:request_id>/', views.request_files_for_completion, name='request_files_for_completion'),
     path('request-details-for-approve/<int:request_id>/', views.request_details_for_approve, name='request_details_for_approve'),
     path('approve-request-with-theme/<int:request_id>/', views.approve_request_with_theme, name='approve_request_with_theme'),
     path('student-refuse-request/<int:request_id>/', views.student_refuse_request, name='student_refuse_request'),

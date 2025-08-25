@@ -166,10 +166,25 @@
             <h3>Завершити роботу студента</h3>
             <form id="completeForm">
                 <input type="hidden" id="completeRequestId" name="requestId">
+                
+                <!-- Секція оцінки -->
                 <div class="form-group">
                     <label for="grade">Оцінка (0-100):</label>
                     <input type="number" id="grade" name="grade" min="0" max="100" class="form-control" required>
                 </div>
+                
+                <!-- Секція вибору файлів для архіву -->
+                <div class="form-group" id="filesSelectionSection" style="display: none;">
+                    <label>Оберіть файли для збереження в архіві:</label>
+                    <div id="filesCheckboxes" class="files-checkboxes">
+                        <!-- Чекбокси будуть додані динамічно -->
+                    </div>
+                    <small class="form-text text-muted">
+                        Тільки обрані файли будуть збережені в архіві після завершення роботи.
+                        <strong>Якщо файлів немає, запит не може бути завершений.</strong>
+                    </small>
+                </div>
+                
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="closeCompleteModal()">Скасувати</button>
                     <button type="button" class="btn-submit" onclick="submitComplete()">Завершити</button>

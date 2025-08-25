@@ -28,7 +28,7 @@ class OnlyTeacher(models.Model):
                                   help_text="Посилання на профіль на сторінці факультету")
     department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
                                    verbose_name="Кафедра")
-
+    
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
     
@@ -296,24 +296,6 @@ class Request(models.Model):
 
             self.slot = available_slot
 
-        # Обробка зміни статусу для слотів
-        if self.pk:
-            old_request = Request.objects.get(pk=self.pk)
-            if old_request.request_status != self.request_status:
-                super().save(*args, **kwargs)
-                
-                if self.request_status == 'Активний':
-                    self.slot.update_occupied_slots(+1)
-                elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
-                    self.slot.update_occupied_slots(-1)
-                    
-                # Free teacher theme when request is completed
-                if self.request_status == 'Завершено' and self.teacher_theme:
-                    self.teacher_theme.is_occupied = False
-                    self.teacher_theme.save()
-                
-                return
-
         # Встановлення навчального року
         if not self.academic_year:
             current_year = timezone.now().year
@@ -323,7 +305,30 @@ class Request(models.Model):
             else:
                 self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
 
+        # Обробка зміни статусу для слотів (переносимо після встановлення academic_year)
+        status_changed = False
+        if self.pk:
+            try:
+                old_request = Request.objects.get(pk=self.pk)
+                if old_request.request_status != self.request_status:
+                    status_changed = True
+            except Request.DoesNotExist:
+                pass
+
+        # Завжди викликаємо super().save() в кінці
         super().save(*args, **kwargs)
+        
+        # Після збереження обробляємо зміни статусу
+        if status_changed:
+            if self.request_status == 'Активний':
+                self.slot.update_occupied_slots(+1)
+            elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
+                self.slot.update_occupied_slots(-1)
+                
+            # Free teacher theme when request is completed
+            if self.request_status == 'Завершено' and self.teacher_theme:
+                self.teacher_theme.is_occupied = False
+                self.teacher_theme.save()
     
     def get_themes_display(self):
         """
@@ -332,6 +337,25 @@ class Request(models.Model):
         student_themes_list = ", ".join([theme.theme for theme in self.student_themes.all()])
         teacher_theme_name = self.teacher_theme.theme if self.teacher_theme else "No teacher theme"
         return teacher_theme_name, student_themes_list
+    
+    def get_theme_display(self):
+        # Якщо є topic_name (після підтвердження), показуємо його
+        if self.topic_name:
+            return self.topic_name
+        
+        # Інакше показуємо тему з ForeignKey
+        if self.custom_student_theme:
+            return f"{self.custom_student_theme} (довільна тема студента)"
+        elif self.approved_student_theme:
+            return f"{self.approved_student_theme.theme} (запропоновано студентом)"
+        elif self.teacher_theme:
+            return self.teacher_theme.theme
+        
+        return "Тема не вказана"
+    
+    @property
+    def theme_display(self):
+        return self.get_theme_display()
 
     def __str__(self):
         student_name = f"{self.student_id.first_name} {self.student_id.last_name}" if self.student_id else "Видалений студент"
@@ -398,7 +422,7 @@ class TeacherTheme(models.Model):
         self.save()
         self.refresh_from_db()  # Перечитуємо з бази
         print(f"After save: is_active={self.is_active}, is_deleted={self.is_deleted}")
-
+    
     def get_active_requests_count(self):
         """Повертає кількість активних запитів для цієї теми"""
         return Request.objects.filter(
@@ -536,7 +560,7 @@ class Group(models.Model):
         verbose_name = "Група"
         verbose_name_plural = "Групи"
         ordering = ['group_code']
-    
+
     def __str__(self):
         return self.group_code
     
@@ -570,6 +594,7 @@ class RequestFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     version = models.IntegerField(default=1)  
     description = models.TextField(blank=True)  
+    is_archived = models.BooleanField(default=False, verbose_name="Збережено в архіві")
 
     class Meta:
         ordering = ['-uploaded_at']

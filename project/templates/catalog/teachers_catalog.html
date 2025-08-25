@@ -59,10 +59,93 @@ When a user triggers the HX request (via button click), the modal is swapped in 
       finally {
         this.isLoading = false;
       }
+     },
+     async applyAutocompleteSearch() {
+        if (!this.searchQuery.trim()) {
+            this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+            return;
+        }
+        
+        const query = this.searchQuery.toLowerCase();
+        
+        // Спочатку фільтруємо по іменах викладачів
+        let filteredByNames = this.data.filter(i => {
+            const teacher = i.teacher;
+            const teacherName = `${teacher.teacher_id.first_name} ${teacher.teacher_id.last_name}`.toLowerCase();
+            
+            return teacherName.includes(query) &&
+                   (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0));
+        });
+        
+        // Додатково шукаємо викладачів по темах
+        try {
+            const response = await fetch(`/catalog/autocomplete/?q=${encodeURIComponent(query)}`);
+            if (response.ok) {
+                const suggestions = await response.json();
+                const themeResults = suggestions.filter(s => s.type === 'theme');
+                
+                for (const theme of themeResults) {
+                    const teachersResponse = await fetch(`/catalog/autocomplete/theme/${theme.id}/teachers/`);
+                    if (teachersResponse.ok) {
+                        const teacherIds = await teachersResponse.json();
+                        const teachersByTheme = this.data.filter(i => 
+                            teacherIds.includes(i.teacher.pk) &&
+                            (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
+                        );
+                        
+                        // Додаємо викладачів по темах, уникаючи дублікатів
+                        teachersByTheme.forEach(teacher => {
+                            if (!filteredByNames.some(existing => existing.teacher.pk === teacher.teacher.pk)) {
+                                filteredByNames.push(teacher);
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            // Тиха обробка помилок
+        }
+        
+        this.filteredData = filteredByNames;
+     },
+     
+     filterByTeacherIds(teacherIds) {
+        const filtered = this.data.filter(item => {
+            const teacherPk = item.teacher?.pk || item.teacher?.id;
+            const hasSlots = this.show_occupied || item.free_slots.some(slot => slot.get_available_slots > 0);
+            const isIncluded = teacherIds.includes(teacherPk);
+            return isIncluded && hasSlots;
+        });
+        
+        this.filteredData = filtered;
+        
+        // Оновлюємо HTMX атрибути після фільтрування
+        this.$nextTick(() => {
+            this.updateHTMXAttributes();
+        });
+     },
+     
+     updateHTMXAttributes() {
+        const buttons = document.querySelectorAll('.modal-button[hx-get]');
+        buttons.forEach(button => {
+            const teacherCard = button.closest('.teacher-card');
+            if (teacherCard && teacherCard.__x) {
+                const item = teacherCard.__x.$data.item;
+                if (item && item.teacher && item.teacher.url) {
+                    button.setAttribute('hx-get', item.teacher.url);
+                }
+            }
+        });
      }
   }" 
-  x-init="initData(); updateScreenSize(); 
-    window.addEventListener('resize', updateScreenSize)">
+  x-init="
+    initData(); 
+    updateScreenSize(); 
+    window.addEventListener('resize', updateScreenSize);
+    // Зберігаємо компонент глобально для доступу з автокомпліту
+    window.catalogMainComponent = $data;
+  "
+  @search-query.window="searchQuery = $event.detail.query; applyAutocompleteSearch()"
   
 
     <!-- Filter Section -->
@@ -112,11 +195,46 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      <!-- Search Section -->
      <div class="search-section">
       <h1>Знайди свого ідеального наукового керівника!</h1>
-      <div class="search-container">
-       {% render_field form.searching class="form-searching" autocomplete="off" x-model="searchQuery" @keydown.enter="applySearch()" %}
-       <button class="search-button" @click="applySearch()">
-        <img src="{% static 'images/search.svg' %}" alt="Search">
-       </button>
+      <div class="autocomplete-wrapper" x-data="autocompleteSearch()" style="position: relative;">
+        <div class="search-container autocomplete-container">
+         <input type="text" 
+                class="form-searching" 
+                placeholder="Пошук викладача чи теми..."
+                x-model="query"
+                @input="handleInput"
+                @keydown.enter="handleEnter"
+                @keydown.escape="hideSuggestions"
+                @focus="showSuggestionsIfQuery"
+                autocomplete="off">
+         <button class="search-button" @click="
+           if (query.trim()) {
+             // Використовуємо ту саму логіку що й в автокомпліті
+             searchQuery = query;
+             applyAutocompleteSearch();
+           } else {
+             // Якщо пошук порожній, показуємо всіх викладачів
+             filteredData = data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+           }
+         ">
+          <img src="{% static 'images/search.svg' %}" alt="Search">
+         </button>
+        </div>
+         
+         <!-- Autocomplete suggestions -->
+         <div class="autocomplete-suggestions" 
+              x-show="suggestions.length > 0"
+              x-transition
+              @click.away="hideSuggestions">
+           <template x-for="(suggestion, index) in suggestions" :key="suggestion.id + '-' + suggestion.type">
+             <div class="suggestion-item" 
+                  @click="selectSuggestion(suggestion)"
+                  :class="{ 'highlighted': highlightedIndex === index }"
+                  @mouseenter="highlightedIndex = index">
+               <div class="suggestion-label" x-text="suggestion.label"></div>
+               <div class="suggestion-description" x-text="suggestion.description"></div>
+             </div>
+           </template>
+         </div>
       </div>
       <!-- Toggle button for small screens -->
         <button class="mobile-filter-toggle" 
@@ -192,5 +310,129 @@ When a user triggers the HX request (via button click), the modal is swapped in 
 <!-- External JavaScript Files -->
 <script src="{% static 'js/teacher_modal.js' %}"></script>
 <script src="{% static 'js/filtering.js' %}"></script>
+
+<script>
+// Автокомпліт для пошуку викладачів та тем
+function autocompleteSearch() {
+    return {
+        query: '',
+        suggestions: [],
+        showSuggestions: false,
+        highlightedIndex: -1,
+        debounceTimer: null,
+        
+        init() {
+            // Component initialized
+        },
+        
+        async handleInput() {
+            if (this.debounceTimer) {
+                clearTimeout(this.debounceTimer);
+            }
+            
+            this.debounceTimer = setTimeout(() => {
+                this.fetchSuggestions();
+            }, 300);
+        },
+        
+        async fetchSuggestions() {
+            if (this.query.length < 2) {
+                this.suggestions = [];
+                this.showSuggestions = false;
+                return;
+            }
+            
+            try {
+                const url = `/catalog/autocomplete/?q=${encodeURIComponent(this.query)}`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    this.suggestions = await response.json();
+                    this.showSuggestions = this.suggestions.length > 0;
+                    this.highlightedIndex = -1;
+                } else {
+                    this.suggestions = [];
+                    this.showSuggestions = false;
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                this.suggestions = [];
+                this.showSuggestions = false;
+            }
+        },
+        
+        selectSuggestion(suggestion) {
+            this.query = suggestion.label.replace(/^(👨‍🏫|📚) /, '');
+            this.suggestions = [];
+            this.showSuggestions = false;
+            
+            if (suggestion.type === 'teacher') {
+                this.filterByTeacher(suggestion.id);
+            } else if (suggestion.type === 'theme') {
+                this.filterByTheme(suggestion.id);
+            }
+            this.hideSuggestions();
+        },
+        
+        filterByTeacher(teacherId) {
+            if (window.catalogMainComponent && window.catalogMainComponent.filterByTeacherIds) {
+                window.catalogMainComponent.filterByTeacherIds([teacherId]);
+            }
+        },
+        
+        async filterByTheme(themeId) {
+            try {
+                // Робимо запит до бекенду для отримання викладачів з цією темою
+                const response = await fetch(`/catalog/autocomplete/theme/${themeId}/teachers/`);
+                if (response.ok) {
+                    const teacherIds = await response.json();
+                    
+                    // Використовуємо глобальний компонент
+                    if (window.catalogMainComponent && window.catalogMainComponent.filterByTeacherIds) {
+                        window.catalogMainComponent.filterByTeacherIds(teacherIds);
+                    }
+                } else {
+                    // Fallback: використовуємо пошук по назві теми
+                    const themeName = this.suggestions.find(s => s.id === themeId && s.type === 'theme')?.label.replace('📚 ', '') || '';
+                    this.query = themeName;
+                    this.handleSearch();
+                }
+            } catch (error) {
+                // Fallback: використовуємо пошук по назві теми
+                const themeName = this.suggestions.find(s => s.id === themeId && s.type === 'theme')?.label.replace('📚 ', '') || '';
+                this.query = themeName;
+                this.handleSearch();
+            }
+        },
+        
+        handleEnter() {
+            if (this.highlightedIndex >= 0 && this.suggestions[this.highlightedIndex]) {
+                this.selectSuggestion(this.suggestions[this.highlightedIndex]);
+            } else {
+                this.handleSearch();
+            }
+        },
+        
+        handleSearch() {
+            // Просто виконуємо стандартний пошук через подію
+            this.$dispatch('search-query', { query: this.query });
+            this.hideSuggestions();
+        },
+        
+        hideSuggestions() {
+            this.showSuggestions = false;
+            this.highlightedIndex = -1;
+        },
+        
+        showSuggestionsIfQuery() {
+            if (this.query.length >= 2 && this.suggestions.length > 0) {
+                this.showSuggestions = true;
+            }
+        }
+    };
+}
+</script>
+
+
 
 {% endblock %}

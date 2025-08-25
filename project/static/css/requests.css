@@ -1,3 +1,204 @@
+/* === File Selection Styles === */
+.files-checkboxes {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #f9fafb;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+.file-checkbox-item {
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.file-checkbox-item:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.file-checkbox-item:last-child {
+    margin-bottom: 0;
+}
+
+.file-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.file-checkbox-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #374151;
+    flex: 1;
+    word-break: break-all;
+    margin-left: 0;
+}
+
+.file-meta {
+    color: #6b7280;
+    font-size: 12px;
+    white-space: nowrap;
+    margin-left: 0;
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+/* === Complete Modal Specific Styles === */
+#completeModal .modal-content {
+    max-width: 500px;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(60, 80, 140, 0.15);
+}
+
+#completeModal h3 {
+    color: #000000;
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    text-align: center;
+    font-family: var(--heading-font, inherit);
+}
+
+#completeModal .form-group {
+    margin-bottom: 24px;
+}
+
+#completeModal .form-group label {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #063f77;
+    font-weight: 500;
+    text-align: left;
+    font-family: var(--default-font, inherit);
+    letter-spacing: 0.25px;
+}
+
+#completeModal .form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: var(--default-font, inherit);
+    transition: box-shadow 0.2s ease-in-out;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#completeModal .form-control:focus {
+    outline: none;
+    box-shadow: 0 2px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#completeModal .form-text {
+    color: #a3a3a3;
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.4;
+    font-family: var(--default-font, inherit);
+}
+
+#completeModal .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#completeModal .btn-submit {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    font-family: var(--default-font, inherit);
+    transition: all 0.3s ease;
+    min-width: 120px;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+#completeModal .btn-submit:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+#completeModal .btn-cancel {
+    background: linear-gradient(135deg, #0378ec, #0256af);
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    font-family: var(--default-font, inherit);
+    transition: all 0.3s ease;
+    min-width: 120px;
+    box-shadow: 0 4px 15px rgba(3, 120, 236, 0.3);
+}
+
+#completeModal .btn-cancel:hover {
+    background: linear-gradient(135deg, #0256af, #1e40af);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(3, 120, 236, 0.4);
+}
+
+#completeModal .close-modal {
+    color: #a3a3a3;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    margin: 0;
+    transition: color 0.3s ease-in-out, transform 0.3s ease-in-out;
+    line-height: 1;
+    z-index: 2;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+#completeModal .close-modal:hover {
+    color: #1e293b;
+    transform: scale(1.1);
+}
+
 /* === Enhanced Request Cards === */
 .request-card {
     background: linear-gradient(145deg, #ffffff, #f8fafc);

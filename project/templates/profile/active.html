@@ -765,6 +765,8 @@ $(document).ready(function() {
 function showCompleteModal(requestId) {
     const modal = document.getElementById('completeModal');
     const gradeInput = document.getElementById('grade');
+    const filesSection = document.getElementById('filesSelectionSection');
+    const filesCheckboxes = document.getElementById('filesCheckboxes');
     
     // Reset form
     document.getElementById('completeRequestId').value = requestId;
@@ -776,8 +778,51 @@ function showCompleteModal(requestId) {
         errorDiv.remove();
     }
     
+    // Завантажуємо файли для цього запиту
+    loadRequestFiles(requestId, filesCheckboxes, filesSection);
+    
     modal.style.display = "flex";
     gradeInput.focus();
+}
+
+function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/users/request-files/${requestId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.files && data.files.length > 0) {
+            filesCheckboxes.innerHTML = '';
+            data.files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-checkbox-item';
+                fileDiv.innerHTML = `
+                    <label class="file-checkbox-label">
+                        <input type="checkbox" name="selected_files" value="${file.id}" checked id="file_${file.id}">
+                        <div class="file-info">
+                            <span class="file-name">${file.file_name}</span>
+                            <small class="file-meta">(${file.uploaded_at} - ${file.uploaded_by})</small>
+                        </div>
+                    </label>
+                `;
+                console.log('Created checkbox for file:', file.id, file.file_name);
+                filesCheckboxes.appendChild(fileDiv);
+            });
+            filesSection.style.display = 'block';
+        } else {
+            filesSection.style.display = 'block';
+            filesCheckboxes.innerHTML = '<p class="text-muted">У цьому запиті немає файлів для архівування.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading files:', error);
+        filesSection.style.display = 'none';
+    });
 }
 
 function closeCompleteModal() {
@@ -833,6 +878,27 @@ function submitComplete() {
         return;
     }
 
+    // Get selected files
+    const checkboxes = document.querySelectorAll('input[name="selected_files"]');
+    const checkedBoxes = document.querySelectorAll('input[name="selected_files"]:checked');
+    
+    console.log('All checkboxes:', checkboxes.length);
+    console.log('Checked checkboxes:', checkedBoxes.length);
+    
+    checkedBoxes.forEach(checkbox => {
+        console.log('Checked file ID:', checkbox.value, 'ID:', checkbox.id);
+    });
+    
+    const selectedFiles = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+    
+    console.log('Selected files:', selectedFiles);
+    
+    // Check if files are selected
+    if (selectedFiles.length === 0) {
+        showError('Будь ласка, оберіть хоча б один файл для збереження в архіві');
+        return;
+    }
+
     // Get CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
@@ -842,15 +908,21 @@ function submitComplete() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Збереження...';
 
+    // Prepare data
+    const formData = new FormData();
+    formData.append('grade', grade);
+    formData.append('selected_files', JSON.stringify(selectedFiles));
+    
+    console.log('FormData selected_files:', JSON.stringify(selectedFiles));
+
     // Send request to server
     fetch(`/users/complete_request/${requestId}/`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: `grade=${encodeURIComponent(grade)}`
+        body: formData
     })
     .then(response => {
         if (!response.ok) {

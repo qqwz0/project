@@ -17,16 +17,8 @@
                     <div class="user-info">
                         <h3>{{ request.teacher_id.teacher_id.get_full_name }}</h3>
                         <p class="role">{{ request.teacher_id.academic_level }}</p>
-                        {% if request.custom_student_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                        {% elif request.approved_student_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                        {% elif request.teacher_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.teacher_theme.theme }}</p>
-                        {% endif %}
+                        <strong>Тема роботи:</strong>
+                        <p class="theme">{{ request.theme_display }}</p>
                         <strong>Дата завершення:</strong>
                         <p>{{ request.completion_date|date:"d.m.Y" }}</p>
                         <strong>Оцінка:</strong>
@@ -38,7 +30,7 @@
         {% endfor %}
     {% else %}
         {% if request.user == profile_user %}
-            <p class="no-active-works">У вас немає завершених робіт.</p>
+            <p class="no-active-works">У вас немає завершених робіт з архівними файлами.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
         {% endif %}
@@ -55,16 +47,8 @@
                     <div class="user-info">
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
-                        {% if request.custom_student_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                        {% elif request.approved_student_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                        {% elif request.teacher_theme %}
-                            <strong>Тема роботи:</strong>
-                            <p class="theme">{{ request.teacher_theme.theme }}</p>
-                        {% endif %}
+                        <strong>Тема роботи:</strong>
+                        <p class="theme">{{ request.theme_display }}</p>
                         <strong>Дата завершення:</strong>
                         <p>{{ request.completion_date|date:"d.m.Y" }}</p>
                         <strong>Оцінка:</strong>
@@ -76,7 +60,7 @@
         {% endfor %}
     {% else %}
         {% if request.user == profile_user %}
-            <p class="no-active-works">У вас немає завершених робіт.</p>
+            <p class="no-active-works">У вас немає завершених робіт з архівними файлами.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
         {% endif %}
@@ -112,6 +96,12 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
+                console.log('Received data from server:', data);
+                console.log('Files count:', data.files ? data.files.length : 0);
+                if (data.files) {
+                    console.log('Files:', data.files.map(f => ({id: f.id, name: f.file_name})));
+                }
+                
                 if (data.error) {
                     console.error('Error fetching archived request details:', data.error);
                     if (data.error === 'Forbidden') {

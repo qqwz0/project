@@ -1,6 +1,9 @@
 import logging
 import re
+import json
 from urllib import request
+
+logger = logging.getLogger(__name__)
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -44,21 +47,21 @@ from .utils import FileAccessMixin, HtmxModalFormAccessMixin
 class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
     """
     Displays the teachers catalog page with filtering and searching capabilities.
-
+    
     This view combines TemplateView and FormView to render a catalog of teachers
     that can be filtered and searched by various criteria.
-
+    
     Attributes:
         template_name (str): Path to the template that renders the catalog.
         form_class: Form class for filtering and searching teachers.
-
+    
     Methods:
         get: Handles GET requests to display the teachers catalog with the filter form.
     """
 
     template_name = "catalog/teachers_catalog.html"
     form_class = FilteringSearchingForm
-
+        
     def dispatch(self, request, *args, **kwargs):
         # Дозволяємо доступ лише студентам
         if (
@@ -70,51 +73,51 @@ class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
 
             return redirect("profile")
         return super().dispatch(request, *args, **kwargs)
-
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = self.get_form()
         context["user_profile"] = self.request.user
         return context
-
+    
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teachers catalog.
         """
         return self.render_to_response(self.get_context_data())
-
+    
 
 class TeachersListView(LoginRequiredMixin, ListView):
     """
     API view that provides a list of teachers with their available slots.
-
+    
     This view extends Django's ListView to return JSON data containing
     teacher information and availability slots. It handles filtering based on
     the authenticated student's academic group.
-
+    
     Attributes:
         model (Model): The OnlyTeacher model class.
         context_object_name (str): Name for the context variable containing the data.
-
+    
     Methods:
         get: Returns JSON data with teacher information and available slots.
     """
 
     model = OnlyTeacher
     context_object_name = "data"
-
+    
     def get(self, request, *args, **kwargs):
         """
         Returns a JSON response with teacher data and their available slots.
-
+        
         For authenticated students, slots are filtered by the student's academic group.
         Each teacher entry includes personal information and availability data.
-
+        
         Args:
             request (HttpRequest): The HTTP request object.
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
-
+            
         Returns:
             JsonResponse: JSON data containing teachers and their available slots.
                 Format:
@@ -159,7 +162,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                     ).exists()
                     else False
                 )
-
+                
                 # --- Фільтрація за кафедрою для 3+ курсу ---
                 # Витягуємо курс з academic_group (наприклад, ФЕС-33 -> 3)
                 course = None
@@ -168,13 +171,13 @@ class TeachersListView(LoginRequiredMixin, ListView):
                     match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
                     if match:
                         course = int(match.group(1))
-
+                
                 # Оновлена, більш точна умова фільтрації
                 if user.department and ((course and course >= 3) or is_master):
                     teachers = teachers.filter(
                         teacher_id__department__iexact=user.department.strip()
                     )
-
+                
                 teacher_ids = [t.pk for t in teachers]
                 # ---
 
@@ -235,9 +238,9 @@ class TeachersListView(LoginRequiredMixin, ListView):
                                     "stream_code": slot.stream_id.stream_code
                                 },
                                 "get_available_slots": slot.get_available_slots(),
-                            }
-                            for slot in free_slots
-                        ],
+                        }
+                        for slot in free_slots
+                    ],
                         "is_matched": is_matched,
                     }
                 )
@@ -264,27 +267,27 @@ class TeacherModalView(
     form_class = RequestForm
     success_url = reverse_lazy("teachers_catalog")
     success_message = "Запит успішно відправлено. Очікуйте підтвердження від викладача."
-
+    
     def get(self, request, *args, **kwargs):
         """
         Handles GET requests to display the teacher modal.
         """
         self.object = self.get_object()
         return super().get(request, *args, **kwargs)
-
+    
     def post(self, request, *args, **kwargs):
         """
         Handles POST requests to process the form data.
         """
         self.object = self.get_object()
         return super().post(request, *args, **kwargs)
-
+    
     def get_success_message(self, cleaned_data):
         """
         Returns the success message defined in the class.
         """
         return super().get_success_message(cleaned_data)
-
+    
     def get_form_kwargs(self):
         """
         Passes the teacher instance to the form via 'teacher_id'.
@@ -299,12 +302,12 @@ class TeacherModalView(
         """
         context = super().get_context_data(**kwargs)
         teacher = self.get_object()
-
+        
         # Fetch available slots for this teacher.
         slots = Slot.filter_by_available_slots().filter(teacher_id=teacher)
         print(f"All available slots for teacher {teacher}: {slots.count()}")
         is_matched = False
-
+        
         # Filter slots by user's academic group if the user is a student.
         user = self.request.user
         is_master = "М" in user.academic_group.upper()
@@ -315,19 +318,19 @@ class TeacherModalView(
             )
             print(f"User stream: {user_stream}")
             # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
-
+            
             slots = slots.filter(stream_id__stream_code__iexact=user_stream)
             print(f"Available slots for stream {user_stream}: {slots.count()}")
             is_matched = True
-
+        
         context["free_slots"] = slots
         context["is_matched"] = is_matched
-
+        
         # Use the template tag to get profile picture URL
         context["photo"] = get_profile_picture_url(teacher.teacher_id)
-
+            
         return context
-
+    
     def form_invalid(self, form):
         """
         Handles invalid form submissions. Returns JSON for XMLHttpRequests.
@@ -335,7 +338,7 @@ class TeacherModalView(
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": False, "errors": form.errors}, status=400)
         return super().form_invalid(form)
-
+    
     def form_valid(self, form):
         """
         Processes valid form data. Creates a request, saves themes, and returns JSON for XMLHttpRequests.
@@ -344,7 +347,7 @@ class TeacherModalView(
             # First try to assign the slot and save the request
             req = form.save(commit=False)
             self.assign_request_fields(form)
-
+            
             # Get and validate the teacher theme if selected
             teacher_theme_text = form.cleaned_data.get("teacher_themes")
             if teacher_theme_text:
@@ -361,7 +364,7 @@ class TeacherModalView(
                         raise ValidationError("Обрана тема вже зайнята")
                 except TeacherTheme.DoesNotExist:
                     raise ValidationError("Обрана тема не існує")
-
+            
             # Save the request after theme assignment
             req.save()
             print(f"Request created with ID: {req.id}")
@@ -370,16 +373,16 @@ class TeacherModalView(
             student_themes = form.cleaned_data.get("student_themes", [])
             if isinstance(student_themes, str):
                 student_themes = [student_themes]
-
+            
             for theme in student_themes:
                 if theme and isinstance(theme, str):
                     student_theme = StudentTheme.objects.create(
                         student_id=self.request.user, request=req, theme=theme.strip()
                     )
                     print(f"Student theme added: {student_theme.theme}")
-
+                        
             messages.success(self.request, self.get_success_message(form.cleaned_data))
-
+            
             if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
                 response = JsonResponse(
                     {
@@ -391,7 +394,7 @@ class TeacherModalView(
                 response["HX-Redirect"] = reverse_lazy("profile")
                 return response
             return super().form_valid(form)
-
+        
         except ValidationError as e:
             print(f"Validation error: {str(e)}")
             messages.error(self.request, str(e))
@@ -409,7 +412,7 @@ class TeacherModalView(
         form.instance.student_id = self.request.user
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = "Очікує"
-
+        
         is_master = "М" in self.request.user.academic_group.upper()
         student_stream_code = form.instance.extract_stream_from_academic_group() + (
             "м" if is_master else ""
@@ -422,24 +425,24 @@ class TeacherModalView(
             form.instance.work_type = "Магістерська"
         else:
             form.instance.work_type = "Курсова"
-
+        
         if student_stream_code:
             try:
                 # Get a single Stream object instead of a QuerySet
                 stream = Stream.objects.get(stream_code=student_stream_code)
-
+                    
                 # Get all slots for this teacher and stream
                 available_slots = Slot.objects.filter(
                     teacher_id=form.instance.teacher_id, stream_id=stream
                 )
-
+                
                 # Find first slot that has space
                 available_slot = None
                 for slot in available_slots:
                     if slot.occupied < slot.quota:
                         available_slot = slot
                         break
-
+                
                 if available_slot:
                     form.instance.slot = available_slot
                 else:
@@ -473,10 +476,42 @@ class CompleteRequestView(View):
             request.user.role == "Викладач"
             and req.teacher_id.teacher_id == request.user
         ):
-            req.request_status = "Завершено"
-            req.completion_date = timezone.now()
-            req.grade = request.POST.get("grade")
-            req.save()
+            # Отримуємо обрані файли
+            selected_files_json = request.POST.get("selected_files", "[]")
+            logger.error(f"[COMPLETE DEBUG] selected_files_json: {selected_files_json}")
+            try:
+                selected_file_ids = json.loads(selected_files_json)
+                logger.error(f"[COMPLETE DEBUG] selected_file_ids: {selected_file_ids}")
+            except json.JSONDecodeError as e:
+                logger.error(f"[COMPLETE DEBUG] JSON decode error: {e}")
+                selected_file_ids = []
+            
+            # Позначаємо файли як архівні
+            if selected_file_ids:
+                updated_files = RequestFile.objects.filter(
+                    request=req,
+                    id__in=selected_file_ids
+                ).update(is_archived=True)
+                logger.error(f"[COMPLETE DEBUG] Updated {updated_files} files as archived")
+                
+                # Позначаємо необрані файли як неархівні
+                unarchived_files = RequestFile.objects.filter(
+                    request=req
+                ).exclude(
+                    id__in=selected_file_ids
+                ).update(is_archived=False)
+                logger.error(f"[COMPLETE DEBUG] Updated {unarchived_files} files as not archived")
+                
+                req.request_status = "Завершено"
+                req.completion_date = timezone.now()
+                req.grade = request.POST.get("grade")
+                req.save()
+            else:
+                logger.error("[COMPLETE DEBUG] No files selected")
+                return JsonResponse({
+                    "success": False, 
+                    "error": "Необхідно обрати хоча б один файл для збереження в архіві"
+                })
 
             # Free the teacher theme if it exists
             if req.teacher_theme:
@@ -488,6 +523,34 @@ class CompleteRequestView(View):
             messages.success(request, "Роботу завершено")
             return JsonResponse({"success": True})
         return JsonResponse({"success": False}, status=403)
+
+
+@login_required
+def request_files_for_completion(request, request_id):
+    """Отримати файли запиту для вибору при завершенні"""
+    try:
+        req = get_object_or_404(Request, pk=request_id)
+        
+        # Перевіряємо права доступу
+        if request.user.role == "Викладач" and req.teacher_id.teacher_id != request.user:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+        
+        files_data = []
+        for file in req.files.all():
+            files_data.append({
+                "id": file.id,
+                "file_name": file.get_filename(),
+                "uploaded_at": file.uploaded_at.strftime("%d.%m.%Y %H:%M"),
+                "uploaded_by": file.uploaded_by.get_full_name() if file.uploaded_by else "Невідомий",
+                "description": file.description or "",
+            })
+        
+        return JsonResponse({"files": files_data})
+        
+    except Request.DoesNotExist:
+        return JsonResponse({"error": "Request not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": "An unexpected error occurred"}, status=500)
 
 
 @login_required
@@ -522,7 +585,15 @@ def archived_request_details(request, request_id):
             )
             return JsonResponse({"error": "Forbidden"}, status=403)
         files_data = []
-        for file in req.files.all():
+        all_files = req.files.all()
+        archived_files = req.files.filter(is_archived=True)
+        logger.error(f"[ARCHIVE DEBUG] Request ID: {req.id}")
+        logger.error(f"[ARCHIVE DEBUG] Total files: {all_files.count()}, Archived files: {archived_files.count()}")
+        logger.error(f"[ARCHIVE DEBUG] All files: {[f.id for f in all_files]}")
+        logger.error(f"[ARCHIVE DEBUG] Archived files: {[f.id for f in archived_files]}")
+        
+        for file in archived_files:
+            logger.error(f"[ARCHIVE DEBUG] Processing archived file: ID {file.id}, name {file.get_filename()}")
             comments_data = []
             for comment in file.comments.all():
                 comments_data.append(
@@ -544,7 +615,9 @@ def archived_request_details(request, request_id):
                     "comments": comments_data,
                 }
             )
-
+        
+        logger.error(f"[ARCHIVE DEBUG] Final files_data length: {len(files_data)}")
+        
         response_data = {
             "student": {
                 "name": req.student_id.get_full_name(),
@@ -560,7 +633,7 @@ def archived_request_details(request, request_id):
             "completion_date": req.completion_date.strftime("%d.%m.%Y"),
             "files": files_data,
         }
-
+        
         return JsonResponse(response_data)
 
     except Request.DoesNotExist:
@@ -592,7 +665,11 @@ def get_requests_data(request):
                 "student_id", "teacher_id", "teacher_theme", "slot"
             )
             .prefetch_related("student_themes")
-            .filter(teacher_id__teacher_id=request.user, request_status="Завершено")
+            .filter(
+            teacher_id__teacher_id=request.user,
+                request_status="Завершено",
+                files__is_archived=True
+            ).distinct()
         )
     else:  # Student
         pending_requests = (
@@ -614,13 +691,17 @@ def get_requests_data(request):
                 "student_id", "teacher_id", "teacher_theme", "slot"
             )
             .prefetch_related("student_themes")
-            .filter(student_id=request.user, request_status="Завершено")
+            .filter(
+            student_id=request.user,
+                request_status="Завершено",
+                files__is_archived=True
+            ).distinct()
         )
-
+    
     print(f"Found pending requests: {pending_requests.count()}")
     print(f"Found active requests: {active_requests.count()}")
     print(f"Found archived requests: {archived_requests.count()}")
-
+    
     # Get files for active requests
     active_request_files = {}
     for request_obj in active_requests:
@@ -630,7 +711,7 @@ def get_requests_data(request):
         active_request_files[str(request_obj.id)] = list(
             files
         )  # Convert QuerySet to list and use string key
-
+    
     return {
         "pending_requests": pending_requests,
         "active_requests": active_requests,
@@ -642,7 +723,7 @@ def get_requests_data(request):
 def load_tab_content(request, tab_name):
     try:
         data = get_requests_data(request)
-
+        
         data.update(
             {
                 "user": request.user,
@@ -672,7 +753,7 @@ def reject_request(request, request_id):
             messages.error(request, "Запит не знайдено")
         except Exception as e:
             messages.error(request, f"Помилка при відхиленні запиту: {str(e)}")
-
+    
     return redirect("profile")
 
 
@@ -680,7 +761,7 @@ class UploadFileView(View):
     def post(self, request, request_id):
         try:
             course_request = Request.objects.get(pk=request_id)
-
+            
             if (
                 request.user != course_request.student_id
                 and request.user != course_request.teacher_id.teacher_id
@@ -703,18 +784,18 @@ class UploadFileView(View):
                 return HttpResponseBadRequest(
                     "Файли можна додавати тільки до активних запитів"
                 )
-
+            
             form = RequestFileForm(request.POST, request.FILES)
             if form.is_valid():
                 file = form.save(commit=False)
                 file.request = course_request
                 file.uploaded_by = request.user
-
+                
                 latest_version = RequestFile.objects.filter(
                     request=course_request
                 ).aggregate(Max("version"))["version__max"]
                 file.version = (latest_version or 0) + 1
-
+                
                 file.save()
                 if request.headers.get("x-requested-with") == "XMLHttpRequest":
                     return JsonResponse({"status": "success"})
@@ -740,7 +821,7 @@ class DeleteFileView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             file = RequestFile.objects.get(pk=pk)
-
+            
             if not (
                 request.user == file.uploaded_by
                 or request.user == file.request.teacher_id.teacher_id
@@ -751,7 +832,7 @@ class DeleteFileView(FileAccessMixin, View):
                         "message": "У вас немає прав для видалення цього файлу",
                     }
                 )
-
+            
             file.delete()
             return JsonResponse({"success": True, "message": "Файл успішно видалено"})
         except RequestFile.DoesNotExist:
@@ -765,20 +846,20 @@ class DownloadFileView(FileAccessMixin, View):
         try:
             file = RequestFile.objects.get(pk=pk)
             course_request = file.request
-
+            
             if not (
                 request.user == file.uploaded_by
                 or request.user == course_request.student_id
                 or request.user == course_request.teacher_id.teacher_id
             ):
                 return HttpResponseForbidden("Немає прав доступу")
-
+            
             response = FileResponse(file.file)
             response["Content-Disposition"] = (
                 f'attachment; filename="{file.get_filename()}"'
             )
             return response
-
+            
         except RequestFile.DoesNotExist:
             return HttpResponseNotFound("Файл не знайдено")
 
@@ -789,7 +870,7 @@ class AddCommentView(FileAccessMixin, View):
         try:
             file = RequestFile.objects.get(pk=file_id)
             course_request = file.request
-
+            
             if (
                 request.user != course_request.student_id
                 and request.user != course_request.teacher_id.teacher_id
@@ -826,9 +907,9 @@ class AddCommentView(FileAccessMixin, View):
             attachment = request.FILES.get("attachment")
             if attachment:
                 comment.attachment = attachment
-
+        
             comment.save()
-
+                
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 response_data = {
                     "success": True,
@@ -837,18 +918,18 @@ class AddCommentView(FileAccessMixin, View):
                     "author": comment.author.get_full_name(),
                     "created_at": comment.created_at.strftime("%d.%m.%Y %H:%M"),
                 }
-
+                
                 if comment.attachment:
                     response_data["attachment"] = {
                         "name": comment.get_attachment_filename(),
                         "url": comment.attachment.url,
                     }
-
+                
                 return JsonResponse(response_data)
             else:
                 messages.success(request, "Коментар успішно додано")
                 return redirect("profile")
-
+            
         except RequestFile.DoesNotExist:
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse(
@@ -857,12 +938,12 @@ class AddCommentView(FileAccessMixin, View):
             else:
                 messages.error(request, "Файл не знайдено")
                 return redirect("profile")
-
+                
         except Exception as e:
             import traceback
 
             traceback.print_exc()
-
+            
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"success": False, "error": str(e)}, status=500)
             else:
@@ -874,15 +955,15 @@ class DeleteCommentView(FileAccessMixin, View):
     def post(self, request, pk):
         try:
             comment = FileComment.objects.get(pk=pk)
-
+            
             if request.user != comment.author:
                 return JsonResponse(
                     {"success": False, "error": "Немає прав доступу"}, status=403
                 )
-
+            
             comment.delete()
             return JsonResponse({"success": True})
-
+            
         except FileComment.DoesNotExist:
             return JsonResponse(
                 {"success": False, "error": "Коментар не знайдено"}, status=404
@@ -1018,3 +1099,87 @@ def delete_theme(request, theme_id):
 
 def home(request):
     return render(request, "home.html")
+
+
+class AutocompleteView(LoginRequiredMixin, View):
+    """
+    Універсальний автокомпліт для пошуку викладачів та тем
+    """
+    
+    def get(self, request):
+        query = request.GET.get("q", "").strip()
+        results = []
+        
+        if not query or len(query) < 2:
+            return JsonResponse(results, safe=False)
+        
+        try:
+            # Пошук викладачів (тільки по іменах, без кафедр)
+            teachers = OnlyTeacher.objects.select_related("teacher_id").filter(
+                Q(teacher_id__first_name__icontains=query) |
+                Q(teacher_id__last_name__icontains=query) |
+                Q(teacher_id__patronymic__icontains=query)
+            )[:5]
+            
+            for teacher in teachers:
+                results.append({
+                    "type": "teacher",
+                    "id": teacher.pk,
+                    "label": f"👨‍🏫 {teacher.teacher_id.first_name} {teacher.teacher_id.last_name}",
+                    "description": f"{teacher.academic_level} • {teacher.teacher_id.department}",
+                    "url": "#"  # Не потрібен URL, фільтрування буде на тій же сторінці
+                })
+            
+            # Пошук тем
+            themes = TeacherTheme.objects.select_related("teacher_id__teacher_id").filter(
+                Q(theme__icontains=query) | Q(theme_description__icontains=query),
+                is_active=True,
+                is_deleted=False
+            )[:5]
+            
+            for theme in themes:
+                results.append({
+                    "type": "theme", 
+                    "id": theme.pk,
+                    "label": f"📚 {theme.theme}",
+                    "description": f"Викладач: {theme.teacher_id.teacher_id.first_name} {theme.teacher_id.teacher_id.last_name}",
+                    "url": "#"  # Не потрібен URL, фільтрування буде на тій же сторінці
+                })
+                
+        except Exception as e:
+            logger.error(f"Error in autocomplete search: {str(e)}")
+            return JsonResponse({"error": "Помилка пошуку"}, status=500)
+        
+        return JsonResponse(results, safe=False)
+
+
+class ThemeTeachersView(LoginRequiredMixin, View):
+    """
+    Повертає список викладачів, які ведуть конкретну тему
+    """
+    
+    def get(self, request, theme_id):
+        try:
+            # Знаходимо тему
+            theme = get_object_or_404(
+                TeacherTheme.objects.select_related('teacher_id'),
+                id=theme_id,
+                is_active=True,
+                is_deleted=False
+            )
+            
+            # Знаходимо всіх викладачів з такою ж темою
+            similar_themes = TeacherTheme.objects.select_related('teacher_id').filter(
+                theme__iexact=theme.theme,
+                is_active=True,
+                is_deleted=False
+            )
+            
+            # Повертаємо список ID викладачів
+            teacher_ids = [t.teacher_id.pk for t in similar_themes]
+            
+            return JsonResponse(teacher_ids, safe=False)
+            
+        except Exception as e:
+            logger.error(f"Error getting teachers for theme {theme_id}: {str(e)}")
+            return JsonResponse({"error": "Помилка отримання викладачів"}, status=500)

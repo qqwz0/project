@@ -14,7 +14,8 @@ def remove_invalid_master_programs(apps, schema_editor):
         code__in=['122', '176']
     ).delete()[0]
     
-    print(f"Видалено {deleted_count} магістерських програм для спеціальностей, які не є ФЕІ та ФЕМ")
+    # Логування видалених записів (print не працює в міграціях продакшену)
+    pass  # print(f"Видалено {deleted_count} магістерських програм для спеціальностей, які не є ФЕІ та ФЕМ")
 
 
 def reverse_remove_invalid_master_programs(apps, schema_editor):
@@ -25,20 +26,21 @@ def reverse_remove_invalid_master_programs(apps, schema_editor):
     # Отримуємо факультет
     faculty = Faculty.objects.first()
     
-    # Відновлюємо магістерські програми для всіх спеціальностей
-    specialties_to_create = [
-        {'code': '121', 'name': 'Інженерія програмного забезпечення', 'education_level': 'master'},
-        {'code': '126', 'name': 'Інформаційні системи та технології', 'education_level': 'master'},
-        {'code': '171', 'name': 'Електроніка', 'education_level': 'master'},
-    ]
-    
-    for specialty_data in specialties_to_create:
-        Specialty.objects.get_or_create(
-            code=specialty_data['code'],
-            faculty=faculty,
-            education_level=specialty_data['education_level'],
-            defaults={'name': specialty_data['name']}
-        )
+    if faculty:
+        # Відновлюємо магістерські програми для всіх спеціальностей
+        specialties_to_create = [
+            {'code': '121', 'name': 'Інженерія програмного забезпечення', 'education_level': 'master'},
+            {'code': '126', 'name': 'Інформаційні системи та технології', 'education_level': 'master'},
+            {'code': '171', 'name': 'Електроніка', 'education_level': 'master'},
+        ]
+        
+        for specialty_data in specialties_to_create:
+            Specialty.objects.get_or_create(
+                code=specialty_data['code'],
+                faculty=faculty,
+                education_level=specialty_data['education_level'],
+                defaults={'name': specialty_data['name']}
+            )
 
 
 class Migration(migrations.Migration):

@@ -12,16 +12,17 @@ from .views import (
     DownloadFileView,
     AddCommentView,
     DeleteCommentView,
-    archived_request_details,
     delete_theme,
-    add_comment
+    add_comment,
+    AutocompleteView,
+    ThemeTeachersView,
 )
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('', TeachersCatalogView.as_view(), name='teachers_catalog'),
-    path('catalog/teachers/', TeachersListView.as_view(), name='teachers_list'),
+    path('teachers/', TeachersListView.as_view(), name='teachers_list'),
     path('teacher/<int:pk>/', TeacherModalView.as_view(), name='modal'),
     path('accept-request/<int:pk>/', AcceptRequestView.as_view(), name='accept_request'),
     path('complete-request/<int:pk>/', CompleteRequestView.as_view(), name='complete_request'),
@@ -36,6 +37,9 @@ urlpatterns = [
     # Comments
     path('file/<int:file_id>/comment/', add_comment, name='add_comment'),
     path('comment/<int:pk>/delete/', DeleteCommentView.as_view(), name='delete_comment'),
-    path('archived-request-details/<int:request_id>/', archived_request_details, name='archived_request_details'),
+    
+    # Search and autocomplete
+    path('autocomplete/', AutocompleteView.as_view(), name='autocomplete'),
+    path('autocomplete/theme/<int:theme_id>/teachers/', ThemeTeachersView.as_view(), name='theme_teachers'),
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

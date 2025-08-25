@@ -38,6 +38,7 @@ from PIL import Image
 from apps.catalog.models import (FileComment, OnlyStudent, OnlyTeacher,
                                  Request, RequestFile, Slot, Stream,
                                  StudentTheme, TeacherTheme, Group)
+from apps.catalog.views import request_files_for_completion
 
 from .forms import (CropProfilePictureForm, ProfilePictureUploadForm,
                     RegistrationForm, StudentProfileForm, TeacherProfileForm)
@@ -284,10 +285,13 @@ def handle_registration_callback(request, code):
                     f"User already registered: {email}"
                 )
 
-            if derived_role == "Студент":
-                create_student_profile(user, group, email)
-            else:
-                create_teacher_profile(user, job_title, department)
+            if created:
+                logger.info("New user registered: %s", email)
+                # Створюємо профіль в залежності від ролі
+                if derived_role == "Студент":
+                    create_student_profile(user, group, email)
+                else:
+                    create_teacher_profile(user, job_title, department)
 
         messages.success(request, "Успішно зареєстровано! Будь ласка, увійдіть.")
         return redirect("login")
@@ -508,6 +512,7 @@ def profile(request: HttpRequest, user_id=None):
     context = {
         "user_profile": user_profile,
         "is_own_profile": is_own_profile,
+        "form": None,  # Для обрізання фото профілю - буде додано пізніше якщо потрібно
     }
 
     # Add role-specific data
@@ -581,15 +586,15 @@ def profile(request: HttpRequest, user_id=None):
         try:
             student_profile = OnlyStudent.objects.get(student_id=user_profile)
         except OnlyStudent.DoesNotExist:
-            from apps.catalog.models import Group
             fallback_group = Group.objects.first()
             if fallback_group:
                 student_profile = OnlyStudent.objects.create(
                     student_id=user_profile,
                     group=fallback_group
                 )
+                messages.warning(request, f"Ваш профіль студента було створено з тимчасовою групою '{fallback_group.group_code}'. Будь ласка, оновіть свою групу в налаштуваннях профілю.")
             else:
-                messages.error(request, "Помилка: немає доступних груп в системі")
+                messages.error(request, "Помилка: немає доступних груп в системі. Зверніться до адміністратора.")
                 return redirect('login')
 
         # Get all requests for the student
@@ -621,6 +626,7 @@ def profile(request: HttpRequest, user_id=None):
                     request_status="Відхилено"
                 ).exists(),
                 "has_pending": all_requests.filter(request_status="Очікує").exists(),
+                "pending_requests": all_requests.filter(request_status="Очікує"),
                 "active_requests": active_requests,
                 "archived_requests": archived_requests,
                 "active_request_files": active_request_files,
@@ -1074,12 +1080,27 @@ def student_profile_edit(request):
                     request.user.first_name = form.cleaned_data["first_name"]
                     request.user.last_name = form.cleaned_data["last_name"]
                     request.user.patronymic = form.cleaned_data["patronymic"]
-                    request.user.academic_group = form.cleaned_data["academic_group"]
+                    old_academic_group = request.user.academic_group
+                    new_academic_group = form.cleaned_data["academic_group"]
+                    request.user.academic_group = new_academic_group
                     request.user.save()
                     
                     # Update student profile fields
                     student_profile.additional_email = form.cleaned_data['additional_email']
                     student_profile.phone_number = form.cleaned_data['phone_number']
+                    
+                    # Оновлення групи якщо змінилася
+                    if old_academic_group != new_academic_group:
+                        try:
+                            # Знайти відповідну групу для нової academic_group
+                            group_code = new_academic_group  # Припускаємо що в базі Group є код identical до academic_group
+                            new_group = Group.objects.get(group_code=group_code)
+                            student_profile.group = new_group
+                            logger.info(f"Updated student {request.user.email} group from {old_academic_group} to {new_academic_group}")
+                        except Group.DoesNotExist:
+                            logger.warning(f"Group {group_code} not found. Student {request.user.email} group not updated in OnlyStudent.")
+                            messages.warning(request, f"Група '{group_code}' не знайдена в системі. Зверніться до адміністратора.")
+                    
                     student_profile.save()
 
                     messages.success(request, "Профіль успішно оновлено")
@@ -1163,11 +1184,44 @@ def complete_request(request, request_id):
                 {"success": False, "error": "Будь ласка, введіть оцінку від 0 до 100"}
             )
 
-        # Update request status
-        req.request_status = "Завершено"
-        req.grade = int(grade)
-        req.completion_date = timezone.now()
-        req.save()
+        # Get selected files
+        selected_files_json = request.POST.get("selected_files", "[]")
+        logger.error(f"[COMPLETE DEBUG] selected_files_json: {selected_files_json}")
+        try:
+            selected_file_ids = json.loads(selected_files_json)
+            logger.error(f"[COMPLETE DEBUG] selected_file_ids: {selected_file_ids}")
+        except json.JSONDecodeError as e:
+            logger.error(f"[COMPLETE DEBUG] JSON decode error: {e}")
+            selected_file_ids = []
+        
+        # Mark files as archived
+        if selected_file_ids:
+            updated_files = RequestFile.objects.filter(
+                request=req,
+                id__in=selected_file_ids
+            ).update(is_archived=True)
+            logger.error(f"[COMPLETE DEBUG] Updated {updated_files} files as archived")
+            
+            # Mark unselected files as not archived
+            unarchived_files = RequestFile.objects.filter(
+                request=req
+            ).exclude(
+                id__in=selected_file_ids
+            ).update(is_archived=False)
+            logger.error(f"[COMPLETE DEBUG] Updated {unarchived_files} files as not archived")
+            
+            # Update request status to completed
+            req.request_status = "Завершено"
+            req.grade = int(grade)
+            req.completion_date = timezone.now()
+            req.save()
+        else:
+            logger.error("[COMPLETE DEBUG] No files selected")
+            # If no files selected, don't complete the request
+            return JsonResponse({
+                "success": False, 
+                "error": "Необхідно обрати хоча б один файл для збереження в архіві"
+            })
 
         # Free the teacher theme if it exists
         if req.teacher_theme:
@@ -1266,12 +1320,16 @@ def load_profile_tab(request, tab_name):
         elif tab_name == "archive":
             if request.user.role == "Викладач":
                 archive_requests = Request.objects.filter(
-                    teacher_id__teacher_id=request.user, request_status="Завершено"
-                ).select_related("student_id", "teacher_id", "teacher_theme", "slot")
+                    teacher_id__teacher_id=request.user, 
+                    request_status="Завершено",
+                    files__is_archived=True
+                ).select_related("student_id", "teacher_id", "teacher_theme", "slot").distinct()
             else:
                 archive_requests = Request.objects.filter(
-                    student_id=request.user, request_status="Завершено"
-                ).select_related("teacher_id__teacher_id", "teacher_theme", "slot")
+                    student_id=request.user, 
+                    request_status="Завершено",
+                    files__is_archived=True
+                ).select_related("teacher_id__teacher_id", "teacher_theme", "slot").distinct()
 
             context["archived_requests"] = archive_requests
             html = render_to_string("profile/archive.html", context, request=request)
@@ -1356,7 +1414,7 @@ def archived_request_details(request, request_id):
             return JsonResponse({"error": "Forbidden"}, status=403)
 
         files_data = []
-        for file in req.files.all():
+        for file in req.files.filter(is_archived=True):
             comments_data = []
             for comment in file.comments.all():
                 comments_data.append(
@@ -1379,9 +1437,11 @@ def archived_request_details(request, request_id):
                 }
             )
 
-        # Determine theme with proper priority
+        # Determine theme with proper priority (topic_name має найвищий пріоритет)
         theme = "Тема не вказана"
-        if req.custom_student_theme:
+        if req.topic_name:
+            theme = req.topic_name
+        elif req.custom_student_theme:
             theme = f"{req.custom_student_theme} (довільна тема студента)"
         elif req.approved_student_theme:
             theme = f"{req.approved_student_theme.theme} (запропоновано студентом)"

@@ -70,10 +70,21 @@
           </template>
           <template x-if="!item.teacher.already_requested && !item.has_active">
             <button class="modal-button"
-              :hx-get='item.teacher.url'
-              hx-target="#inner_modal"
-              hx-trigger="click"
-              x-init="htmx.process($el)">
+              :data-teacher-id="item.teacher.id"
+              :data-teacher-name="item.teacher.teacher_id.full_name"
+              :data-teacher-url="item.teacher.url"
+              @click="
+                // Примусово оновлюємо HTMX атрибути перед кліком
+                $el.setAttribute('hx-get', item.teacher.url);
+                $el.setAttribute('hx-target', '#inner_modal');
+                $el.setAttribute('hx-trigger', 'click');
+                
+                // Реініціалізуємо HTMX для цієї кнопки
+                htmx.process($el);
+                
+                // Запускаємо запит вручну
+                htmx.ajax('GET', item.teacher.url, {target: '#inner_modal'});
+              ">
               <span class="arrow-icon">›</span>
             </button>
           </template>

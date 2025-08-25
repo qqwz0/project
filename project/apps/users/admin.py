@@ -693,7 +693,8 @@ class RequestAdmin(admin.ModelAdmin):
         'teacher_id__teacher_id__last_name',
         'teacher_id__teacher_id__first_name',
         'teacher_id__teacher_id__patronymic',
-        'work_type', 
+        'work_type',
+        'topic_name',  # Додали пошук по темі
     )
 
     export_fields = [
@@ -736,6 +737,7 @@ class RequestAdmin(admin.ModelAdmin):
                 'custom_student_theme',
                 'request_status',
                 'work_type',
+                'topic_name',  # Додали можливість вручну встановлювати тему
             ]
         return super().get_fields(request, obj)
 
@@ -761,8 +763,10 @@ class RequestAdmin(admin.ModelAdmin):
 
     @admin.display(description='Тема')
     def get_theme_display(self, obj):
-        # Пріоритет: довільна тема студента > затверджена тема студента > тема викладача
-        if obj.custom_student_theme:
+        # Пріоритет: topic_name (після підтвердження) > довільна тема студента > затверджена тема студента > тема викладача
+        if obj.topic_name:
+            text = obj.topic_name
+        elif obj.custom_student_theme:
             text = obj.custom_student_theme
         elif obj.approved_student_theme:
             text = obj.approved_student_theme.theme
