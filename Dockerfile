@@ -2,28 +2,33 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Встановлення системних залежностей
 RUN apt-get update && apt-get install -y \
     default-libmysqlclient-dev \
     build-essential \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
+# Копіювання requirements.txt спочатку для кращого кешування
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Копіювання проекту
 COPY . .
 
-# Set working directory to where manage.py is located
+# Встановлення робочої директорії
 WORKDIR /app/project
 
-# Collect static files
+# Створення користувача для безпеки
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
+
+# Збірка статичних файлів
 RUN python manage.py collectstatic --noinput
 
-# Expose port
+# Відкриття порту
 EXPOSE 8000
 
-# Run the application (collectstatic + runserver)
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"] 
+# Запуск додатку
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
