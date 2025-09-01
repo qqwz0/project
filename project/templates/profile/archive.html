@@ -29,7 +29,7 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає завершених робіт з архівними файлами.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
@@ -59,7 +59,7 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає завершених робіт з архівними файлами.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>

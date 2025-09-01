@@ -1432,7 +1432,7 @@ def request_details_for_approve(request, request_id):
         return JsonResponse({"error": "Invalid request"}, status=400)
     try:
         req = (
-            Request.objects.select_related("student_id", "teacher_id")
+            Request.objects.select_related("student_id", "teacher_id", "teacher_theme")
             .prefetch_related("student_themes")
             .get(id=request_id, request_status="Очікує")
         )
@@ -1443,9 +1443,24 @@ def request_details_for_approve(request, request_id):
 
         # Теми викладача
         teacher_themes = TeacherTheme.objects.filter(
-            Q(teacher_id=req.teacher_id)
+            Q(teacher_id=req.teacher_id, is_deleted=False)
             & (Q(is_occupied=False, is_active=True) | Q(id=selected_theme_id))
         )
+        student = req.student_id
+        if hasattr(student, 'academic_group') and student.academic_group:
+            is_master = "м" in student.academic_group.lower()
+            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", student.academic_group)
+            if match:
+                stream_code_base = f"{match.group(1)}-{match.group(2)}"
+                user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
+                try:
+                    user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
+                    teacher_themes = teacher_themes.filter(
+                        Q(streams=user_stream) | Q(streams__isnull=True)
+                    )
+                except Stream.DoesNotExist:
+                    logger.warning(f"Stream '{user_stream_code}' not found for student {student.email}. Showing only themes without a stream.")
+                    teacher_themes = teacher_themes.filter(streams__isnull=True)
 
         # Теми студента
         student_themes = req.student_themes.all()
@@ -1477,7 +1492,6 @@ def request_details_for_approve(request, request_id):
         return JsonResponse(data)
     except Request.DoesNotExist:
         return JsonResponse({"error": "Request not found"}, status=404)
-
 
 @csrf_exempt
 @require_POST
@@ -1592,7 +1606,6 @@ def approve_request_with_theme(request, request_id):
         return JsonResponse({"error": "Тема студента не знайдена"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
 
 @csrf_exempt
 @require_POST
@@ -1725,7 +1738,7 @@ def get_student_request_details(request, request_id):
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     req = get_object_or_404(
-        Request.objects.select_related("teacher_theme", "teacher_id"), id=request_id
+        Request.objects.select_related("teacher_theme", "teacher_id", "student_id"), id=request_id
     )
 
     if req.student_id != request.user:
@@ -1736,8 +1749,25 @@ def get_student_request_details(request, request_id):
     selected_teacher_theme_id = req.teacher_theme.id if req.teacher_theme else None
 
     available_teacher_themes_query = TeacherTheme.objects.filter(
-        teacher_id=req.teacher_id, is_active=True
+        teacher_id=req.teacher_id, is_active=True, is_deleted=False
     ).filter(Q(is_occupied=False) | Q(id=selected_teacher_theme_id))
+
+    student = req.student_id
+    if hasattr(student, 'academic_group') and student.academic_group:
+        is_master = "м" in student.academic_group.lower()
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", student.academic_group)
+        if match:
+            stream_code_base = f"{match.group(1)}-{match.group(2)}"
+            user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
+            try:
+                user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
+                available_teacher_themes_query = available_teacher_themes_query.filter(
+                    Q(streams=user_stream) | Q(streams__isnull=True)
+                )
+            except Stream.DoesNotExist:
+                logger.warning(f"Stream '{user_stream_code}' not found for student {student.email}. Showing only themes without a stream.")
+                available_teacher_themes_query = available_teacher_themes_query.filter(streams__isnull=True)
+
     available_teacher_themes = list(
         available_teacher_themes_query.values("id", "theme")
     )

@@ -176,7 +176,7 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає активних робіт.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
@@ -390,7 +390,7 @@
             </div>
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає активних робіт.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>

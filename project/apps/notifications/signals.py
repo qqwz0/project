@@ -138,7 +138,7 @@ def send_notification_on_file_upload(sender, instance, created, **kwargs):
                 send_email_in_thread(
                     f'{uploader_name} завантажив новий файл до роботи!',
                     '',
-                    'vasylhlova24@gmail.com',
+                    'advisor.finder@lnu.edu.ua',
                     [another_user.email],
                     html_message
                 )
@@ -200,7 +200,7 @@ def send_notification_on_request_status_changed(sender, instance, **kwargs):
             send_email_in_thread(
                 f'Увага! Нове повідомлення від викладача {teacher_name}',
                 '',
-                'vasylhlova24@gmail.com',
+                'advisor.finder@lnu.edu.ua',
                 [student_user.email],
                 html_message
             )
@@ -260,7 +260,7 @@ def send_notification_on_work_status_changed(sender, instance, **kwargs):
             send_email_in_thread(
                 f'Увага! Нове повідомлення від викладача {teacher_name}',
                 '',
-                'vasylhlova24@gmail.com',
+                'advisor.finder@lnu.edu.ua',
                 [student_user.email],
                 html_message
             )
