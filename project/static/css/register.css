@@ -1,16 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Inter", serif;
+  font-family: "Inter", sans-serif;
 }
 
 body {
   min-height: 100vh;
-  /* display: flex; */
-  background: #87BDF1;
+  background: #87bdf1;
   position: relative;
 }
 
@@ -28,303 +27,340 @@ body {
 }
 
 .wrapper h2 {
-  position: relative;
   font-size: 28px;
   font-weight: 700;
   color: #333;
-  display: inline;
-  white-space: nowrap;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-.wrapper form {
-  margin-top: 20px;
+.input-box {
+  margin-bottom: 15px;
 }
 
-.wrapper form .input-box {
-  height: 52px;
-  margin-bottom: 0px;
-  margin-top: 10px;
-  flex-direction: column;
-  display: flex;
-}
-
-.wrapper .input-box input {
-  height: 100%;
-  width: 100%;
-  border: 1px solid #DDDDDD;
-  border-radius: 8px;
-  padding: 8px 15px;
-  min-height: 50px;
-}
-
-/* 
-.input-box input:focus,
-.input-box input:valid {
-  border-color: #7128ee;
-} */
-
-.input-box label {
-  color: #344054;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-form .policy {
+.login-button {
   display: flex;
   align-items: center;
-}
-
-form h3 {
-  color: #98a2b3;
-  font-size: 14px;
-  font-weight: 500;
-  
-}
-
-form h3 a {
-  color: #1574e9;
-  text-decoration: none;;
-}
-
-/* .input-box.button button, */
-.input-box.button input {
-  color: #fff;
-  background: #7128ee;
-  border: none;
-  padding: 12px 20px;
-  font-size: 18px;
-  font-weight: 600;
-  text-transform: uppercase;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-
-.text {
-  margin-top: 0.5rem;
-}
-
-.error-message {
-  color: red;
-  font-weight: bold;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-#group-or-department-container {
-  margin-bottom: 10px;
-}
-
-.microsoft-button {
-  text-align: center;
-  background-color: #1570ef;
-  color: white;
-  padding: 14px;
+  justify-content: center;
   text-decoration: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   height: 48px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
+  padding: 0 20px;
   cursor: pointer;
-  outline: none;
-  border: none;
-  transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
-  display: inline-block;
-  z-index: 1;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.microsoft-button {
+  background-color: #1570ef;
+  color: white;
 }
 
 .microsoft-button:hover {
-  background-color: #005A9E;
+  background-color: #005a9e;
 }
 
-.success-popup {
-  position: fixed; /* Position fixed at the top of the viewport */
-  top: 20px; /* Distance from the top of the page */
-  left: 50%; /* Center horizontally */
-  transform: translateX(-50%); /* Center horizontally */
-  background-color: white; /* White background */
-  padding: 16px; /* More spacious padding */
-  border-radius: 12px; /* Slightly more rounded corners */
-  border:  3px solid #6FCF97; /* Green border by default */
-  box-shadow: none; /* Softer, expensive-looking shadow */
-  z-index: 1000; /* Ensure it stays on top */
+.dev-button {
+  background-color: #aedeecff;
+  color: #5c838fff;
+  border: 2px dashed #5c838fff;
+}
+
+.dev-button:hover {
+  background-color: #9dd4e4;
+}
+
+.temp-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc3545;
+  color: #fff;
+  padding: 0.25em 0.5em;
+  font-size: 0.75em;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.logo {
+  width: 17px;
+  height: 17px;
+  margin-right: 10px;
+}
+
+.text {
+  margin-top: 20px;
   text-align: center;
-  animation: fadeIn 0.5s ease-in-out; /* Smooth fade-in animation */
+}
+
+.text h3 {
+  color: #98a2b3;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.text h3 a {
+  color: #1574e9;
+  text-decoration: none;
+}
+
+.text h3 a:hover {
+  text-decoration: underline;
+}
+
+/* Success/Error Popup */
+.success-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: 3px solid #6fcf97;
+  z-index: 1000;
   display: flex;
-  max-width: 400px;
-  width: 100%;
   align-items: center;
+  max-width: 400px;
+  width: calc(100% - 40px);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.success-popup.error {
+  border-color: #eb5757;
 }
 
 .success-icon {
-  width: 2.8rem; /* Adjust size */
+  width: 2.8rem;
   height: 2.8rem;
-  margin-right: 10px; /* Space between icon and text */
+  margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .popup-content {
-  text-align: start;
+  flex: 1;
 }
 
 .popup-title {
-  font-size: 16px; /* Larger title for emphasis */
-  font-weight: 700; /* Slightly heavier font for premium feel */
-  color: #333; /* Darker text color */
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
   margin-bottom: 5px;
-  margin: 0; /* Small margin below the title */
 }
 
 .popup-text {
-  font-size: 14px; /* Smaller text for additional information */
-  color: #333; /* Darker text color */
-  margin: 4px 0 0; /* Small margin below the text */
+  font-size: 14px;
+  color: #333;
+  margin: 0;
 }
 
-/* Style for the close button */
 .toast-close {
-  position: absolute; /* Absolutely position it inside the parent */
-  top: 10px; /* Distance from the top of the popup */
-  right: 10px; /* Distance from the right of the popup */
-  font-size: 20px; /* Size of the close icon */
-  cursor: pointer; /* Pointer cursor to indicate it's clickable */
-  color: #333; /* Close button color */
-}
-  
-/* Error Message Styling */
-.success-popup.error {
-  border-color: #EB5757; /* Red border for errors */
-}
-  
-    /* Animation for Popup */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-      }
-    }
-
-
-.logo {
-  width: 17px; /* Adjust size */
-  height: 17px;
-  margin-right: 10px; /* Space between logo and text */
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #333;
 }
 
+/* Registration page role selection */
 .role-selection {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.form-h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  display: block;
 }
 
 .toggle-buttons {
   display: flex;
-  justify-content: space-between;
-  flex-direction: row;
-  margin-top: 10px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.custom-radio-class input[type="radio"] {
-  display: none; /* Hide the default radio buttons */
-}
-
-.custom-radio-class label {
-  padding: 10px 20px;
+.role-button {
+  flex: 1;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 2px solid #e9ecef;
   border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #f0f8ff;
-  color: #333;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  flex: 1; /* Optional: Makes both buttons equal in width */
-}
-
-.custom-radio-class input[type="radio"]:checked + label {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.custom-radio-class label:hover {
-  background-color: #e6f2ff;
-}
-
-.role-button{
-    width: 49%;
-    background-color: #d1e9ff;
-    color: #1473eb;
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+  text-align: center;
 }
 
 .role-button:hover {
-  background-color: #1570ef;
-  color: white;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
 }
 
 .role-button.active {
   background-color: #1570ef;
   color: white;
+  border-color: #1570ef;
 }
 
 .role-button.active:hover {
-  background-color: #0d51af;
+  background-color: #005a9e;
+  border-color: #005a9e;
 }
 
-.form-h3 {
-  color: #344054;
-  font-weight: 600;
-  font-size: 15px;
+/* Error message styles for forms */
+.error-message {
+  margin-top: 8px;
+  margin-bottom: 15px;
 }
 
-.form-input::placeholder {
-    color: #BBBBBB;  /* Placeholder text color */
-    font-size: 14px;  /* Optional: set the font size */
-}
-.form-input:focus,
-.form-input:valid,
-.form-input:active,
-.form-input:focus-visible {
-  border: 2px solid #d1e9ff !important;  /* Your custom focus border color */
-  outline: none;
+.error-message p {
+  color: #dc3545;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  padding: 0;
 }
 
-.form-select {
-  font-size: 14px;
-  padding: 5px;
-  height: 100%;
+/* Register button styles */
+.register-button {
   width: 100%;
-  border: 1px solid #DDDDDD;
+  border: none;
+  background-color: #1570ef;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   border-radius: 8px;
-  padding: 8px 15px;
-  min-height: 50px;
-  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  height: 48px;
+  padding: 0 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.form-select::placeholder {
-  color: #BBBBBB;  /* Placeholder text color */
-  font-size: 14px;  /* Optional: set the font size */
+.register-button:hover {
+  background-color: #005a9e;
+}
+
+/* Form field styles for Django form elements */
+.input-box select,
+.input-box input[type="text"],
+.input-box input[type="email"],
+.input-box input[type="password"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #333;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+.input-box select:focus,
+.input-box input[type="text"]:focus,
+.input-box input[type="email"]:focus,
+.input-box input[type="password"]:focus {
+  outline: none;
+  border-color: #1570ef;
+}
+
+.input-box select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Development buttons grouping */
+.dev-buttons {
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .wrapper {
+    margin: 20px;
+    padding: 30px 25px;
+    max-width: none;
+    width: calc(100% - 40px);
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+  }
+
+  .wrapper h2 {
+    font-size: 24px;
+  }
 }
 
 @media (max-width: 480px) {
   .wrapper {
-    padding: 20px 25px;
-    max-width: 350px;
+    padding: 25px 20px;
+    margin: 15px;
+    width: calc(100% - 30px);
   }
 
   .wrapper h2 {
     font-size: 20px;
-    }
+  }
 
-  .microsoft-button {
+  .login-button {
     font-size: 12px;
-    padding: 8px;
+    height: 44px;
+    padding: 0 15px;
+  }
+
+  .logo {
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+  }
+
+  .temp-badge {
+    font-size: 0.7em;
+    padding: 0.2em 0.4em;
+  }
+
+  .text h3 {
+    font-size: 12px;
+  }
+
+  .success-popup {
+    padding: 12px;
+    width: calc(100% - 30px);
+  }
+
+  .success-icon {
+    width: 2.2rem;
+    height: 2.2rem;
   }
 
   .popup-title {
@@ -339,30 +375,180 @@ form h3 a {
     font-size: 16px;
   }
 
-  .text h3 {
+  /* Responsive updates for registration page elements */
+  .toggle-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .role-button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .form-h3 {
+    font-size: 14px;
+  }
+
+  .error-message p {
     font-size: 12px;
   }
 
-  .text h3 a {
+  .register-button {
+    font-size: 13px;
+    height: 44px;
+  }
+
+  .input-box select,
+  .input-box input[type="text"],
+  .input-box input[type="email"],
+  .input-box input[type="password"] {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 320px) {
+  .wrapper {
+    margin: 10px;
+    padding: 20px 15px;
+    width: calc(100% - 20px);
+  }
+
+  .login-button {
+    font-size: 11px;
+    height: 40px;
+  }
+
+  .role-button {
+    padding: 8px 10px;
     font-size: 12px;
   }
 
-  .form-input {
+  .register-button {
     font-size: 12px;
-    padding: 8px;
+    height: 40px;
   }
+}
 
-  .form-select {
-    font-size: 12px;
-    padding: 8px;
-  }
-
-  .logo {
-    width: 12px;
-    height: 12px;
-  }
-
-  .success-popup {
-    padding: 10px;
-  }
+.dropdown {
+  position: relative;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.dropdown-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dropdown-input select {
+  flex: 1;
+  padding: 12px 45px 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color 0.2s ease;
+  appearance: none;
+  cursor: pointer;
+  color: #374151;
+}
+.dropdown-input select:focus {
+  outline: none;
+  border-color: #0378ec;
+}
+.dropdown-input select:hover:not(:focus) {
+  border-color: #cbd5e1;
+}
+.dropdown-toggle {
+  position: absolute;
+  right: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.dropdown-toggle:hover {
+  background: #0378ec;
+  border-color: #0378ec;
+}
+.dropdown-toggle:hover .dropdown-icon {
+  color: #fff;
+}
+.dropdown-icon {
+  font-size: 12px;
+  transition: all 0.3s ease;
+  color: #6b7280;
+}
+.dropdown-toggle.active {
+  background: #0378ec;
+  border-color: #0378ec;
+}
+.dropdown-toggle.active .dropdown-icon {
+  transform: rotate(180deg);
+  color: #fff;
+}
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+.dropdown-item:hover {
+  background: #f8fafc;
+}
+.dropdown-item.no-themes {
+  color: #9ca3af;
+  font-style: italic;
+  justify-content: center;
+}
+.dropdown-item.no-themes:hover {
+  background: #f9fafb;
+}
+.theme-icon {
+  font-size: 12px;
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+.theme-text {
+  font-weight: 400;
+  line-height: 1.4;
+  flex: 1;
+}
+.dropdown-menu::-webkit-scrollbar {
+  width: 4px;
+}
+.dropdown-menu::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
 }

@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вхід</title>
     {% load static %}
-    <!-- Link to external CSS file -->
     <link rel="stylesheet" href="{% static 'css/register.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/header.css' %}">
     <script>
       function closePopup() {
         const popup = document.querySelector('.success-popup');
-        popup.style.display = 'none';
+        if (popup) {
+          popup.style.display = 'none';
+        }
       }
-      </script>
+    </script>
   </head>
   <body>
-    {% include 'header.html' %}  <!-- Include header -->
+    {% include 'header.html' %}
 
     <!-- Messages -->
     {% if messages %}
@@ -29,154 +30,67 @@
             {% elif message.tags == 'error' %}
               <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
             {% endif %}
-            <div>
-              <div class="popup-content">
-                <p class="popup-title">
-                  {% if message.tags == 'success' %}
-                    Успіх!
-                  {% elif message.tags == 'error' %}
-                    Помилка!
-                  {% endif %}
-                </p>
-                <p class="popup-text">
-                  {{ message }}
-                </p>
-              </div>
-              <i class="toast-close fas fa-times" onclick="closePopup()"></i>
+            <div class="popup-content">
+              <p class="popup-title">
+                {% if message.tags == 'success' %}
+                  Успіх!
+                {% elif message.tags == 'error' %}
+                  Помилка!
+                {% endif %}
+              </p>
+              <p class="popup-text">{{ message }}</p>
             </div>
+            <i class="toast-close fas fa-times" onclick="closePopup()"></i>
           </div>
         {% endfor %}
       </div>
     {% endif %}
 
-      <div class="wrapper">
-        <h2>Вхід</h2>
-        <!-- Login form -->
-        <form action="{% url 'login' %}" method="GET">
-          {% csrf_token %}
-          <!-- Submit button -->
+    <div class="wrapper">
+      <h2>Вхід</h2>
+      <form action="{% url 'login' %}" method="GET">
+        {% csrf_token %}
+        
+        <!-- Main Microsoft Login -->
+        <div class="input-box button">
+          <a href="{% url 'login' %}?redirect=true" class="login-button microsoft-button">
+            <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
+            Увійти
+          </a>
+        </div>
+
+        <!-- Development Login Options -->
+        <div class="dev-buttons">
           <div class="input-box button">
-            <a type="submit" href="{% url 'login' %}?redirect=true" class="register-button microsoft-button">
-                <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
-              Увійти</a>
-          </div>
-          <div class="input-box button">
-             <a
-              type="submit"
-              href="{% url 'fake_login' %}?redirect=true"
-              class="register-button microsoft-button"
-              style="
-                background-color: #aedeecff;
-                color: #5c838fff;
-                border: 2px dashed #5c838fff;
-                padding: 0.75em 1.5em;
-                font-weight: bold;
-                text-transform: uppercase;
-                position: relative;
-              "
-            >
-              <!-- optional badge -->
-              <span style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #dc3545;
-                color: #fff;
-                padding: 0.25em 0.5em;
-                font-size: 0.75em;
-                border-radius: 4px;
-              ">
-                TEMP
-              </span>
-              <img
-                src="{% static 'images/microsoft-logo.webp' %}"
-                alt="Microsoft Logo"
-                class="logo"
-                style="vertical-align: middle; margin-right: 0.5em;"
-              />
+            <a href="{% url 'fake_login' %}?redirect=true" class="login-button dev-button">
+              <span class="temp-badge">TEMP</span>
+              <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
               Fake Teacher Login
             </a>
           </div>
+          
           <div class="input-box button">
-             <a
-              type="submit"
-              href="{% url 'fake_student_login' %}?redirect=true"
-              class="register-button microsoft-button"
-              style="
-                background-color: #aedeecff;
-                color: #5c838fff;
-                border: 2px dashed #5c838fff;
-                padding: 0.75em 1.5em;
-                font-weight: bold;
-                text-transform: uppercase;
-                position: relative;
-              "
-            >
-              <!-- optional badge -->
-              <span style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #dc3545;
-                color: #fff;
-                padding: 0.25em 0.5em;
-                font-size: 0.75em;
-                border-radius: 4px;
-              ">
-                TEMP
-              </span>
-              <img
-                src="{% static 'images/microsoft-logo.webp' %}"
-                alt="Microsoft Logo"
-                class="logo"
-                style="vertical-align: middle; margin-right: 0.5em;"
-              />
+            <a href="{% url 'fake_student_login' %}?redirect=true" class="login-button dev-button">
+              <span class="temp-badge">TEMP</span>
+              <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
               Fake Student Login
             </a>
           </div>
+          
           <div class="input-box button">
-             <a
-              type="submit"
-              href="{% url 'fake_student_login_2' %}?redirect=true"
-              class="register-button microsoft-button"
-              style="
-                background-color: #aedeecff;
-                color: #5c838fff;
-                border: 2px dashed #5c838fff;
-                padding: 0.75em 1.5em;
-                font-weight: bold;
-                text-transform: uppercase;
-                position: relative;
-              "
-            >
-              <!-- optional badge -->
-              <span style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #dc3545;
-                color: #fff;
-                padding: 0.25em 0.5em;
-                font-size: 0.75em;
-                border-radius: 4px;
-              ">
-                TEMP
-              </span>
-              <img
-                src="{% static 'images/microsoft-logo.webp' %}"
-                alt="Microsoft Logo"
-                class="logo"
-                style="vertical-align: middle; margin-right: 0.5em;"
-              />
+            <a href="{% url 'fake_student_login_2' %}?redirect=true" class="login-button dev-button">
+              <span class="temp-badge">TEMP</span>
+              <img src="{% static 'images/microsoft-logo.webp' %}" alt="Microsoft Logo" class="logo" />
               Fake Student Login 2
             </a>
           </div>
-          
-          <!-- Registration link -->
-          <div class="text">
-            <h3>Ще не маєш облікового запису? <a href="{% url 'register' %}">Зареєструйся!</a></h3>
-          </div>
-        </form>
-      </div>
+        </div>
+        
+        <!-- Registration link -->
+        <div class="text">
+          <h3>Ще не маєш облікового запису? <a href="{% url 'register' %}">Зареєструйся!</a></h3>
+        </div>
+      </form>
+    </div>
   </body>
 </html>

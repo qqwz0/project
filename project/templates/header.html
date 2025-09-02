@@ -12,146 +12,112 @@
       crossorigin="anonymous"
     ></script>
     <link rel="stylesheet" href="{% static 'css/notification.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/header.css' %}" />
   </head>
   <body hx-ext="ws" ws-connect="/ws/notifications/">
-    <div class="header">
-      <div class="logo">
-        <img src={% static 'images/LOGOfaculty.PNG'%} alt="Logo">
-      </div>
-
-      {% if user.is_authenticated %}
-      <div class="icons">
-        <a href="{% url 'home' %}" title="Home page">
-          <i class="fas fa-home"></i>
-        </a>
-        {% if user_profile.role == 'Студент' %}
-          <a href="{% url 'teachers_catalog' %}" title="Teachers Catalog">
-            <i class="fas fa-search"></i>
-          </a>
-        {% endif %}
-        <a
-          href="#"
-          id="dropdownMenuButton"
-          role="button"
-          style="position: relative; cursor: default; color: #000"
-        >
-          <i
-            class="fa-solid fa-circle"
-            id="notification-indicator"
-            style="
-              color: #1570ef;
-              display: none;
-              position: absolute;
-              font-size: 0.5em;
-              z-index: 2;
-              top: 15%;
-              left: 80%;
-              transform: translate(-50%, -50%);
-            "
-          ></i>
-          <i class="fas fa-bell" style="position: relative; z-index: 1"></i>
-          <ul class="notification-dropdown" id="notification-list">
-            <div class="empty-notifications" id="no-notifications-message">
-              <h3 class="notification-empty-title">Сповіщень немає</h3>
-              <div class="notification-divider"></div>
-              <p class="notification-empty-message">
-                Тут з'являтимуться ваші сповіщення
-              </p>
-            </div>
-          </ul>
-        </a>
-
-        <a
-          href="#"
-          id="messageDropdownButton"
-          role="button"
-          style="position: relative; cursor: pointer; color: #000"
-        >
-          {%if unread%}
-          <div class="message-badge" id="message-indicator">
-            {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
-          </div>
-          {%endif%}
-          <i class="fas fa-envelope"></i>
-          <div class="message-popup" id="message-popup">
-            {% if message_list%}
-            <div class="message-header">
-              <h3>Повідомлення</h3>
-            </div>
-            {% for item in message_list %}
-            <div
-              class="message-item message {% if item.is_read %}read{% endif %}"
-              data-id="{{ item.id }}"
-            >
-              <div class="profile-message-link">
-                <p>
-                  {{ item.message_text }} {% if item.status == 'відхилив' or item.status == 'скасував' %}
-                  <button
-                    type="button"
-                    class="view-rejection-reason-btn"
-                    data-reason="{{ item.related_request.rejected_reason|default:'Причина не вказана.' }}"
-                  >
-                    Переглянути причину →
-                  </button>
-                  {% endif %}
-                </p>
-                <span class="timestamp"
-                  >{{ item.created_at |date:"d.m.Y H:i" }}</span
-                >
-              </div>
-            </div>
-            {% endfor %} {%else%}
-            <div class="no-messages">
-              <p class="empty-state-title">Ваша скринька порожня</p>
-              <p class="empty-state-message">
-                Коли з'являться нові повідомлення, ви побачите їх тут.
-              </p>
-            </div>
-            {%endif%}
-          </div>
-        </a>
+    <header class="header">
+      <div class="header-content">
+        <div class="header-logo">
+          <img src="{% static 'images/LOGOfaculty.PNG' %}" alt="Logo">
+        </div>
 
         {% if user.is_authenticated %}
-        <div class="header-pic">
-          <a href="{% url 'profile' %}">
-            <img
-              src="{{ profile_picture_url }}"
-              alt="Фото профілю"
-              class="default-avatar"
-            />
+        <nav class="nav-icons">
+          <a href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
+            <i class="fas fa-home"></i>
+          </a>
+          {% if user_profile.role == 'Студент' %}
+            <a href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
+              <i class="fas fa-search"></i>
+            </a>
+          {% endif %}
+          <div class="nav-icon notification-wrapper" id="dropdownMenuButton">
+            <i class="fas fa-bell"></i>
+            <i class="notification-dot" id="notification-indicator"></i>
+            <ul class="notification-dropdown" id="notification-list">
+              <div class="empty-notifications" id="no-notifications-message">
+                <h3 class="notification-empty-title">Сповіщень немає</h3>
+                <div class="notification-divider"></div>
+                <p class="notification-empty-message">
+                  Тут з'являтимуться ваші сповіщення
+                </p>
+              </div>
+            </ul>
+          </div>
+
+          <div class="nav-icon message-wrapper" id="messageDropdownButton">
+            <i class="fas fa-envelope"></i>
+            {%if unread%}
+            <span class="message-badge" id="message-indicator">
+              {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
+            </span>
+            {%endif%}
+            <div class="message-popup" id="message-popup">
+              {% if message_list%}
+              <div class="message-header">
+                <h3>Повідомлення</h3>
+              </div>
+              {% for item in message_list %}
+              <div class="message-item message {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
+                <div class="profile-message-link">
+                  <p>
+                    {{ item.message_text }} {% if item.status == 'відхилив' or item.status == 'скасував' %}
+                    <button
+                      type="button"
+                      class="view-rejection-reason-btn"
+                      data-reason="{{ item.related_request.rejected_reason|default:'Причина не вказана.' }}"
+                    >
+                      Переглянути причину →
+                    </button>
+                    {% endif %}
+                  </p>
+                  <span class="timestamp">{{ item.created_at |date:"d.m.Y H:i" }}</span>
+                </div>
+              </div>
+              {% endfor %} 
+              {%else%}
+              <div class="no-messages">
+                <p class="empty-state-title">Ваша скринька порожня</p>
+                <p class="empty-state-message">
+                  Коли з'являться нові повідомлення, ви побачите їх тут.
+                </p>
+              </div>
+              {%endif%}
+            </div>
+          </div>
+
+          <div class="profile-wrapper">
+            <a href="{% url 'profile' %}" class="profile-link">
+              <img
+                src="{{ profile_picture_url }}"
+                alt="Фото профілю"
+                class="profile-avatar"
+              />
+            </a>
+          </div>
+        </nav>
+        {% else %}
+        <div class="auth-section">
+          <a
+            href="{% url 'login' %}"
+            class="auth-btn {% if request.resolver_match.url_name == 'login' %}primary{% else %}secondary{% endif %}"
+          >
+            Вхід
+          </a>
+          <a
+            href="{% url 'register' %}"
+            class="auth-btn {% if request.resolver_match.url_name == 'register' %}primary{% else %}secondary{% endif %}"
+          >
+            Реєстрація
           </a>
         </div>
         {% endif %}
       </div>
-      {% else %}
-      <div class="auth-buttons">
-        <a
-          href="{% url 'login' %}"
-          class="header-button {% if request.resolver_match.url_name == 'login' %}primary{% else %}secondary{% endif %}"
-        >
-          Вхід
-        </a>
-        {% comment %} <span class="auth-separator">або</span> {% endcomment %}
-        <a
-          href="{% url 'register' %}"
-          class="header-button {% if request.resolver_match.url_name == 'register' %}primary{% else %}secondary{% endif %}"
-        >
-          Реєстрація
-        </a>
-      </div>
-      {% endif %}
-    </div>
+    </header>
 
-    <!-- Modal for Rejection Reason -->
-    <div
-      id="rejectionReasonModal"
-      class="rejection-modal-overlay"
-      style="display: none"
-    >
+    <div id="rejectionReasonModal" class="rejection-modal-overlay" style="display: none">
       <div class="rejection-modal-content">
-        <span class="rejection-close-button" onclick="closeRejectionModal()"
-          >&times;</span
-        >
+        <span class="rejection-close-button" onclick="closeRejectionModal()">&times;</span>
         <h3>Причина відмови</h3>
         <div class="rejection-modal-divider"></div>
         <div class="rejection-reason-box">
@@ -159,6 +125,7 @@
         </div>
       </div>
     </div>
+
+    <script src="{% static 'js/notification.js' %}"></script>
   </body>
-  <script src="{% static 'js\notification.js' %}"></script>
 </html>
