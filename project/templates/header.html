@@ -25,14 +25,18 @@
         <nav class="nav-icons">
           <a href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
             <i class="fas fa-home"></i>
+            <span class="nav-tooltip">Головна</span>
           </a>
           {% if user_profile.role == 'Студент' %}
             <a href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
               <i class="fas fa-search"></i>
+              <span class="nav-tooltip">Пошук</span>
             </a>
           {% endif %}
+          
           <div class="nav-icon notification-wrapper" id="dropdownMenuButton">
             <i class="fas fa-bell"></i>
+            <span class="nav-tooltip">Сповіщення</span>
             <i class="notification-dot" id="notification-indicator"></i>
             <ul class="notification-dropdown" id="notification-list">
               <div class="empty-notifications" id="no-notifications-message">
@@ -47,6 +51,7 @@
 
           <div class="nav-icon message-wrapper" id="messageDropdownButton">
             <i class="fas fa-envelope"></i>
+            <span class="nav-tooltip">Повідомлення</span>
             {%if unread%}
             <span class="message-badge" id="message-indicator">
               {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
@@ -93,6 +98,7 @@
                 alt="Фото профілю"
                 class="profile-avatar"
               />
+              <span class="nav-tooltip">Профіль</span>
             </a>
           </div>
         </nav>

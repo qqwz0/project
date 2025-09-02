@@ -1,27 +1,39 @@
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 /* Header Styles */
 .header {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: sticky;
   top: 0;
   z-index: 1000;
   backdrop-filter: blur(8px);
   width: 100%;
-  overflow: hidden;
+  max-width: 100vw;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  /* Reduced padding and added max-width constraint */
+  padding: 0.75rem 1rem;
   min-height: 56px;
+  max-height: 56px;
   width: 100%;
+  max-width: 100vw;
   box-sizing: border-box;
+  overflow: visible;
 }
 
 /* Logo Styles */
@@ -29,6 +41,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  /* Allow header-logo to shrink more aggressively */
+  flex-shrink: 2;
+  min-width: 0;
 }
 
 .header-logo img {
@@ -50,7 +65,11 @@
 .nav-icons {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  /* More aggressive shrinking for nav icons */
+  flex-shrink: 3;
+  min-width: 0;
+  max-width: 50vw;
 }
 
 .nav-icon {
@@ -68,7 +87,13 @@
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(226, 232, 240, 0.8);
   white-space: nowrap;
-  flex-shrink: 0;
+  /* Allow nav icons to shrink */
+  flex-shrink: 1;
+  min-width: 24px;
+}
+
+.nav-icon i {
+  font-size: 16px;
 }
 
 .nav-icon:hover {
@@ -79,11 +104,6 @@
   border-color: transparent;
 }
 
-.nav-icon i {
-  font-size: 16px;
-}
-
-/* Tooltips */
 .nav-tooltip {
   position: absolute;
   bottom: -40px;
@@ -159,9 +179,10 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  min-width: min(300px, calc(100vw - 40px));
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Better viewport constraint for dropdowns */
+  width: min(300px, calc(100vw - 20px));
+  max-width: calc(100vw - 20px);
   max-height: 400px;
   overflow-y: auto;
   z-index: 1000;
@@ -197,9 +218,10 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  min-width: min(280px, calc(100vw - 20px));
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Better viewport constraint for message popup */
+  width: min(280px, calc(100vw - 20px));
+  max-width: calc(100vw - 20px);
   max-height: 400px;
   overflow-y: auto;
   z-index: 1000;
@@ -294,14 +316,18 @@
 .auth-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  /* More aggressive shrinking for auth section */
+  flex-shrink: 2;
+  min-width: 0;
+  max-width: 40vw;
 }
 
 .auth-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 1.25rem;
+  padding: 0.6rem 1rem;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
@@ -312,7 +338,10 @@
   overflow: hidden;
   letter-spacing: 0.025em;
   white-space: nowrap;
-  flex-shrink: 0;
+  /* Allow buttons to shrink more aggressively */
+  flex-shrink: 1;
+  min-width: 60px;
+  max-width: 120px;
 }
 
 .auth-btn::before {
@@ -322,12 +351,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.5s;
 }
 
@@ -365,7 +389,8 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .header-content {
-    padding: 0.6rem 1rem;
+    /* More aggressive padding reduction */
+    padding: 0.5rem 0.5rem;
   }
 
   .header-logo img {
@@ -373,57 +398,13 @@
   }
 
   .nav-icons {
-    gap: 0.75rem;
-  }
-
-  .nav-icon {
-    width: 34px;
-    height: 34px;
-  }
-
-  .profile-avatar {
-    width: 34px;
-    height: 34px;
-  }
-
-  .auth-section {
     gap: 0.5rem;
-  }
-
-  .auth-btn {
-    padding: 0.5rem 0.8rem;
-    font-size: 13px;
-    height: 34px;
-  }
-
-  .message-popup,
-  .notification-dropdown {
-    min-width: min(300px, calc(100vw - 40px));
-    right: 0;
-    left: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-content {
-    padding: 0.5rem 0.75rem;
-  }
-
-  .header-logo img {
-    height: 28px;
-  }
-
-  .nav-icons {
-    gap: 0.5rem;
+    max-width: 45vw;
   }
 
   .nav-icon {
     width: 32px;
     height: 32px;
-  }
-
-  .nav-icon i {
-    font-size: 14px;
   }
 
   .profile-avatar {
@@ -432,37 +413,32 @@
   }
 
   .auth-section {
-    gap: 0.4rem;
+    gap: 0.5rem;
+    max-width: 35vw;
   }
 
   .auth-btn {
     padding: 0.4rem 0.6rem;
     font-size: 12px;
     height: 32px;
-  }
-
-  .message-popup,
-  .notification-dropdown {
-    min-width: min(280px, calc(100vw - 20px));
-    right: 0;
-    left: auto;
-    max-width: calc(100vw - 20px);
+    min-width: 50px;
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 480px) {
   .header-content {
-    padding: 0.4rem 0.5rem;
-  }
-
-  .auth-btn {
-    padding: 0.35rem 0.5rem;
-    font-size: 11px;
-    height: 30px;
+    /* Even more aggressive padding reduction */
+    padding: 0.25rem 0.25rem;
+    gap: 0.25rem;
   }
 
   .header-logo img {
-    height: 24px;
+    height: 28px;
+  }
+
+  .nav-icons {
+    gap: 0.25rem;
+    max-width: 40vw;
   }
 
   .nav-icon {
@@ -470,8 +446,160 @@
     height: 28px;
   }
 
+  .nav-icon i {
+    font-size: 12px;
+  }
+
   .profile-avatar {
     width: 28px;
     height: 28px;
+  }
+
+  .auth-section {
+    gap: 0.25rem;
+    max-width: 30vw;
+  }
+
+  .auth-btn {
+    padding: 0.3rem 0.4rem;
+    font-size: 11px;
+    height: 28px;
+    min-width: 40px;
+  }
+}
+
+@media (max-width: 400px) {
+  .header-content {
+    /* Minimal padding and tight constraints */
+    padding: 0.125rem 0.125rem;
+    gap: 0.125rem;
+  }
+
+  .header-logo {
+    gap: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 25vw;
+  }
+
+  .nav-icons {
+    gap: 0.125rem;
+    flex-shrink: 4;
+    min-width: 0;
+    max-width: 35vw;
+  }
+
+  .nav-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 1;
+  }
+
+  .nav-icon i {
+    font-size: 10px;
+  }
+
+  .profile-avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .auth-section {
+    gap: 0.125rem;
+    flex-shrink: 3;
+    min-width: 0;
+    max-width: 25vw;
+  }
+
+  .auth-btn {
+    padding: 0.2rem 0.25rem;
+    font-size: 9px;
+    height: 24px;
+    min-width: 30px;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-content {
+    padding: 0.125rem 0.125rem;
+    gap: 0.125rem;
+  }
+
+  .header-logo img {
+    height: 20px;
+  }
+
+  .nav-icons {
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+  }
+
+  .nav-icon i {
+    font-size: 8px;
+  }
+
+  .profile-avatar {
+    width: 20px;
+    height: 20px;
+  }
+
+  .auth-section {
+    gap: 0.125rem;
+  }
+
+  .auth-btn {
+    padding: 0.125rem 0.2rem;
+    font-size: 8px;
+    height: 18px;
+    min-width: 35px;
+    border-radius: 6px;
+  }
+
+  /* Hide tooltips on very small screens to prevent overflow */
+  .nav-tooltip {
+    display: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .header-content {
+    padding: 0.125rem 0.125rem;
+    gap: 0;
+  }
+
+  .header-logo img {
+    height: 18px;
+  }
+
+  .nav-icons {
+    gap: 0;
+  }
+
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .nav-icon i {
+    font-size: 7px;
+  }
+
+  .profile-avatar {
+    width: 18px;
+    height: 18px;
+  }
+
+  .auth-btn {
+    padding: 0.125rem 0.2rem;
+    font-size: 7px;
+    height: 18px;
+    min-width: 30px;
   }
 }
