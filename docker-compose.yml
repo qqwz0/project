@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -14,14 +27,10 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-    # Видаляємо залежність від локальної БД
+      - DEBUG=True
+    depends_on:
+      - db
     restart: always
-
-  # Видаляємо локальну БД, оскільки використовуєте Railway
-  # db:
-  #   image: mysql:8.0
-  #   ...
 
   nginx:
     image: nginx:latest
@@ -36,6 +45,6 @@ services:
     restart: always
 
 volumes:
-  # mysql_data:  # Видаляємо
   static_volume:
   media_volume:
+  db_data:
