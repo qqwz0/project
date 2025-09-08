@@ -76,6 +76,7 @@
     max-width: 500px;
     padding: 32px;
     border-radius: 12px;
+    border: none; 
     box-shadow: 0 8px 32px rgba(60, 80, 140, 0.15);
 }
 
@@ -115,8 +116,9 @@
 }
 
 #completeModal .form-control:focus {
-    outline: none;
-    box-shadow: 0 2px 4px 8px rgba(0, 0, 0, 0.1);
+  outline: none;
+  border-color: #0378ec;
+  box-shadow: 0.125rem 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
 }
 
 #completeModal .form-text {
@@ -179,19 +181,18 @@
 }
 
 #completeModal .close-modal {
-    color: #a3a3a3;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    position: absolute;
-    left: 8px;
-    top: 8px;
-    margin: 0;
-    transition: color 0.3s ease-in-out, transform 0.3s ease-in-out;
-    line-height: 1;
-    z-index: 2;
-    padding: 8px;
-    border-radius: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  top: 0.75rem;
+  left: 0.875rem;
+  font-size: 1.75rem;
+  color: #a3a3a3;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  line-height: 1;
 }
 
 #completeModal .close-modal:hover {

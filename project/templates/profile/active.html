@@ -405,38 +405,36 @@
 
 <!-- Модальне вікно для редагування теми -->
 <div id="editThemeModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Редагувати тему роботи</h3>
-            <span class="close" onclick="closeEditThemeModal()">&times;</span>
-        </div>
-        <div class="modal-body">
+    <div class="edit-theme-modal-content">
+        <!-- Updated close button to match completion modal style -->
+        <span class="edit-theme-close-modal" onclick="closeEditThemeModal()">&times;</span>
+        <h3>Редагувати тему роботи</h3>
+        <div class="edit-theme-modal-body">
             <form id="editThemeForm">
-                <div class="form-group">
-                    <label for="newTheme">Нова тема:</label>
-                    <textarea id="newTheme" name="newTheme" rows="3" class="form-control" placeholder="Введіть нову тему роботи..." required></textarea>
+                <div class="edit-theme-form-group">
+                    <textarea id="newTheme" name="newTheme" rows="4" class="edit-theme-form-control" placeholder="Введіть нову тему роботи..." required></textarea>
                 </div>
                 <input type="hidden" id="editThemeRequestId" name="requestId">
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeEditThemeModal()">Скасувати</button>
-                    <button type="submit" class="btn-submit">Зберегти зміни</button>
+                <!-- Updated button container and classes to match completion modal -->
+                <div class="edit-theme-modal-buttons">
+                    <button type="button" class="edit-theme-btn-cancel" onclick="closeEditThemeModal()">Скасувати</button>
+                    <button type="submit" class="edit-theme-btn-submit">Зберегти зміни</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 <!-- Cancel modal -->
-<div id="cancelModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="closeCancelModal()">&times;</span>
-        <h3>Скасувати активну роботу</h3>
-        <form id="cancelForm" onsubmit="handleCancelSubmit(event)">
+<div id="cancelModal" class="rejection-modal">
+    <div class="rejection-modal-content">
+        <button class="rejection-modal-close" onclick="closeCancelModal()">&times;</button>
+        <h3 class="rejection-modal-header">Скасувати активну роботу</h3>
+        <form id="cancelForm" class="rejection-modal-form" onsubmit="handleCancelSubmit(event)">
             <input type="hidden" id="cancelRequestId" name="requestId">
-            <div class="form-group">
-                <label for="cancelReason">Причина скасування:</label>
-                <textarea id="cancelReason" name="cancelReason" rows="4" cols="30"></textarea>
+            <div class="rejection-modal-form-group">
+                <textarea id="cancelReason" name="cancelReason" rows="4" class="rejection-modal-textarea" placeholder="Вкажіть причину скасування..."></textarea>
             </div>
-            <button type="submit" class="request-button reject modal-reject-btn">Скасувати роботу</button>
+            <button type="submit" class="rejection-modal-submit">Скасувати роботу</button>
         </form>
     </div>
 </div>
@@ -492,7 +490,6 @@ function updateCommentFile(input) {
 }
 
 $(document).ready(function() {
-    // Додаємо обробник на всі кнопки видалення
     $(document).on('click', '.delete-file-btn', function(e) {
         e.preventDefault();
         var button = $(this);
@@ -500,22 +497,16 @@ $(document).ready(function() {
         
         // Створюємо власне модальне вікно
         var modal = $(`
-            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding-top: 5%;">
-                <div style="background: white; border-radius: 0.75rem; border: 2px solid #6FCF97; padding: 1.25rem; position: relative; width: 400px; max-width: 90%;">
-                    <button type="button" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #333;">×</button>
-                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                        <div style="width: 44px; height: 44px; margin-right: 15px;">
-                            <svg viewBox="0 0 44 44" style="width: 100%; height: 100%;">
-                                <circle cx="22" cy="22" r="22" fill="#6FCF97"/>
-                                <path d="M18 24.5L14 20.5L12 22.5L18 28.5L32 14.5L30 12.5L18 24.5Z" fill="white"/>
-                            </svg>
-                        </div>
-                        <h3 style="margin: 0; font-size: 1.25rem;">Підтвердження</h3>
+            <div class="delete-modal">
+                <div class="delete-modal-content">
+                    <span class="delete-modal-close">&times;</span>
+                    <div class="delete-modal-header">
+                        <h3 class="delete-modal-title">Підтвердження</h3>
                     </div>
-                    <p style="margin-bottom: 1.5rem;">Ви впевнені, що хочете видалити цей файл?</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="cancel-button" style="padding: 8px 16px; background: #FF4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Скасувати</button>
-                        <button type="button" class="confirm-button" style="padding: 8px 16px; background: #6FCF97; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+                    <p class="delete-modal-message">Ви впевнені, що хочете видалити цей файл?</p>
+                    <div class="delete-modal-buttons">
+                        <button type="button" class="delete-modal-cancel">Скасувати</button>
+                        <button type="button" class="delete-modal-confirm">OK</button>
                     </div>
                 </div>
             </div>
@@ -525,17 +516,17 @@ $(document).ready(function() {
         $('body').append(modal);
         
         // Обробник закриття по кнопці X
-        modal.find('button:first').click(function() {
+        modal.find('.delete-modal-close').click(function() {
             modal.remove();
         });
         
         // Обробник кнопки "Скасувати"
-        modal.find('.cancel-button').click(function() {
+        modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
         });
         
         // Обробник кнопки "OK"
-        modal.find('.confirm-button').click(function() {
+        modal.find('.delete-modal-confirm').click(function() {
             $.ajax({
                 url: url,
                 type: 'POST',
@@ -544,7 +535,9 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (response.success) {
-                        window.location.reload();
+                        button.closest('.file-block').fadeOut(300, function() {
+                            $(this).remove();
+                        });
                     } else {
                         alert('Помилка: ' + (response.error || 'Не вдалося видалити файл'));
                     }
@@ -649,43 +642,37 @@ $(document).ready(function() {
         var commentId = button.data('comment-id');
         
         // Створюємо власне модальне вікно (аналогічно до видалення файлу)
-        var modal = $(
-            `<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding-top: 5%;">
-                <div style="background: white; border-radius: 0.75rem; border: 2px solid #EF4444; padding: 1.25rem; position: relative; width: 400px; max-width: 90%;">
-                    <button type="button" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #333;">×</button>
-                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                        <div style="width: 44px; height: 44px; margin-right: 15px;">
-                            <svg viewBox="0 0 44 44" style="width: 100%; height: 100%;">
-                                <circle cx="22" cy="22" r="22" fill="#EF4444"/>
-                                <path d="M18 24.5L14 20.5L12 22.5L18 28.5L32 14.5L30 12.5L18 24.5Z" fill="white"/>
-                            </svg>
-                        </div>
-                        <h3 style="margin: 0; font-size: 1.25rem; color: #EF4444;">Підтвердження</h3>
+        var modal = $(`
+            <div class="delete-modal">
+                <div class="delete-modal-content">
+                    <span class="delete-modal-close">&times;</span>
+                    <div class="delete-modal-header">
+                        <h3 class="delete-modal-title">Підтвердження</h3>
                     </div>
-                    <p style="margin-bottom: 1.5rem;">Ви впевнені, що хочете видалити цей коментар?</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="cancel-button" style="padding: 8px 16px; background: #FF4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Скасувати</button>
-                        <button type="button" class="confirm-button" style="padding: 8px 16px; background: #6FCF97; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+                    <p class="delete-modal-message">Ви впевнені, що хочете видалити цей коментар?</p>
+                    <div class="delete-modal-buttons">
+                        <button type="button" class="delete-modal-cancel">Скасувати</button>
+                        <button type="button" class="delete-modal-confirm">OK</button>
                     </div>
                 </div>
-            </div>`
-        );
+            </div>
+        `);
         
         // Додаємо модальне вікно до body
         $('body').append(modal);
         
         // Обробник закриття по кнопці X
-        modal.find('button:first').click(function() {
+        modal.find('.delete-modal-close').click(function() {
             modal.remove();
         });
         
         // Обробник кнопки "Скасувати"
-        modal.find('.cancel-button').click(function() {
+        modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
         });
         
         // Обробник кнопки "OK"
-        modal.find('.confirm-button').click(function() {
+        modal.find('.delete-modal-confirm').click(function() {
             $.ajax({
                 url: '/catalog/comment/' + commentId + '/delete/',
                 type: 'POST',
@@ -1114,4 +1101,3 @@ function handleCancelSubmit(event) {
     });
 }
 </script>
-
