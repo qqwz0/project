@@ -14,7 +14,9 @@ from .views import (
     delete_theme,
     add_comment,
     AutocompleteView,
+    ThemesAPIView,
     ThemeTeachersView,
+    ThemesListView
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -39,6 +41,9 @@ urlpatterns = [
     
     # Search and autocomplete
     path('autocomplete/', AutocompleteView.as_view(), name='autocomplete'),
+    path('themes/', ThemesAPIView.as_view(), name='themes_api'),
+    path('themes/list/', ThemesListView.as_view(), name='themes_list'),
+    path('themes/all/', ThemesListView.as_view(), name='all_themes_list'),
     path('autocomplete/theme/<int:theme_id>/teachers/', ThemeTeachersView.as_view(), name='theme_teachers'),
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

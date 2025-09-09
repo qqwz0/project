@@ -1768,6 +1768,23 @@ body {
   overflow: hidden;
 }
 
+/* === Profile Edit: tidy up inline field errors (student & teacher) === */
+/* Hide empty placeholders so no red strips appear when there's no text */
+.error-message:empty {
+  display: none;
+}
+/* Scope cleaner style to edit forms only to avoid affecting other pages */
+.personal-info .error-message,
+.contacts .error-message {
+  background: none;
+  border: none;
+  border-left: none;
+  padding: 0;
+  margin-top: 4px;
+  color: #DC2626;
+  font-size: 12px;
+}
+
 /* Прибираємо всі старі конфліктуючі стилі тем */
 .themes-controls,
 .themes-container,

@@ -26,6 +26,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
 }
 .modal-backdrop {
   position: absolute;
@@ -73,6 +74,8 @@
 .left-container h2 {
   margin-bottom: 0.5rem;
   font-family: var(--heading-font);
+  text-align: center;
+  width: 100%;
 }
 p.position {
   color: #a3a3a3;
@@ -97,11 +100,13 @@ p.position {
   border-radius: 0.5rem;
   display: block;
   margin: 1rem auto;
-  width: 50%;
+  width: 100%;
   height: 10%;
   font-size: 1.125rem;
   font-family: var(--default-font);
   transition: background-color 0.3s ease;
+  border: none;
+  cursor: pointer;
 }
 .submit-btn:hover {
   background-color: #0256af;
@@ -110,7 +115,7 @@ p.position {
   background-color: #99b8e6;
 }
 .form-input {
-  width: 90%;
+  width: 100%;
   padding: 0.625rem;
   border: 0.0625rem solid #ccc;
   border-radius: 0.5rem;
@@ -118,6 +123,7 @@ p.position {
   font-size: 1rem;
   box-shadow: 0.125rem 0.25rem 0.25rem rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease-in-out;
+  box-sizing: border-box;
 }
 .add-theme-container {
   position: relative;
@@ -239,6 +245,7 @@ p.position {
 .dropdown {
   margin-bottom: 0;
   justify-content: left;
+  width: 100%;
 }
 .dropdown-input input {
   padding-right: 1.875rem;
@@ -283,7 +290,7 @@ p.position {
   text-align: left;
 }
 .textera-container textarea {
-  width: 94%;
+  width: 100%;
   padding: 0.625rem;
   border: 0.0625rem solid #ccc;
   border-radius: 0.5rem;
@@ -296,6 +303,7 @@ p.position {
   transition: box-shadow 0.2s ease-in-out;
   resize: none;
   display: block;
+  box-sizing: border-box;
 }
 .form-input::placeholder,
 .form-textarea::placeholder {

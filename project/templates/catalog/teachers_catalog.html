@@ -27,15 +27,20 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      searchQuery: '', 
      isLoading: true,
      showFilters: window.innerWidth > 780,
-    isMobile: window.innerWidth <= 780,
-    toggleFilters() {
-      this.showFilters = !this.showFilters;
-    },
-    updateScreenSize() {
-      this.isMobile = window.innerWidth <= 780;  // Ensure breakpoint matches CSS
-      if (!this.isMobile) this.showFilters = true;
+     isMobile: window.innerWidth <= 780,
+     filteredTeachers: [],
+     filteredThemes: [],
+     filteredData: [],
+     searchTeachers: true,
+     searchThemes: false,
+     allThemes: [],  
+     toggleFilters() {
+       this.showFilters = !this.showFilters;
      },
-     filteredData: [],  
+     updateScreenSize() {
+       this.isMobile = window.innerWidth <= 780;  // Ensure breakpoint matches CSS
+       if (!this.isMobile) this.showFilters = true;
+     },  
      async initData() {
       try {
         const response = await fetch('/catalog/teachers/');
@@ -51,6 +56,9 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         }
         this.data = data;
         this.filteredData = data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+        
+        // Завантажуємо всі теми для відображення без пошуку
+        await this.loadAllThemes();
       } catch (error) {
         console.error('Error fetching data:', error);
         this.data = [];
@@ -60,55 +68,122 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         this.isLoading = false;
       }
      },
-     async applyAutocompleteSearch() {
-        if (!this.searchQuery.trim()) {
-            this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
-            return;
-        }
-        
-        const query = this.searchQuery.toLowerCase();
-        
-        // Спочатку фільтруємо по іменах викладачів
-        let filteredByNames = this.data.filter(i => {
-            const teacher = i.teacher;
-            const teacherName = `${teacher.teacher_id.first_name} ${teacher.teacher_id.last_name}`.toLowerCase();
-            
-            return teacherName.includes(query) &&
-                   (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0));
+     
+     async loadAllThemes() {
+      try {
+        const response = await fetch('/catalog/themes/', {
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
         });
-        
-        // Додатково шукаємо викладачів по темах
-        try {
-            const response = await fetch(`/catalog/autocomplete/?q=${encodeURIComponent(query)}`);
-            if (response.ok) {
-                const suggestions = await response.json();
-                const themeResults = suggestions.filter(s => s.type === 'theme');
-                
-                for (const theme of themeResults) {
-                    const teachersResponse = await fetch(`/catalog/autocomplete/theme/${theme.id}/teachers/`);
-                    if (teachersResponse.ok) {
-                        const teacherIds = await teachersResponse.json();
-                        const teachersByTheme = this.data.filter(i => 
-                            teacherIds.includes(i.teacher.pk) &&
-                            (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
-                        );
-                        
-                        // Додаємо викладачів по темах, уникаючи дублікатів
-                        teachersByTheme.forEach(teacher => {
-                            if (!filteredByNames.some(existing => existing.teacher.pk === teacher.teacher.pk)) {
-                                filteredByNames.push(teacher);
-                            }
-                        });
-                    }
-                }
-            }
-        } catch (error) {
-            // Тиха обробка помилок
+        if (response.ok) {
+          this.allThemes = await response.json();
+        } else {
+          console.error('Failed to load themes, status:', response.status);
         }
-        
-        this.filteredData = filteredByNames;
+      } catch (error) {
+        console.error('Error loading all themes:', error);
+        this.allThemes = [];
+      }
+     },
+          async applyAutocompleteSearch() {
+      const query = this.searchQuery.trim().toLowerCase();
+      this.filteredTeachers = [];
+      this.filteredThemes = [];
+
+      if (!query && !this.searchTeachers && !this.searchThemes) {
+          this.filteredData = []; // No results if nothing is selected and no query
+          return;
+      }
+      
+      if (!query && this.searchTeachers && !this.searchThemes) {
+          this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+          return;
+      }
+      
+      if (!query && this.searchThemes && !this.searchTeachers) {
+          this.filteredThemes = this.allThemes; // якщо пустий запит — показуємо всі теми
+          this.filteredTeachers = [];
+          this.filteredData = [];
+          return;
+      }
+      
+      if (!query && this.searchTeachers && this.searchThemes) {
+          this.filteredData = this.data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+          this.filteredThemes = this.allThemes;
+          return;
+      }
+
+      if (this.searchTeachers) {
+          this.filteredTeachers = this.data.filter(i => {
+              const teacher = i.teacher.teacher_id;
+              const teacherName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+              const hasSlots = this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0);
+              return teacherName.includes(query) && hasSlots;
+          });
+      }
+
+      if (this.searchThemes) {
+          try {
+              const response = await fetch(`/catalog/themes/?q=${encodeURIComponent(query)}`, {
+                  credentials: 'same-origin',
+                  headers: {
+                      'Accept': 'application/json',
+                      'X-Requested-With': 'XMLHttpRequest'
+                  }
+              });
+              if (!response.ok) throw new Error('Themes API error');
+              const themes = await response.json();
+              this.filteredThemes = themes;
+
+              if (this.searchTeachers) {
+                  const teacherIds = new Set(this.filteredTeachers.map(t => t.teacher.pk));
+                  for (const theme of themes) {
+                      if (!teacherIds.has(theme.teacher_id)) {
+                          const teacher = this.data.find(i =>
+                              i.teacher.pk === theme.teacher_id &&
+                              (this.show_occupied || i.free_slots.some(slot => slot.get_available_slots > 0))
+                          );
+                          if (teacher) {
+                              this.filteredTeachers.push(teacher);
+                              teacherIds.add(theme.teacher_id);
+                          }
+                      }
+                  }
+              }
+          } catch (error) {
+              console.error('Error fetching themes:', error);
+              this.filteredThemes = [];
+          }
+      }
+      // у режимах пошуку ми не показуємо загальний список викладачів
+      this.filteredData = [];
      },
      
+     selectThemeTeacher(teacherId) {
+        // Знаходимо викладача в даних
+        const teacher = this.data.find(item => item.teacher.pk === teacherId);
+        if (teacher) {
+            // Показуємо тільки цього викладача в лівій колонці
+            this.filteredTeachers = [teacher];
+            // Очищаємо теми
+            this.filteredThemes = [];
+        }
+     },
+     
+    // Повертає список тем для конкретного викладача
+    themesForTeacher(item) {
+       if (!item || !this.allThemes || this.allThemes.length === 0) return [];
+       const candidateIds = [];
+       if (item?.teacher?.pk) candidateIds.push(item.teacher.pk);
+       if (item?.teacher?.id) candidateIds.push(item.teacher.id);
+       if (typeof item?.teacher?.teacher_id === 'number') candidateIds.push(item.teacher.teacher_id);
+       if (typeof item?.teacher?.teacher_id?.id === 'number') candidateIds.push(item.teacher.teacher_id.id);
+       return this.allThemes.filter(t => candidateIds.includes(t.teacher_id));
+    },
+    
      filterByTeacherIds(teacherIds) {
         const filtered = this.data.filter(item => {
             const teacherPk = item.teacher?.pk || item.teacher?.id;
@@ -136,25 +211,90 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                 }
             }
         });
+     },
+     
+     showModal() {
+        const modal = document.getElementById('details_request_modal');
+        if (!modal) {
+            console.error('Modal element not found!');
+            return;
+        }
+        try {
+            modal.showModal();
+        } catch (error) {
+            console.error('Error showing modal:', error);
+        }
+     },
+     
+     selectThemeAndShowModal(themeTeacherId) {
+        // Знаходимо викладача в даних (використовуємо teacher.id замість teacher.pk)
+        let teacher = this.data.find(item => item.teacher.pk === themeTeacherId);
+        if (!teacher) {
+            teacher = this.data.find(item => item.teacher.id === themeTeacherId);
+        }
+        if (!teacher) {
+            teacher = this.data.find(item => item.teacher.teacher_id === themeTeacherId);
+        }
+        
+        if (teacher && teacher.teacher.url) {
+            // Фільтруємо результати
+            this.selectThemeTeacher(themeTeacherId);
+            
+            // Показуємо модалку
+            this.showModal();
+            
+            // Завантажуємо контент через HTMX
+            htmx.ajax('GET', teacher.teacher.url, {target: '#inner_modal'});
+        }
      }
   }" 
   x-init="
-    initData(); 
+    await initData();
+    await loadAllThemes();
     updateScreenSize(); 
     window.addEventListener('resize', updateScreenSize);
     // Зберігаємо компонент глобально для доступу з автокомпліту
     window.catalogMainComponent = $data;
   "
+  @update-search.window="
+    console.log('Received search event:', $event.detail);
+    searchQuery = $event.detail.query;
+    applyAutocompleteSearch()
+  "
   @search-query.window="searchQuery = $event.detail.query; applyAutocompleteSearch()"
   
 
     <!-- Filter Section -->
-    <div x-show="showFilters"
-        x-transition.opacity.duration.300ms
-        class="filter-wrapper"
-        @click.away="isMobile && (showFilters = false)"
-    >
-        <div class="filter-section shadow-sm" @click.outside.window="isMobile && (showFilters = false)">
+    <div class="filter-wrapper">
+            <!-- Search Mode Switchers -->
+      <div class="search-mode-switchers">
+        <div class="switcher-header">
+          <h4>Оберіть тип пошуку:</h4>
+        </div>
+        <div class="segment-switcher">
+          <button class="segment-btn"
+                  :class="{ 'active': searchTeachers && !searchThemes }"
+                  @click="searchTeachers = true; searchThemes = false; applyAutocompleteSearch()">
+            Викладачі
+          </button>
+          <button class="segment-btn"
+                  :class="{ 'active': searchThemes && !searchTeachers }"
+                  @click="searchThemes = true; searchTeachers = false; applyAutocompleteSearch()">
+            Теми
+          </button>
+          <button class="segment-btn"
+                  :class="{ 'active': searchTeachers && searchThemes }"
+                  @click="searchTeachers = true; searchThemes = true; applyAutocompleteSearch()">
+            Всі
+          </button>
+        </div>
+      </div>
+      
+      <div x-show="showFilters"
+          x-transition.opacity.duration.300ms
+          class="filter-section shadow-sm"
+          @click.away="isMobile && (showFilters = false)"
+      >
         <div class="filter-header">
         <h3>Фільтри</h3>
         <img src="{% static 'images/filters.svg' %}" alt="Filters">
@@ -205,36 +345,16 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                 @keydown.enter="handleEnter"
                 @keydown.escape="hideSuggestions"
                 @focus="showSuggestionsIfQuery"
+                @blur="setTimeout(() => hideSuggestions(), 150)"
                 autocomplete="off">
-         <button class="search-button" @click="
-           if (query.trim()) {
-             // Використовуємо ту саму логіку що й в автокомпліті
-             searchQuery = query;
-             applyAutocompleteSearch();
-           } else {
-             // Якщо пошук порожній, показуємо всіх викладачів
-             filteredData = data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
-           }
-         ">
+         <button class="search-button" @click="handleSearch">
           <img src="{% static 'images/search.svg' %}" alt="Search">
          </button>
         </div>
          
          <!-- Autocomplete suggestions -->
-         <div class="autocomplete-suggestions" 
-              x-show="suggestions.length > 0"
-              x-transition
-              @click.away="hideSuggestions">
-           <template x-for="(suggestion, index) in suggestions" :key="suggestion.id + '-' + suggestion.type">
-             <div class="suggestion-item" 
-                  @click="selectSuggestion(suggestion)"
-                  :class="{ 'highlighted': highlightedIndex === index }"
-                  @mouseenter="highlightedIndex = index">
-               <div class="suggestion-label" x-text="suggestion.label"></div>
-               <div class="suggestion-description" x-text="suggestion.description"></div>
-             </div>
-           </template>
-         </div>
+         <!-- Suggestions disabled: results render inline below -->
+         <div class="autocomplete-suggestions" x-show="false"></div>
       </div>
       <!-- Toggle button for small screens -->
         <button class="mobile-filter-toggle" 
@@ -245,30 +365,186 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         </button>
      </div>
 
-      <template x-if="isLoading">
-        <div class="loader-container">
-            <div class="loader"></div>
-        </div>
-     </template>
+     <!-- Main Results Container -->
+     <div class="search-results" x-cloak>
+       <!-- Loading State -->
+       <div class="loader-container" x-show="isLoading">
+         <div class="loader"></div>
+       </div>
 
-     <!-- No Results Message -->
-     <template x-if="!isLoading && filteredData.length === 0">
-      <div class="no-results">
-        <div class="search-icon-wrapper">
-          <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
-          </svg>
-        </div>
-        <h2>Нічого не знайдено!</h2>
-        <p>Спробуйте змінити критерії пошуку або фільтри.</p>
-      </div>
-     </template>
+       <!-- Results -->
+       <div x-show="!isLoading">
+         <!-- No Results Message -->
+         <div class="no-results" 
+              x-show="searchQuery.trim() && filteredTeachers.length === 0 && filteredThemes.length === 0">
+           <div class="search-icon-wrapper">
+             <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+               <circle cx="11" cy="11" r="8"></circle>
+               <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+             </svg>
+           </div>
+           <h2>Нічого не знайдено!</h2>
+           <p>Спробуйте змінити критерії пошуку або фільтри.</p>
+         </div>
 
-     <!-- Teacher Cards -->
-     <template x-for="item in filteredData">
-      {% include "catalog/teacher_cards.html" %}
-     </template>
+         <!-- Unified Results Layout -->
+         <div class="unified-results" x-show="searchQuery.trim()">
+           <!-- Teachers Results (only teachers mode) -->
+           <div class="results-section" x-show="searchTeachers && !searchThemes && filteredTeachers.length > 0">
+             <h3>Викладачі (<span x-text="filteredTeachers.length"></span>)</h3>
+             <div class="teachers-list">
+               <template x-for="(item, index) in filteredTeachers || []" :key="item?.teacher?.pk || index">
+                 {% include "catalog/teacher_cards.html" %}
+               </template>
+             </div>
+           </div>
+
+           <!-- Themes Results (only themes mode) -->
+           <div class="results-section" x-show="searchThemes && !searchTeachers && filteredThemes.length > 0">
+             <h3>Теми робіт (<span x-text="filteredThemes.length"></span>)</h3>
+             <div class="themes-list">
+               <template x-for="(theme, index) in filteredThemes || []" :key="theme?.id || index">
+                <div class="topic-card">
+                  <h5 class="topic-name" x-text="theme.theme"></h5>
+                  <p class="theme-teacher" x-text="'Викладач: ' + theme.teacher_name"></p>
+                  <template x-if="theme.theme_description">
+                    <p class="topic-description" x-text="theme.theme_description"></p>
+                  </template>
+                  <button class="theme-select-btn" 
+                          @click="selectThemeAndShowModal(theme.teacher_id)">
+                    Обрати викладача
+                  </button>
+                </div>
+               </template>
+             </div>
+           </div>
+
+           <!-- Combined Results (both teachers and themes) -->
+          <div class="results-section" x-show="searchTeachers && searchThemes">
+            <h3>Результати</h3>
+            <!-- Teachers subsection -->
+            <div class="catalog-container" x-show="filteredTeachers.length > 0">
+              <template x-for="(item, index) in filteredTeachers || []" :key="item?.teacher?.pk || index">
+                <div class="teacher-with-themes" x-data="{ expanded: false }">
+                  {% include "catalog/teacher_cards.html" %}
+                  <div class="topics-container attach" x-show="themesForTeacher(item).length > 0" x-transition>
+                    <div class="topics-toggle-bar compact">
+                      <div class="topics-inline">
+                        <span class="topics-inline-label">Доступні теми:</span>
+                        <div class="topics-chips">
+                          <template x-for="(t, i) in themesForTeacher(item)" :key="t?.id || i">
+                            <span class="topic-chip" x-text="t.theme"></span>
+                          </template>
+                        </div>
+                      </div>
+                      <div class="topics-actions">
+                        <button type="button" class="toggle-topics-btn" @click="expanded = !expanded">
+                          <span x-text="expanded ? 'Згорнути' : 'Показати теми'"></span>
+                          <span class="chev" :class="{ up: expanded }">▾</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="topics-grid" x-show="expanded">
+                      <template x-for="(theme, tIndex) in themesForTeacher(item)" :key="theme?.id || tIndex">
+                        <div class="topic-card">
+                          <h5 class="topic-name" x-text="theme.theme"></h5>
+                          <p class="topic-description" x-text="theme.theme_description"></p>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Themes subsection -->
+            <div class="themes-list" x-show="filteredThemes.length > 0" style="margin-top:16px;">
+              <template x-for="(theme, index) in filteredThemes || []" :key="theme?.id || index">
+                <div class="topic-card">
+                  <h5 class="topic-name" x-text="theme.theme"></h5>
+                  <p class="theme-teacher" x-text="'Викладач: ' + theme.teacher_name"></p>
+                  <template x-if="theme.theme_description">
+                    <p class="topic-description" x-text="theme.theme_description"></p>
+                  </template>
+                  <button class="theme-select-btn" @click="selectThemeAndShowModal(theme.teacher_id)">Обрати викладача</button>
+                </div>
+              </template>
+            </div>
+          </div>
+         </div>
+ 
+         <!-- Default View (all teachers or all themes) -->
+         <div class="all-content" x-show="!searchQuery.trim()">
+           <!-- All Teachers View -->
+           <div class="results-section" x-show="searchTeachers && !searchThemes">
+             <h3>Всі викладачі</h3>
+             <div class="teachers-list">
+               <template x-for="(item, index) in filteredData || []" :key="item?.teacher?.pk || index">
+                 {% include "catalog/teacher_cards.html" %}
+               </template>
+             </div>
+           </div>
+           
+           <!-- All Themes View -->
+           <div class="results-section" x-show="searchThemes && !searchTeachers">
+             <h3>Всі теми робіт (<span x-text="allThemes.length"></span>)</h3>
+             <div class="themes-list">
+               <template x-for="(theme, index) in allThemes || []" :key="theme?.id || index">
+                <div class="topic-card">
+                  <h5 class="topic-name" x-text="theme.theme"></h5>
+                  <p class="theme-teacher" x-text="'Викладач: ' + theme.teacher_name"></p>
+                  <template x-if="theme.theme_description">
+                    <p class="topic-description" x-text="theme.theme_description"></p>
+                  </template>
+                  <button class="theme-select-btn" 
+                          @click="selectThemeAndShowModal(theme.teacher_id)">
+                    Обрати викладача
+                  </button>
+                </div>
+               </template>
+             </div>
+           </div>
+           
+           <!-- Combined default view (both teachers and their themes) -->
+           <div class="results-section" x-show="searchTeachers && searchThemes">
+             <h3>Всі викладачі та їх теми</h3>
+             <div class="catalog-container">
+               <template x-for="(item, index) in filteredData || []" :key="item?.teacher?.pk || index">
+                 <div class="teacher-with-themes" x-data="{ expanded: false }">
+                   {% include "catalog/teacher_cards.html" %}
+                   <div class="topics-container attach" x-show="themesForTeacher(item).length > 0" x-transition>
+                     <div class="topics-toggle-bar compact">
+                       <div class="topics-inline">
+                         <span class="topics-inline-label">Доступні теми:</span>
+                         <div class="topics-chips">
+                           <template x-for="(t, i) in themesForTeacher(item)" :key="t?.id || i">
+                             <span class="topic-chip" x-text="t.theme"></span>
+                           </template>
+                         </div>
+                       </div>
+                       <div class="topics-actions">
+                         <button type="button" class="toggle-topics-btn" @click="expanded = !expanded">
+                           <span x-text="expanded ? 'Згорнути' : 'Показати теми'"></span>
+                           <span class="chev" :class="{ up: expanded }">▾</span>
+                         </button>
+                       </div>
+                     </div>
+                     <div class="topics-grid" x-show="expanded">
+                       <template x-for="(theme, tIndex) in themesForTeacher(item)" :key="theme?.id || tIndex">
+                         <div class="topic-card">
+                           <h5 class="topic-name" x-text="theme.theme"></h5>
+                           <p class="topic-description" x-text="theme.theme_description"></p>
+                         </div>
+                       </template>
+                     </div>
+                   </div>
+                 </div>
+               </template>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
     </div>
 </div>
 
@@ -366,12 +642,44 @@ function autocompleteSearch() {
             this.suggestions = [];
             this.showSuggestions = false;
             
-            if (suggestion.type === 'teacher') {
-                this.filterByTeacher(suggestion.id);
-            } else if (suggestion.type === 'theme') {
-                this.filterByTheme(suggestion.id);
+            // Встановлюємо searchQuery в основному компоненті та запускаємо пошук
+            if (window.catalogMainComponent) {
+                window.catalogMainComponent.searchQuery = this.query;
+                window.catalogMainComponent.applyAutocompleteSearch();
             }
+            
             this.hideSuggestions();
+        },
+        
+        filterByTeacher(teacherId) {
+            if (window.catalogMainComponent && window.catalogMainComponent.filterByTeacherIds) {
+                window.catalogMainComponent.filterByTeacherIds([teacherId]);
+            }
+        },
+        
+        async filterByTheme(themeId) {
+            try {
+                // Робимо запит до бекенду для отримання викладачів з цією темою
+                const response = await fetch(`/catalog/autocomplete/theme/${themeId}/teachers/`);
+                if (response.ok) {
+                    const teacherIds = await response.json();
+                    
+                    // Використовуємо глобальний компонент
+                    if (window.catalogMainComponent && window.catalogMainComponent.filterByTeacherIds) {
+                        window.catalogMainComponent.filterByTeacherIds(teacherIds);
+                    }
+                } else {
+                    // Fallback: використовуємо пошук по назві теми
+                    const themeName = this.suggestions.find(s => s.id === themeId && s.type === 'theme')?.label.replace('📚 ', '') || '';
+                    this.query = themeName;
+                    this.handleSearch();
+                }
+            } catch (error) {
+                // Fallback: використовуємо пошук по назві теми
+                const themeName = this.suggestions.find(s => s.id === themeId && s.type === 'theme')?.label.replace('📚 ', '') || '';
+                this.query = themeName;
+                this.handleSearch();
+            }
         },
         
         filterByTeacher(teacherId) {
@@ -414,9 +722,14 @@ function autocompleteSearch() {
         },
         
         handleSearch() {
-            // Просто виконуємо стандартний пошук через подію
-            this.$dispatch('search-query', { query: this.query });
+            // Закриваємо автокомпліт
             this.hideSuggestions();
+            
+            // Встановлюємо searchQuery в основному компоненті та запускаємо пошук
+            if (window.catalogMainComponent) {
+                window.catalogMainComponent.searchQuery = this.query;
+                window.catalogMainComponent.applyAutocompleteSearch();
+            }
         },
         
         hideSuggestions() {

@@ -272,7 +272,7 @@
                                             <h6 class="file-comments-title">Коментарі:</h6>
                                             
                                             <!-- Форма додавання коментаря -->
-                                            <form method="post" action="/file/{{ file.pk }}/comment/" class="mb-3" enctype="multipart/form-data">
+                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mb-3" enctype="multipart/form-data">
                                                 {% csrf_token %}
                                                 <div class="form-group">
                                                     <textarea name="text" class="form-control comment-textarea" rows="2" placeholder="Додайте коментар..." style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px;"></textarea>
@@ -559,7 +559,7 @@ $(document).ready(function() {
     });
 
     // Обробник для форм відправки коментарів
-    $('form[action^="/file/"][action$="/comment/"]').on('submit', function(e) {
+    $('form[action^="/catalog/file/"][action$="/comment/"]').on('submit', function(e) {
         e.preventDefault();
         
         var form = $(this);
