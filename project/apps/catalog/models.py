@@ -51,11 +51,7 @@ class Stream(models.Model):
                                  related_name='streams',
                                  verbose_name="Спеціальність",
                                  null=True, blank=True)  # Тимчасово nullable для міграції
-    year_of_entry = models.IntegerField(verbose_name="Рік вступу",
-                                       help_text="Рік, коли потік почав навчання",
-                                       default=2020)  # Тимчасовий default
-    
-    # Залишаємо specialty_name для зворотної сумісності під час міграції
+    work_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Назва роботи")
     specialty_name = models.CharField(max_length=100, blank=True, null=True,
                                      help_text="Застаріле поле, буде видалено після міграції")
     
