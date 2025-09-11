@@ -1,46 +1,39 @@
 {% load static %}
 {% load catalog_extras %}
 <section class="teacher-info">
-    <div class="teacher-card" >
+    <div class="teacher-card">
       <div class="photo-container">
         <div class="teacher-photo">
-          <!-- If a teacher photo is available, display it; otherwise use a default image. -->
           <img :src="item.teacher.photo || '{% static 'images/default-avatar.jpg' %}'" alt="Teacher photo">
         </div>
       </div>
       <div class="teacher-details">
-        <!-- Display teacher credentials such as name, position, and department. -->
         <h2>
-          <a 
-            :href="`{% url 'profile_detail' 0 %}`.replace('0', item.teacher.id)"
-            x-text="`${item.teacher.teacher_id.full_name}`"
-            class="supervisor-name"
-          ></a>
+          <a :href="(() => { const tid = item?.teacher?.teacher_id?.id || item?.teacher?.id || item?.teacher?.pk; return `/users/profile/${tid}/`; })()" x-text="`${item.teacher.teacher_id.full_name}`"></a>
         </h2>
         <template x-if="item.teacher.academic_level">
-          <p x-text="`${item.teacher.academic_level}`" class="supervisor-position"></p>
+          <h3 x-text="`${item.teacher.academic_level}`"></h3>
         </template>
         <template x-if="item.teacher.academic_level === null">
-          <p>Викладач</p>
+          <h3>Викладач</h3>
         </template>  
-        <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`" class="supervisor-department"></h3>
+        <p class="department" x-text="`Кафедра ${item.teacher.teacher_id.department}`"></p>
 
         <!-- Conditional logic for displaying the number of free slots. -->
         <div class="slots-container" x-show="item.is_matched || !item.is_matched">
           <!-- No slots -->
           <div class="slots-info no-slots" x-show="item.free_slots.length < 1">
-            <p class="supervisor-places-label"><strong>Місць немає</strong></p>
+            <p><strong>Місць немає</strong></p>
           </div>
 
           <!-- Single slot -->
-          <div class="slots-info single-slot supervisor-places-label" x-show="item.is_matched && item.free_slots.length === 1">
-            <p><strong>Місць:</strong></p>
-            <p class="supervisor-places-badge" x-text="item.free_slots[0].get_available_slots"></p>
+          <div class="slots-info single-slot" x-show="item.is_matched && item.free_slots.length === 1">
+            <strong>Місць:</strong>
+            <span x-text="item.free_slots[0].get_available_slots"></span>
           </div>
 
           <!-- Multiple slots -->
-          <div class="slots-info multiple-slots supervisor-places-label" x-show="!item.is_matched && item.free_slots.length >= 1">
-            <p><strong>Загальна кількість місць:</strong></p>
+          <div class="slots-info multiple-slots" x-show="!item.is_matched && item.free_slots.length >= 1">
             <ul>
               <template x-for="slot in item.free_slots" :key="slot.id">
                 <li>
@@ -53,6 +46,7 @@
         </div>
 
       </div>
+      
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
         {% if user.is_authenticated and user.role == 'Студент'%}

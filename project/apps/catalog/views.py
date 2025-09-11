@@ -226,6 +226,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                             "url": teacher.get_absolute_url(),
                             "already_requested": already_requested,
                             "teacher_id": {
+                                "id": teacher.teacher_id.id,
                                 "first_name": teacher.teacher_id.first_name,
                                 "last_name": teacher.teacher_id.last_name,
                                 "department": teacher.teacher_id.department,
@@ -1137,6 +1138,104 @@ class AutocompleteView(LoginRequiredMixin, View):
             return JsonResponse({"error": "Помилка пошуку"}, status=500)
         
         return JsonResponse(results, safe=False)
+
+
+class ThemesAPIView(LoginRequiredMixin, View):
+    """
+    API view для отримання списку тем у JSON форматі
+    """
+    
+    def get(self, request):
+        try:
+            query = request.GET.get('q', '').strip()
+            user = request.user
+            
+            # Базовий набір тем (активні, не видалені, не зайняті)
+            themes_qs = TeacherTheme.objects.select_related('teacher_id__teacher_id').filter(
+                is_active=True,
+                is_deleted=False,
+                teacher_id__isnull=False,
+                teacher_id__teacher_id__isnull=False,
+            )
+            
+            # Показуємо лише доступні теми (не зайняті)
+            if hasattr(TeacherTheme, 'is_occupied'):
+                themes_qs = themes_qs.filter(is_occupied=False)
+            
+            # Обмеження доступу для студента: показувати лише теми викладачів,
+            # у яких є вільні слоти для потоку студента
+            if user.is_authenticated and getattr(user, 'role', None) == 'Студент':
+                teachers = OnlyTeacher.objects.select_related('teacher_id').all()
+                
+                # Фільтр кафедри для 3+ курсу або магістрів (аналогічно TeachersListView)
+                course = None
+                is_master = 'М' in user.academic_group.upper() if getattr(user, 'academic_group', '') else False
+                if getattr(user, 'academic_group', None):
+                    match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
+                    if match:
+                        course = int(match.group(1))
+                if getattr(user, 'department', None) and ((course and course >= 3) or is_master):
+                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                
+                # Витягуємо потік студента
+                slots = Slot.filter_by_available_slots()
+                is_matched = False
+                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", getattr(user, 'academic_group', '') )
+                if match:
+                    user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                    slots = slots.filter(stream_id__stream_code__iexact=user_stream)
+                    is_matched = True
+                
+                # Залишаємо лише викладачів з вільними слотами у відповідному потоці
+                teacher_ids_with_slots = slots.values_list('teacher_id', flat=True).distinct()
+                allowed_teacher_ids = teachers.filter(pk__in=teacher_ids_with_slots).values_list('pk', flat=True)
+                themes_qs = themes_qs.filter(teacher_id__in=allowed_teacher_ids)
+            
+            # Пошуковий запит
+            if query:
+                themes_qs = themes_qs.filter(
+                    Q(theme__icontains=query) |
+                    Q(theme_description__icontains=query) |
+                    Q(teacher_id__teacher_id__first_name__icontains=query) |
+                    Q(teacher_id__teacher_id__last_name__icontains=query)
+                )
+            
+            themes_qs = themes_qs.order_by('theme')
+            
+            themes_data = []
+            for theme in themes_qs:
+                themes_data.append({
+                    'id': theme.id,
+                    'theme': theme.theme,
+                    'theme_description': theme.theme_description or '',
+                    'teacher_name': theme.teacher_id.teacher_id.get_full_name(),
+                    'teacher_id': theme.teacher_id.teacher_id.id,
+                    'department': theme.teacher_id.teacher_id.department or '',
+                })
+            
+            return JsonResponse(themes_data, safe=False)
+            
+        except Exception as e:
+            logger.error(f"Error in ThemesAPIView: {str(e)}")
+            return JsonResponse({"error": "Помилка завантаження тем"}, status=500)
+
+
+class ThemesListView(LoginRequiredMixin, ListView):
+    """
+    Відображає список всіх доступних тем
+    """
+    model = TeacherTheme
+    template_name = "catalog/themes_list.html"
+    context_object_name = "themes"
+    paginate_by = 20
+    
+    def get_queryset(self):
+        return TeacherTheme.objects.select_related('teacher_id__teacher_id').filter(
+            is_active=True,
+            is_deleted=False,
+            teacher_id__isnull=False,
+            teacher_id__teacher_id__isnull=False
+        ).order_by('theme')
 
 
 class ThemeTeachersView(LoginRequiredMixin, View):

@@ -27,6 +27,8 @@
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    {% block extra_css %}{% endblock %}
   </head>
 
   <body>
@@ -41,6 +43,11 @@
       defer
       src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
+    <script>
+      document.addEventListener('alpine:init', () => {
+        console.log('Alpine.js initialized');
+      });
+    </script>
     <script src="{% static 'js/main.js' %}"></script>
   </body>
 </html>

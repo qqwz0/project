@@ -1,3 +1,4 @@
+from itertools import count
 from django.db import models
 from django.urls import reverse  
 from django.db.models import F
@@ -29,6 +30,10 @@ class OnlyTeacher(models.Model):
     department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
                                    verbose_name="Кафедра")
     
+    class Meta:
+        verbose_name = "Викладач"
+        verbose_name_plural = "Викладачі"
+    
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
     
@@ -46,13 +51,13 @@ class Stream(models.Model):
                                  related_name='streams',
                                  verbose_name="Спеціальність",
                                  null=True, blank=True)  # Тимчасово nullable для міграції
-    year_of_entry = models.IntegerField(verbose_name="Рік вступу",
-                                       help_text="Рік, коли потік почав навчання",
-                                       default=2020)  # Тимчасовий default
-    
-    # Залишаємо specialty_name для зворотної сумісності під час міграції
+    work_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Назва роботи")
     specialty_name = models.CharField(max_length=100, blank=True, null=True,
                                      help_text="Застаріле поле, буде видалено після міграції")
+    
+    class Meta:
+        verbose_name = "Потік"
+        verbose_name_plural = "Потоки"
     
     def bachelors_or_masters(self):
         if self.stream_code.endswith('м'):
@@ -108,6 +113,8 @@ class Slot(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['teacher_id', 'stream_id'], name='unique_teacher_stream')
         ]
+        verbose_name = "Місце"
+        verbose_name_plural = "Місця"
 
     def __str__(self):
         available = self.quota - self.occupied
@@ -224,6 +231,10 @@ class Request(models.Model):
         ('Дипломна', 'Дипломна'),
         ('Магістерська', 'Магістерська'),
     ], default='Курсова', help_text='Тип роботи, яку студент планує виконувати', blank=False)
+
+    class Meta:
+        verbose_name = "Запит"
+        verbose_name_plural = "Запити"
 
     @property
     def is_active(self):
@@ -370,7 +381,12 @@ class TeacherTheme(models.Model):
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')
-    
+
+    class Meta:
+        verbose_name = "Тема викладача"
+        verbose_name_plural = "Теми викладачів"
+        ordering = ['teacher_id__teacher_id__last_name', 'theme']
+
     def __str__(self):
         status = "🟢" if self.is_active else "🔴"
         return f"{status} {self.theme}"
@@ -441,9 +457,7 @@ class TeacherTheme(models.Model):
     def get_active_themes(cls):
         """Повертає лише активні теми"""
         return cls.objects.filter(is_active=True)
-    
-    class Meta:
-        ordering = ['teacher_id__teacher_id__last_name', 'theme']
+
 
 class StudentTheme(models.Model):
     student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
@@ -638,3 +652,75 @@ class FileComment(models.Model):
         if self.attachment:
             return self.attachment.name.split('/')[-1]
         return None
+
+class Announcement(models.Model):
+    AUTHOR_TYPES = [
+        ('faculty', 'Факультет'),
+        ('department', 'Кафедра'),
+    ]
+
+    ANNOUNCEMENT_TYPES = [
+        ('primary', 'Основне'),
+        ('warning', 'Попередження'),
+        ('success', 'Успішне'),
+    ]
+
+    title = models.CharField(max_length=255, verbose_name="Назва оголошення")
+    content = models.TextField(verbose_name="Текст оголошення")
+    author_type = models.CharField(max_length=20, choices=AUTHOR_TYPES, verbose_name="Тип автора")
+    author_faculty = models.ForeignKey(
+        'Faculty',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="announcements",
+        verbose_name="Факультет"
+    )
+    author_department = models.ForeignKey(
+        'Department',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="announcements",
+        verbose_name="Кафедра"
+    )
+    announcement_type = models.CharField(
+        max_length=20,
+        choices=ANNOUNCEMENT_TYPES,
+        default='primary',
+        verbose_name="Тип оголошення"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Активне")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Оголошення"
+        verbose_name_plural = "Оголошення"
+
+    def clean(self):
+        """Валідація відповідності author_type"""
+        # Якщо тип = faculty, але не вказаний факультет
+        if self.author_type == 'faculty' and not self.author_faculty:
+            raise ValidationError("Оберіть факультет для оголошення типу 'факультет'.")
+        
+        # Якщо тип = faculty, але хтось вибрав кафедру (не можна)
+        if self.author_type == 'faculty' and self.author_department:
+            raise ValidationError("Не можна обирати кафедру для оголошення типу 'факультет'.")
+
+        # Якщо тип = department, але не вказана кафедра
+        if self.author_type == 'department' and not self.author_department:
+            raise ValidationError("Оберіть кафедру для оголошення типу 'кафедра'.")
+
+        # Якщо тип = department і вже є 4 активних оголошення
+        if self.author_type == 'department' and self.author_department:
+            count = Announcement.objects.filter(
+                author_department=self.author_department,
+                is_active=True
+            ).exclude(pk=self.pk).count()
+            if count >= 4:
+                raise ValidationError("Максимум 4 активних оголошення для кафедри.")
+
+
+    def __str__(self):
+        return f"[{self.get_announcement_type_display()}] {self.title}"
+

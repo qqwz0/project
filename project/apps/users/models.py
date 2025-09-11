@@ -85,6 +85,32 @@ class CustomUser(AbstractUser):
         if self.patronymic:
             parts.append(self.patronymic)
         return ' '.join(parts)
+    
+    def get_teacher_profile(self):
+        """
+        Повертає профіль OnlyTeacher або None.
+        Використовує related_name, без прямого query.
+        """
+        from apps.catalog.models import OnlyTeacher  # Імпортуємо тут, щоб уникнути циклічних імпортів
+        try:
+            print(f"[DEBUG] Found OnlyTeacher: {self.catalog_teacher_profile} for user")
+            return self.catalog_teacher_profile  # це OneToOneField, поверне профіль або викличе DoesNotExist
+        except OnlyTeacher.DoesNotExist:
+            print(f"[DEBUG] No OnlyTeacher profile for user {self.email}")
+            return None
+
+    def get_faculty(self):
+        profile = self.get_teacher_profile()
+        if profile and profile.department:
+            return profile.department.faculty
+        return None
+
+    def get_department(self):
+        profile = self.get_teacher_profile()
+        if profile:
+            print(f"[DEBUG] Found DEPARTMENT: {profile.department} for user")
+            return profile.department
+        return None
 
 # @receiver(pre_save, sender=CustomUser)
 # def auto_delete_old_file_on_change(sender, instance, **kwargs):
