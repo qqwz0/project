@@ -748,12 +748,35 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Додаємо анімації для модалки редагування */
+.student-add-theme.wiggle {
+    animation: wiggle 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes wiggle {
+    0% { transform: rotate(-2deg); }
+    100% { transform: rotate(2deg); }
+}
+
+.student-dropdown-toggle {
+    transition: transform 0.2s ease;
+}
+
+.student-dropdown-toggle.active .student-dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.student-dropdown-icon {
+    transition: transform 0.2s ease;
+}
 </style>
 
 <script>
     // --- REJECT REQUEST MODAL (TEACHER) ---
     function showRejectModal(requestId) {
-        document.getElementById('rejectModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('rejectModal').style.display = 'flex';
         document.getElementById('rejectRequestId').value = requestId;
         document.getElementById('rejectReason').value = '';
         document.getElementById('rejectReason').focus();
@@ -761,6 +784,7 @@
 
     function closeRejectModal() {
         document.getElementById('rejectModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 
     function handleRejectSubmit(event) {
@@ -790,9 +814,10 @@
     const approveDetails = document.getElementById('approveRequestDetails');
 
     function openApproveModal(requestId) {
+        document.body.classList.add('modal-open');
         if (!approveDetails || !approveModal) return;
         approveDetails.innerHTML = '<div style="text-align:center;padding:2em;">Завантаження...</div>';
-        approveModal.style.display = 'block';
+        approveModal.style.display = 'flex';
         fetch(`/users/request-details-for-approve/${requestId}/`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
@@ -862,6 +887,7 @@
     function closeApproveModal() {
         if (approveModal) approveModal.style.display = 'none';
         if (approveDetails) approveDetails.innerHTML = '';
+        document.body.classList.remove('modal-open');
     }
 
     function submitApprove(requestId) {
@@ -897,7 +923,8 @@
 
     // --- STUDENT REFUSE MODAL ---
     function showStudentRefuseModal(requestId) {
-        document.getElementById('studentRefuseModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('studentRefuseModal').style.display = 'flex';
         document.getElementById('studentRefuseRequestId').value = requestId;
         document.getElementById('studentRefuseReason').value = '';
         document.getElementById('studentRefuseReason').focus();
@@ -905,6 +932,7 @@
 
     function closeStudentRefuseModal() {
         document.getElementById('studentRefuseModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 
     function handleStudentRefuseSubmit(event) {
@@ -934,6 +962,7 @@
 
     // --- STUDENT EDIT REQUEST MODAL ---
     function openStudentEditRequestModal(requestId) {
+        document.body.classList.add('modal-open');
         const modal = document.getElementById('studentEditRequestModal');
         document.getElementById('studentEditRequestId').value = requestId;
 
@@ -991,7 +1020,7 @@
                 });
             }
             teacherThemeDisplay.value = selectedThemeName;
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
         })
         .catch(err => console.error('Помилка при завантаженні даних.', err));
     }
@@ -1026,6 +1055,7 @@
         addThemeButton.style.cursor = isLimitReached ? 'not-allowed' : 'pointer';
         
         document.getElementById('theme-count-edit').textContent = themeCount;
+        checkStudentButtonReadiness(); // Check wiggle state
     }
 
     function updatePlaceholderVisibility() {
@@ -1046,6 +1076,7 @@
     }
 
     function closeStudentEditRequestModal() {
+        document.body.classList.remove('modal-open');
         const modal = document.getElementById('studentEditRequestModal');
         if (modal) modal.style.display = 'none';
     }
@@ -1090,6 +1121,31 @@
         });
     }
 
+    // --- Wiggle Animation Helpers ---
+    function startWiggle() {
+        const studentAddBtn = document.querySelector('.student-add-theme');
+        if (studentAddBtn && !studentAddBtn.classList.contains('wiggle') && !studentAddBtn.disabled) {
+            studentAddBtn.classList.add('wiggle');
+        }
+    }
+    function stopWiggle() {
+        const studentAddBtn = document.querySelector('.student-add-theme');
+        if (studentAddBtn) studentAddBtn.classList.remove('wiggle');
+    }
+    function checkStudentButtonReadiness() {
+        const newThemeInput = document.getElementById('newThemeInput');
+        if (!newThemeInput) return;
+        const text = newThemeInput.value.trim();
+        const themeCount = document.querySelectorAll('#all-themes-container > li').length;
+        const isLimitReached = themeCount >= 3;
+        
+        if (text.length >= 3 && !isLimitReached) {
+            startWiggle();
+        } else {
+            stopWiggle();
+        }
+    }
+
     // --- GLOBAL EVENT LISTENERS ---
     document.addEventListener('DOMContentLoaded', function() {
         // Attach form submit handler
@@ -1101,25 +1157,45 @@
         const dropdownMenu = document.getElementById('editTeacherThemeMenu');
         const displayInput = document.getElementById('editTeacherThemeDisplay');
         const hiddenInput = document.getElementById('editTeacherTheme');
+        const toggleBtn = dropdown ? dropdown.querySelector('.student-dropdown-toggle') : null;
 
-        if (dropdown && dropdownMenu && displayInput && hiddenInput) {
+        if (dropdown && dropdownMenu && displayInput && hiddenInput && toggleBtn) {
+            // Open/close on click and toggle active class
             dropdown.addEventListener('click', function(event) {
                 if (!event.target.classList.contains('student-dropdown-item')) {
-                    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+                    const isOpen = dropdownMenu.style.display === 'block';
+                    dropdownMenu.style.display = isOpen ? 'none' : 'block';
+                    toggleBtn.classList.toggle('active', !isOpen);
                 }
             });
 
+            // Select item and close
             dropdownMenu.addEventListener('click', function(event) {
                 if (event.target.classList.contains('student-dropdown-item')) {
                     displayInput.value = event.target.textContent;
                     hiddenInput.value = event.target.dataset.value;
                     dropdownMenu.style.display = 'none';
+                    toggleBtn.classList.remove('active');
                 }
             });
 
+            // Close when clicking outside
             document.addEventListener('click', function(event) {
                 if (!dropdown.contains(event.target)) {
                     dropdownMenu.style.display = 'none';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+        }
+
+        // Wiggle animation for add theme button
+        const newThemeInput = document.getElementById('newThemeInput');
+        if (newThemeInput) {
+            newThemeInput.addEventListener('input', checkStudentButtonReadiness);
+            newThemeInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNewThemeField();
                 }
             });
         }

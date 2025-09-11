@@ -513,16 +513,19 @@ $(document).ready(function() {
         `);
         
         // Додаємо модальне вікно до body
-        $('body').append(modal);
+        $('body').append(modal).addClass('modal-open');
+        modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
         modal.find('.delete-modal-close').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
         modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
@@ -548,12 +551,14 @@ $(document).ready(function() {
                 }
             });
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
         modal.click(function(e) {
             if ($(e.target).is(modal)) {
                 modal.remove();
+                $('body').removeClass('modal-open');
             }
         });
     });
@@ -659,16 +664,19 @@ $(document).ready(function() {
         `);
         
         // Додаємо модальне вікно до body
-        $('body').append(modal);
+        $('body').append(modal).addClass('modal-open');
+        modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
         modal.find('.delete-modal-close').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
         modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
@@ -691,12 +699,14 @@ $(document).ready(function() {
                 }
             });
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
         modal.click(function(e) {
             if ($(e.target).is(modal)) {
                 modal.remove();
+                $('body').removeClass('modal-open');
             }
         });
     });
@@ -750,6 +760,7 @@ $(document).ready(function() {
 
 // Функції для роботи з модальним вікном завершення роботи
 function showCompleteModal(requestId) {
+    document.body.classList.add('modal-open');
     const modal = document.getElementById('completeModal');
     const gradeInput = document.getElementById('grade');
     const filesSection = document.getElementById('filesSelectionSection');
@@ -815,6 +826,7 @@ function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
 function closeCompleteModal() {
     const modal = document.getElementById('completeModal');
     modal.style.display = "none";
+    document.body.classList.remove('modal-open');
     
     // Clear form and errors
     document.getElementById('completeRequestId').value = '';
@@ -977,12 +989,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Функції для редагування теми
 function showEditThemeModal(requestId, currentTheme) {
+    document.body.classList.add('modal-open');
     document.getElementById('editThemeRequestId').value = requestId;
     document.getElementById('newTheme').value = currentTheme;
-    document.getElementById('editThemeModal').style.display = 'block';
+    document.getElementById('editThemeModal').style.display = 'flex';
 }
 
 function closeEditThemeModal() {
+    document.body.classList.remove('modal-open');
     document.getElementById('editThemeModal').style.display = 'none';
     document.getElementById('editThemeForm').reset();
 }
@@ -1048,12 +1062,14 @@ document.addEventListener('keydown', function(event) {
 });
 
 function showCancelModal(requestId) {
+    document.body.classList.add('modal-open');
     const modal = document.getElementById('cancelModal');
     document.getElementById('cancelRequestId').value = requestId;
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
 }
 
 function closeCancelModal() {
+    document.body.classList.remove('modal-open');
     const modal = document.getElementById('cancelModal');
     modal.style.display = 'none';
     document.getElementById('cancelForm').reset();

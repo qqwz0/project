@@ -1892,6 +1892,12 @@ textarea.form-control::placeholder {
    MODAL STYLES - CONSOLIDATED SECTION
    ======================================== */
 
+/* === Body lock when modal is open === */
+html.modal-open,
+body.modal-open {
+  overflow: hidden;       
+}
+
 /* === Base Modal Styles === */
 .modal,
 #completeModal,
@@ -1907,19 +1913,14 @@ textarea.form-control::placeholder {
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow-y: hidden;
   background-color: rgba(0, 0, 0, 0.4);
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-}
-
-/* Specific modal display properties */
-#completeModal {
-  overflow: hidden; /* To match original behavior */
+  padding: 12vh 16px 4vh;
 }
 
 .delete-modal {
-  align-items: flex-start;
   z-index: 9999;
 }
 
@@ -1942,7 +1943,7 @@ textarea.form-control::placeholder {
 .student-modal-content,
 .rejection-modal-content {
   background-color: #fefefe;
-  margin: 8% auto;
+  margin: 0 auto;
   border: 1px solid #e0e7ef;
   border-radius: 12px;
   width: 90%;
@@ -2615,6 +2616,10 @@ textarea.form-control::placeholder {
   margin-bottom: 8px;
 }
 
+.student-theme-list .theme-item:hover {
+  transform: none;
+}
+
 .student-theme-list .theme-item span {
   font-weight: 500;
   color: #374151;
@@ -2797,7 +2802,6 @@ textarea.form-control::placeholder {
   #editThemeModal .edit-theme-modal-content {
     width: 98%;
     padding: 20px 16px;
-    margin: 5% auto;
   }
 
   #editThemeModal h3 {
@@ -2830,7 +2834,6 @@ textarea.form-control::placeholder {
   .student-modal-content {
     width: 95%;
     padding: 1rem;
-    margin: 5% auto;
   }
 
   .student-modal-content h3 {

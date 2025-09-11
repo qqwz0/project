@@ -306,6 +306,7 @@
 
         function openModal() {
             document.getElementById("cropModal").style.display = "flex";
+            document.body.classList.add('modal-open');
         }
 
         function closeModal() {
@@ -314,6 +315,7 @@
                 cropper.destroy();
                 cropper = null;
             }
+            document.body.classList.remove('modal-open');
         }
 
         function closePopup() {
