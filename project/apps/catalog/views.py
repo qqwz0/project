@@ -39,6 +39,7 @@ from .models import (
     Stream,
     StudentTheme,
     TeacherTheme,
+    Announcement
 )
 from .templatetags.catalog_extras import get_profile_picture_url
 from .utils import FileAccessMixin, HtmxModalFormAccessMixin
@@ -1085,7 +1086,35 @@ def delete_theme(request, theme_id):
         )
 
 def home(request):
-    return render(request, "home.html")
+    faculty_announcements = []
+    department_announcements = []
+
+    if request.user.is_authenticated:
+        faculty = request.user.get_faculty()
+        department = request.user.get_department()
+
+        # Факультетські оголошення
+        if faculty:
+            faculty_announcements = Announcement.objects.filter(
+                author_type="faculty",
+                author_faculty=faculty,
+                is_active=True
+            )
+
+        # Кафедральні оголошення
+        if department:
+            department_announcements = Announcement.objects.filter(
+                author_type="department",
+                author_department=department,
+                is_active=True
+            )
+
+    context = {
+        "faculty_announcements": faculty_announcements,
+        "department_announcements": department_announcements,
+    }
+    return render(request, "home.html", context)
+
 
 
 class AutocompleteView(LoginRequiredMixin, View):

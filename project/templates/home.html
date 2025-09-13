@@ -18,7 +18,6 @@
 
     <!-- Header -->
     {% include 'header.html' %}
-    <!-- Hero Section -->
 
     <!-- Main Content -->
     <main class="main-content">
@@ -32,64 +31,206 @@
 
       <div class="content-grid">
         <!-- Announcements Section -->
+        {% if user.is_authenticated %}
         <div>
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">
-                <svg
-                  class="icon-lg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                Оголошення
-              </h3>
-            </div>
-            <div class="card-content">
-              <div class="announcement primary">
-                <h3 class="announcement-title">
-                  Здача курсових робіт - Зимова сесія 2024
+          <!-- Faculty Announcements Section -->
+          {% if user.get_faculty %}
+          <div class="section-announcements">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <svg
+                    class="icon-lg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  Факультетські оголошення
                 </h3>
-                <p class="announcement-content">
-                  Термін здачі курсових робіт:
-                  <strong>15 січня 2025 року</strong>
-                </p>
-                <div class="announcement-details">
-                  <h4>Формат здачі:</h4>
-                  <ul>
-                    <li>• PDF файл з повним текстом роботи</li>
-                    <li>• Презентація для захисту (PowerPoint або PDF)</li>
-                    <li>• Презентація в аудиторії 1 о 13:00</li>
-                  </ul>
+              </div>
+              <div class="card-content">
+                {% for ann in faculty_announcements %}
+                <div class="announcement {{ ann.announcement_type }}">
+                  <h3 class="announcement-title">
+                    {{ ann.title }}
+                    <time datetime="{{ ann.created_at }}"
+                      >{{ ann.created_at }}</time
+                    >
+                  </h3>
+                  <p class="announcement-content">{{ ann.content }}</p>
                 </div>
+                {% empty %}
+                <p>Немає актуальних оголошень факультету.</p>
+                {% endfor %}
               </div>
+            </div>
+          </div>
+          {% endif %}
 
-              <div class="announcement warning">
-                <h3 class="announcement-title">Друкована версія</h3>
-                <p class="announcement-content">
-                  До уваги студентів! При здачі у дистанційному форматі не
-                  забудьте принести друковану версію курсової роботи до 13
-                  січня.
+          <!-- Department Announcements Section -->
+          {% with dept=user.get_department %} {% if dept %}
+          <div class="section-announcements">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                  Оголошення кафедри
+                  <span class="department-name"
+                    >{{ dept.department_name }}</span
+                  >
+                </h3>
+              </div>
+              <div class="card-content">
+                {% for ann in department_announcements %}
+                <div class="announcement {{ ann.announcement_type }}">
+                  <h3 class="announcement-title">
+                    {{ ann.title }}
+                    <time datetime="{{ ann.created_at }}"
+                      >{{ ann.created_at }}</time
+                    >
+                  </h3>
+                  <p class="announcement-content">{{ ann.content }}</p>
+                </div>
+                {% empty %}
+                <p>Немає актуальних оголошень кафедри.</p>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %} {% endwith %}
+        </div>
+        {% else %}
+        <div class="non-auth-content">
+          <!-- Hero Section for Non-Authenticated Users -->
+          <div class="auth-prompt-card">
+            <div class="auth-prompt-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <h2 class="auth-prompt-title">Знайди свого наукового керівника</h2>
+            <p class="auth-prompt-description">
+              Переглядай актуальні оголошення факультету та кафедри, знаходь
+              керівників для курсових робіт
+            </p>
+            <a href="/login/" class="auth-prompt-button">Увійти в систему</a>
+          </div>
+
+          <!-- Platform Features -->
+          <div class="features-section">
+            <h3 class="features-title">Можливості платформи</h3>
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </div>
+                <h4 class="feature-title">Перегляд викладачів</h4>
+                <p class="feature-description">
+                  Знаходь наукових керівників за спеціальністю та темою
+                  дослідження
                 </p>
               </div>
 
-              <div class="announcement success">
-                <h3 class="announcement-title">Нові вимоги до оформлення</h3>
-                <p class="announcement-content">
-                  З 1 січня 2025 року діють оновлені вимоги до оформлення
-                  курсових робіт. Детальну інформацію дивіться в розділі "Файли
-                  та документи".
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                    ></path>
+                  </svg>
+                </div>
+                <h4 class="feature-title">Пряме спілкування</h4>
+                <p class="feature-description">
+                  Обговорюй тему роботи та отримуй консультації від керівника
+                </p>
+              </div>
+
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    ></path>
+                    <polyline points="14,2 14,8 20,8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                </div>
+                <h4 class="feature-title">Документообіг</h4>
+                <p class="feature-description">
+                  Завантажуй файли, отримуй зворотний зв'язок та відстежуй
+                  прогрес
+                </p>
+              </div>
+
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </div>
+                <h4 class="feature-title">Головні події</h4>
+                <p class="feature-description">
+                  Слідкуй за дедлайнами, захистами та важливими датами
                 </p>
               </div>
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- Sidebar -->
         <div>
@@ -104,9 +245,7 @@
                   stroke="currentColor"
                   stroke-width="2"
                 >
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  ></path>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="14,2 14,8 20,8"></polyline>
                   <line x1="16" y1="13" x2="8" y2="13"></line>
                   <line x1="16" y1="17" x2="8" y2="17"></line>
@@ -163,61 +302,64 @@
               </div>
             </a>
           </div>
-        </div>
-        <!-- FAQ Section -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <svg
-                class="icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              FAQ
-            </h3>
-          </div>
-          <div class="card-content">
-            <div class="faq-item">
-              <h4 class="faq-question">Що таке курсова робота?</h4>
-              <p class="faq-answer">
-                Курсова робота — це самостійне наукове дослідження студента на
-                конкретну тему в межах навчальної дисципліни. Це письмова
-                робота, яка включає аналіз літератури, власні висновки та
-                пропозиції.
-              </p>
-            </div>
 
-            <div class="faq-item">
-              <h4 class="faq-question">Як проходить захист курсової роботи?</h4>
-              <p class="faq-answer">
-                Студент представляє свою роботу комісії у форматі презентації
-                тривалістю 5–10 хвилин, розповідає про мету, методи дослідження
-                та використані технології. Після презентації викладачі ставлять
-                питання за темою роботи. На основі представленого матеріалу
-                виставляється оцінка за 100-бальною шкалою, яка впливає на
-                рейтинг студента.
-              </p>
+          <!-- FAQ Section -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                FAQ
+              </h3>
             </div>
+            <div class="card-content">
+              <div class="faq-item">
+                <h4 class="faq-question">Що таке курсова робота?</h4>
+                <p class="faq-answer">
+                  Курсова робота — це самостійне наукове дослідження студента на
+                  конкретну тему в межах навчальної дисципліни. Це письмова
+                  робота, яка включає аналіз літератури, власні висновки та
+                  пропозиції.
+                </p>
+              </div>
 
-            <div class="faq-item">
-              <h4 class="faq-question">Що робити при технічних проблемах?</h4>
-              <p class="faq-answer">
-                У разі технічних проблем звертайтеся на електронну скриньку
-                <a
-                  href="https://mail.google.com/mail/?view=cm&fs=1&to=advisor.finder@lnu.edu.ua"
-                  >advisor.finder@lnu.edu.ua</a
-                >
-                або залишайте відгук у
-                <a href="https://forms.gle/46FpoK7FnDLGTE748"
-                  >формі за посиланням.</a
-                >
-              </p>
+              <div class="faq-item">
+                <h4 class="faq-question">
+                  Як проходить захист курсової роботи?
+                </h4>
+                <p class="faq-answer">
+                  Студент представляє свою роботу комісії у форматі презентації
+                  тривалістю 5–10 хвилин, розповідає про мету, методи
+                  дослідження та використані технології. Після презентації
+                  викладачі ставлять питання за темою роботи. На основі
+                  представленого матеріалу виставляється оцінка за 100-бальною
+                  шкалою, яка впливає на рейтинг студента.
+                </p>
+              </div>
+
+              <div class="faq-item">
+                <h4 class="faq-question">Що робити при технічних проблемах?</h4>
+                <p class="faq-answer">
+                  У разі технічних проблем звертайтеся на електронну скриньку
+                  <a
+                    href="https://mail.google.com/mail/?view=cm&fs=1&to=advisor.finder@lnu.edu.ua"
+                    >advisor.finder@lnu.edu.ua</a
+                  >
+                  або залишайте відгук у
+                  <a href="https://forms.gle/46FpoK7FnDLGTE748"
+                    >формі за посиланням.</a
+                  >
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -225,7 +367,6 @@
     </main>
 
     <script>
-      // Add smooth scrolling and other interactions
       document.addEventListener("DOMContentLoaded", function () {
         // Add hover effects to file items
         const fileItems = document.querySelectorAll(".file-item");
@@ -255,6 +396,5 @@
         });
       });
     </script>
-    ]
   </body>
 </html>

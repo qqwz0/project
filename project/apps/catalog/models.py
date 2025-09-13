@@ -482,6 +482,8 @@ class OnlyStudent(models.Model):
     group = models.ForeignKey('Group', on_delete=models.CASCADE,
                              related_name='students',
                              verbose_name="Група")
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Кафедра")
     additional_email = models.EmailField(blank=True, null=True, verbose_name="Додатковий email")
     phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Телефон")
     
