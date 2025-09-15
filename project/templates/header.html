@@ -13,6 +13,7 @@
     ></script>
     <link rel="stylesheet" href="{% static 'css/notification.css' %}" />
     <link rel="stylesheet" href="{% static 'css/header.css' %}" />
+    <link rel="stylesheet" href="https://unpkg.com/intro.js/minified/introjs.min.css" />
   </head>
   <body hx-ext="ws" ws-connect="/ws/notifications/">
     <header class="header">
@@ -23,12 +24,12 @@
 
         {% if user.is_authenticated %}
         <nav class="nav-icons">
-          <a href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
+          <a id="nav-home" href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
             <i class="fas fa-home"></i>
             <span class="nav-tooltip">Головна</span>
           </a>
           {% if user_profile.role == 'Студент' %}
-            <a href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
+            <a id="nav-search" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
               <i class="fas fa-search"></i>
               <span class="nav-tooltip">Пошук</span>
             </a>
@@ -91,7 +92,9 @@
             </div>
           </div>
 
-          <div class="profile-wrapper">
+          <!-- per-page help moved out of header -->
+
+          <div class="profile-wrapper" id="nav-profile">
             <a href="{% url 'profile' %}" class="profile-link">
               <img
                 src="{{ profile_picture_url }}"
@@ -133,5 +136,27 @@
     </div>
 
     <script src="{% static 'js/notification.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    <script>window.APP_ROLE = "{{ user_profile.role|default_if_none:'' }}";</script>
+    <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
+    <script src="{% static 'js/intro_tour.js' %}"></script>
+    <script>
+      (function(){
+        var help = document.getElementById('start-tour');
+        if(!help) return;
+        function loadTour(cb){
+          var s=document.createElement('script');
+          s.src = '{% static 'js/intro_tour.js' %}';
+          s.onload = function(){ if(cb) cb(); };
+          document.body.appendChild(s);
+        }
+        help.addEventListener('click', function(e){
+          if (typeof window.startTour !== 'function') {
+            e.preventDefault();
+            loadTour(function(){ if (typeof window.startTour === 'function') window.startTour(); });
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

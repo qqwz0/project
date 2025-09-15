@@ -233,4 +233,79 @@ html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-
     html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
         height: 500px; /* Трохи менша висота на мобільних, але все одно комфортна */
     }
+}
+
+/* Мобільний адаптив для екранів до 480px */
+@media (max-width: 480px) {
+    html body main.profile-main div.profile-content div.edit-profile-container {
+        padding: 8px; /* Зменшуємо зовнішні відступи */
+        margin: 0; /* Прибираємо зовнішні відступи */
+    }
+    
+    html body main.profile-main div.profile-content div.form-content {
+        padding: 12px; /* Зменшуємо внутрішні відступи */
+        margin: 0; /* Прибираємо зовнішні відступи */
+        border-radius: 8px; /* Менші закруглення */
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info,
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.contacts {
+        padding: 12px; /* Зменшуємо внутрішні відступи */
+        border-radius: 6px; /* Менші закруглення */
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+        height: auto; /* Автоматична висота замість фіксованої */
+        min-height: 300px; /* Мінімальна висота */
+        max-height: 60vh; /* Максимальна висота - 60% від висоти екрану */
+        border-radius: 6px;
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info div.form-row {
+        grid-template-columns: 1fr; /* Одна колонка на мобільних */
+        gap: 16px;
+    }
+    
+    /* Покращення карток тем на мобільних */
+    html body main.profile-main div.profile-content .theme-card {
+        padding: 12px; /* Менший padding для карток тем */
+        margin-bottom: 12px;
+    }
+    
+    /* Покращення кнопок дій в темах */
+    html body main.profile-main div.profile-content .theme-actions {
+        flex-direction: column; /* Кнопки в колонку на мобільних */
+        gap: 8px;
+    }
+    
+    html body main.profile-main div.profile-content .action-btn {
+        width: 100%; /* Повна ширина кнопок */
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+}
+
+/* Мобільний адаптив для дуже маленьких екранів до 360px */
+@media (max-width: 360px) {
+    html body main.profile-main div.profile-content div.edit-profile-container {
+        padding: 4px; /* Ще менші відступи */
+    }
+    
+    html body main.profile-main div.profile-content div.form-content {
+        padding: 8px; /* Ще менші внутрішні відступи */
+        border-radius: 6px;
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.personal-info,
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.contacts {
+        padding: 8px;
+        border-radius: 4px;
+    }
+    
+    html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+        height: auto; /* Автоматична висота */
+        min-height: 250px; /* Мінімальна висота для дуже маленьких екранів */
+        max-height: 50vh; /* Максимальна висота - 50% від висоти екрану */
+        border-radius: 4px;
+    }
 } 

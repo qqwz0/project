@@ -178,9 +178,15 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Cloudinary settings for media files.
-# The library will automatically use the CLOUDINARY_URL environment variable from Render.
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Media storage selection: use Cloudinary in production if credentials are present,
+# otherwise fall back to local FileSystemStorage for localhost/dev.
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
+USE_LOCAL_MEDIA = os.getenv('USE_LOCAL_MEDIA', 'true' if not CLOUDINARY_URL else 'false').lower() == 'true'
+
+if USE_LOCAL_MEDIA:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+else:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
 EMAIL_HOST = 'smtp.office365.com'

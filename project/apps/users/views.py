@@ -7,7 +7,7 @@ from io import BytesIO
 from urllib.parse import parse_qs, urlencode
 
 import requests
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from django.core.files.storage import default_storage
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
@@ -768,25 +768,15 @@ def crop_profile_picture(request):
                 cropped_image.save(img_io, format="JPEG", quality=90)
                 img_content = ContentFile(img_io.getvalue())
 
-                # --- FORCE CLOUDINARY UPLOAD (DIAGNOSTIC STEP) ---
+                # Save to configured storage (Cloudinary in prod or local in dev)
                 user = request.user
-                storage = MediaCloudinaryStorage()
                 file_name = f"profile_pics/profile_{user.id}.jpg"
-
-                # Delete the old file from Cloudinary if it exists, to prevent duplicates
-                if storage.exists(file_name):
-                    storage.delete(file_name)
-
-                # Save the new file directly to Cloudinary
-                saved_file_name = storage.save(file_name, img_content)
-
-                # Manually update the user's model field with the path returned by Cloudinary
+                if default_storage.exists(file_name):
+                    default_storage.delete(file_name)
+                saved_file_name = default_storage.save(file_name, img_content)
                 user.profile_picture.name = saved_file_name
                 user.save(update_fields=["profile_picture"])
-
-                # Get the final URL directly from the storage
-                new_url = storage.url(saved_file_name)
-                # --- END OF DIAGNOSTIC STEP ---
+                new_url = default_storage.url(saved_file_name)
 
                 logger.debug(
                     f"Forced Cloudinary upload successful for user {user.id}. URL: {new_url}"

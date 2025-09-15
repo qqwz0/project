@@ -54,17 +54,16 @@ body {
   z-index: 10;
 }
 
+[x-cloak] { display: none !important; }
+
 .filter-section {
-  width: 320px;
   background: var(--white);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-md);
   padding: 24px;
   height: fit-content;
-  position: sticky;
-  top: 24px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
@@ -79,9 +78,16 @@ body {
   border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
-.filter-section:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+.filter-section:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+/* Mobile filter close */
+.mobile-filter-close { display:none; border:none; background:transparent; color:#6b7280; border-radius:50%; padding:6px; font-weight:600; width:32px; height:32px; position:absolute; right:12px; top:8px; }
+.mobile-filter-close:after{ content:'\00d7'; font-size:20px; line-height:20px; display:block; }
+@media (max-width:780px){ .mobile-filter-close{ display:inline-block; } }
+
+/* On mobile, hide the filters icon inside the filter header to avoid overlap with the close button */
+@media (max-width:780px){
+  .filter-header img{ display:none; }
 }
 
 .filter-header {
@@ -147,11 +153,7 @@ body {
   border-radius: 4px;
 }
 
-.form-checkbox label:hover {
-  background: var(--blue-50);
-  color: var(--gray-900);
-  transform: translateY(-1px);
-}
+.form-checkbox label:hover { background: var(--blue-50); color: var(--gray-900); transform: none; }
 
 .range-container {
   display: flex;
@@ -189,10 +191,7 @@ body {
   background: transparent;
 }
 
-.checkbox-wrapper:hover {
-  background: var(--blue-50);
-  transform: translateY(-1px);
-}
+.checkbox-wrapper:hover { background: var(--blue-50); transform: none; }
 
 .checkbox-text {
   font-size: 14px;
@@ -226,11 +225,7 @@ body {
   gap: 8px;
 }
 
-.filter-button:hover {
-  background: var(--primary-blue-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
-}
+.filter-button:hover { background: var(--primary-blue-hover); transform: none; box-shadow: none; }
 
 .filter-button:active {
   transform: translateY(0);
@@ -252,7 +247,7 @@ body {
   font-size: 36px;
   font-weight: 700;
   color: var(--gray-700);
-  margin: 0 0 32px 0;
+  margin: 0 0 16px 0;
   line-height: 1.2;
 }
 
@@ -264,6 +259,7 @@ body {
   overflow: hidden;
   background: var(--white);
   border: 1px solid var(--gray-200);
+  margin-top: 8px;
 }
 
 .form-searching {
@@ -293,11 +289,7 @@ body {
   transform: none;
 }
 
-.search-button:hover {
-  background: var(--primary-blue-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
-}
+.search-button:hover { background: var(--primary-blue-hover); transform:none; box-shadow:none; }
 
 .search-button img {
   width: 18px;
@@ -337,7 +329,7 @@ body {
   background: var(--white);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-md);
-  margin: 0 auto;
+  margin: 0 auto 0 auto;
 }
 
 .search-icon-wrapper {
@@ -445,21 +437,27 @@ body {
     gap: 16px;
   }
 
+  /* Convert to inline expandable filters below a compact top bar */
   .filter-section {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: static;
     width: 100%;
-    height: 100vh;
-    z-index: 50;
-    overflow-y: auto;
-    border-radius: 0;
+    height: auto;
+    z-index: 1;
+    overflow: visible;
+    border-radius: var(--border-radius);
+    padding-bottom: 16px;
+    background: var(--white);
+    margin-top: 8px;
   }
 
+  /* Hide inner filter header on mobile to avoid duplicate titles under the bar */
+  .filter-header { display: none; }
+  /* Remove the first divider inside the mobile filter content */
+  .filter-section .filter-content > .devider:first-child { display: none; }
+  .filter-section .filter-content { padding-top: 8px; }
+
   .search-section {
-    padding: 32px 0 24px 0;
+    padding: 24px 0 24px 0;
   }
 
   .search-section h1 {
@@ -469,6 +467,19 @@ body {
   .search-container {
     max-width: 100%;
   }
+  /* Replace old toggle button with compact top bar */
+  .mobile-filter-toggle{ display:none; }
+  .mobile-filter-bar{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:12px; color:#1f2937; font-weight:600; margin-top:14px; }
+  .mobile-filter-bar .bar-left{ display:flex; align-items:center; gap:10px; }
+  .mobile-filter-bar .bar-icon{ width:18px; height:18px; opacity:.7; }
+  .mobile-filter-bar .bar-title{ font-weight:700; }
+  .mobile-filter-bar .bar-right{ display:flex; align-items:center; gap:8px; }
+  .mobile-filter-bar .bar-chev{ transition:transform .2s ease; display:inline-block; }
+  .mobile-filter-bar .bar-chev.open{ transform: rotate(180deg); }
+  .mobile-filter-bar .bar-chev-btn{ border:none; background:#f8fafc; border:1px solid #e5e7eb; width:34px; height:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,0.04); }
+  .mobile-filter-bar .bar-chev-btn .bar-chev-icon{ transition:transform .2s ease, color .2s ease; color:#374151; display:inline-block; line-height:1; }
+  .mobile-filter-bar .bar-chev-btn.open{ background:#2563eb; border-color:#2563eb; }
+  .mobile-filter-bar .bar-chev-btn.open .bar-chev-icon{ color:#fff; transform: rotate(180deg); }
 
   .form-searching {
     padding: 16px 20px;
@@ -498,13 +509,10 @@ body {
     font-size: 24px;
   }
 
-  .modal {
-    width: 95%;
-  }
+  .modal { width: 95%; max-height: 90vh; }
+  .modal-box { padding: 24px 20px; max-height: 85vh; overflow-y: auto; }
 
-  .modal-box {
-    padding: 24px 20px;
-  }
+  
 
   .no-results-illustration {
     width: 120px;
@@ -517,6 +525,7 @@ body {
 }
 
 /* Search Mode Switchers */
+/* Search mode switchers - card look */
 .search-mode-switchers {
   margin-bottom: 1.5rem;
   text-align: center;
@@ -578,10 +587,7 @@ body {
   white-space: nowrap;
 }
 
-.segment-btn:hover {
-  color: var(--gray-800);
-  background: rgba(255, 255, 255, 0.5);
-}
+.segment-btn:hover { color: var(--gray-800); background: rgba(255,255,255,0.5); transform:none; }
 
 .segment-btn.active {
   background: var(--white);
@@ -655,12 +661,74 @@ body {
   gap: 16px;
 }
 
+/* Mobile-only horizontal chips scroll for topics inline */
+@media (max-width: 780px){
+  .topics-toggle-bar{ overflow: visible; }
+  .topics-inline{ flex: 1 1 0; min-width: 0; overflow: hidden; }
+  .topics-chips{
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  .topics-chips .topic-chip{ flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+  .topics-chips::-webkit-scrollbar{ height:6px; }
+  .topics-chips::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:3px; }
+}
+
 .themes-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   padding: 0;
 }
+
+/* Refined theme card look (only where explicitly enabled) */
+.themes-list.enhanced .topic-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px 20px 64px 20px;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.themes-list.enhanced .topic-card .topic-name { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+/* Removed chip-icon styles since icons are no longer used */
+.themes-list.enhanced .topic-card .theme-teacher { color:#64748b; margin-bottom:10px; font-size:14px; }
+.themes-list.enhanced .topic-card .theme-select-btn { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); width:90%; }
+
+/* Disabled request button */
+.theme-select-btn[disabled], .teacher-card .modal-button[disabled] {
+  background: #cbd5e1 !important; color:#fff !important; cursor:not-allowed; box-shadow:none;
+}
+
+/* Mobile: stack themes vertically (no horizontal scroll) */
+@media (max-width: 780px){
+  .results-section .themes-list,
+  .unified-results .themes-list,
+  .all-content .themes-list{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .themes-list .topic-card,
+  .themes-list .theme-card{
+    min-width: 0;
+  }
+}
+
+/* Invisible horizontal scrollbar (desktop), still scrollable */
+.topics-container.attach .topics-chips{ overflow-x:auto; overflow-y:hidden; -ms-overflow-style:none; scrollbar-width:none; }
+.topics-container.attach .topics-chips::-webkit-scrollbar{ width:0; height:0; }
+.topics-container.attach .topics-chips::-webkit-scrollbar-thumb{ background:transparent; }
 
 .unified-results {
   width: 100%;
@@ -724,10 +792,7 @@ body {
   position: relative;
 }
 
-.theme-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
-}
+.theme-card:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); transform:none; }
 
 .theme-content {
   display: flex;
@@ -797,11 +862,7 @@ body {
   gap: 6px;
 }
 
-.theme-select-btn:hover {
-  background: var(--primary-blue-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
-}
+.theme-select-btn:hover { background: var(--primary-blue-hover); transform:none; box-shadow:none; }
 
 /* Стилі для порожніх результатів в колонках */
 .no-results-column {
@@ -1018,9 +1079,7 @@ body {
     transition: box-shadow 0.2s ease;
 }
 
-.instructor-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+.instructor-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
 .instructor-info {
     display: flex;
@@ -1073,9 +1132,7 @@ body {
     transition: color 0.2s ease;
 }
 
-.department-link:hover {
-    color: #2563eb;
-}
+.department-link:hover { color: #2563eb; }
 
 .instructor-location {
     font-size: 14px;
@@ -1161,6 +1218,7 @@ body {
     word-break: break-word;
     white-space: normal;
     display: -webkit-box;
+    line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -1255,6 +1313,7 @@ body {
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: normal;
+    line-clamp: 3;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -1371,19 +1430,13 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, height 0.3s ease;
   overflow: hidden;
   box-sizing: border-box;
-  height: 120px; /* компактніше, менше порожнього простору */
+  min-height: 120px; /* компактніше, менше порожнього простору */
   cursor: pointer;
   position: relative;
   padding-bottom: 56px; /* достатньо місця під кнопку в режимі тем-тільки */
 }
 
-.topic-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-  z-index: 10;
-  position: relative;
-  height: 160px; /* взважена висота при ховері */
-}
+.topic-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.18); z-index:10; position:relative; transform:none; }
 
 /* Кнопка завжди зафіксована знизу карти */
 .topic-card .theme-select-btn {
@@ -1414,6 +1467,12 @@ body {
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
+  /* ensure no line-clamp when inside topic-card */
+  display: block;
+  line-clamp: unset;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  /* start collapsed for smooth animation */
   max-height: 0;
   opacity: 0;
   transition: all 0.3s ease;
@@ -1423,7 +1482,8 @@ body {
 
 /* Збільшуємо max-height опису та забезпечуємо правильний відступ від кнопки */
 .topic-card:hover .topic-description {
-  max-height: 56px;
+  max-height: 1000px; /* large to fit long descriptions */
+  line-clamp: 5;
   opacity: 1;
 }
 
@@ -1455,7 +1515,7 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible; /* default; overridden on mobile */
 }
 
 .topic-chip {
@@ -1531,19 +1591,16 @@ body {
 
 /* Combined mode explicit themes list should use the themes-only card style */
 .results-section .themes-list .topic-card {
-  height: 150px;
+  min-height: 150px;
   padding: 16px;
   padding-bottom: 80px;
 }
 
-.results-section .themes-list .topic-card:hover {
-  height: 200px;
-}
+.results-section .themes-list .topic-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
 
 /* Prevent animated buttons from overflowing rounded containers */
 .search-container,
-.teacher-card .card-right-side,
-.topics-toggle-bar {
+.teacher-card .card-right-side {
   overflow: hidden;
 }
 
@@ -1661,4 +1718,123 @@ body {
 .teacher-card .teacher-details .department a {
   color: var(--gray-600);
   text-decoration: none;
+}
+/* --- Mobile override for horizontal scroll of "Доступні теми" chips --- */
+@media (max-width: 780px) {
+  .topics-container.attach .topics-toggle-bar .topics-inline { flex: 1 1 0; min-width: 0; overflow: hidden; }
+  .topics-container.attach .topics-chips { display:flex; flex:1 1 auto; min-width:0; max-width:100%; overflow-x:auto !important; overflow-y:hidden; gap:8px; padding-bottom:4px; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; }
+  .topics-container.attach .topics-chips .topic-chip { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; }
+}
+
+/* Enhanced card styles apply only where explicitly enabled */
+.themes-list.enhanced .topic-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px 20px 64px 20px;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.themes-list.enhanced .topic-card .topic-name { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+/* Removed chip-icon styles since icons are no longer used */
+.themes-list.enhanced .topic-card .theme-teacher { color:#64748b; margin-bottom:10px; font-size:14px; }
+.themes-list.enhanced .topic-card .theme-select-btn { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); width:90%; }
+
+/* Mirror enhanced styles for topics shown under each teacher */
+.topics-grid.enhanced .topic-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px 20px;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.topics-grid.enhanced .topic-card .topic-name { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+/* Removed chip-icon styles since icons are no longer used */
+.topics-grid.enhanced .topic-card .topic-description{ color:#64748b; font-size:14px; }
+
+/* Small topic cards (under teacher) - hover to reveal description */
+.topics-grid.enhanced { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.topics-grid.enhanced .topic-card { border: 1px solid var(--gray-200); border-radius: 12px; background:#fff; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.topics-grid.enhanced .topic-card .topic-chip{ display:flex; align-items:center; justify-content:center; gap:10px; min-height:100px; width:100%; cursor:pointer; transition:box-shadow .2s ease; }
+.topics-grid.enhanced .topic-card .topic-chip:hover{ box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+/* Removed chip-icon styles since icons are no longer used */
+.topics-grid.enhanced .topic-card .topic-name{ font-weight:600; color:#0f172a; text-align:center; }
+.topics-grid.enhanced .topic-card .chip-desc{ margin-top:10px; color:#475569; font-size:14px; background:#f8fafc; border:1px solid var(--gray-200); border-radius:10px; padding:12px; width:100%; opacity:0; max-height:0; overflow:hidden; transition:opacity .25s ease, max-height .25s ease; }
+.topics-grid.enhanced .topic-card:hover .chip-desc{ opacity:1; max-height:400px; }
+.topics-grid.enhanced .topic-card .topic-chip:hover + .chip-desc{ opacity:1; max-height:400px; }
+.topics-grid.enhanced .topic-card.interactive .chip-desc{ display:block !important; margin-top:10px; color:#475569; font-size:14px; background:#f8fafc; border:1px solid var(--gray-200); border-radius:10px; padding:12px; width:100%; opacity:0; max-height:0; overflow:hidden; transition:opacity .25s ease, max-height .25s ease; }
+
+/* Simple fix for topic description hover */
+.topic-card .topic-description {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.topic-card:hover .topic-description {
+  max-height: 200px;
+  opacity: 1;
+}
+
+/* Help icon for catalog tour */
+.help-section {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.help-icon-btn {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.help-icon-btn:hover {
+  background: var(--primary-blue-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.help-icon-btn i {
+  font-size: 18px;
+}
+
+/* Mobile help button */
+.mobile-help-btn {
+  display: none;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 780px) {
+  .help-section {
+    display: none; /* Hide desktop help button */
+  }
+  
+  .mobile-help-btn {
+    display: flex !important; /* Show mobile help button */
+  }
+  
+  .search-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .search-header h1 {
+    font-size: 24px;
+    margin: 0;
+  }
 }

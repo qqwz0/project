@@ -632,6 +632,7 @@ class FileComment(models.Model):
     author = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     text = models.TextField()
     attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

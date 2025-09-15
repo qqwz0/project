@@ -1,17 +1,14 @@
 from django.templatetags.static import static
 from .models import CustomUser
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from django.core.files.storage import default_storage
 
 def user_profile_picture(request):
     if request.user.is_authenticated:
         # Check if a profile picture value (a file name) exists in the database.
         if request.user.profile_picture and request.user.profile_picture.name:
             try:
-                storage = MediaCloudinaryStorage()
-                # First, check if the file actually exists in Cloudinary.
-                if storage.exists(request.user.profile_picture.name):
-                    # If it exists, get the URL.
-                    picture_url = storage.url(request.user.profile_picture.name)
+                if default_storage.exists(request.user.profile_picture.name):
+                    picture_url = default_storage.url(request.user.profile_picture.name)
                     return {'profile_picture_url': picture_url}
             except Exception:
                 # If there's any error communicating with storage, fall back to default.
@@ -24,7 +21,7 @@ def user_profile_picture(request):
 
 from django.templatetags.static import static
 from .models import CustomUser  # adjust import if needed
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from django.core.files.storage import default_storage
 
 def user_context(request):
     context = {}
@@ -36,9 +33,8 @@ def user_context(request):
         # Handle profile picture
         if request.user.profile_picture and request.user.profile_picture.name:
             try:
-                storage = MediaCloudinaryStorage()
-                if storage.exists(request.user.profile_picture.name):
-                    context['profile_picture_url'] = storage.url(request.user.profile_picture.name)
+                if default_storage.exists(request.user.profile_picture.name):
+                    context['profile_picture_url'] = default_storage.url(request.user.profile_picture.name)
                     return context
             except Exception:
                 pass

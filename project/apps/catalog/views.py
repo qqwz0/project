@@ -313,8 +313,10 @@ class TeacherModalView(
         
         # Filter slots by user's academic group if the user is a student.
         user = self.request.user
-        is_master = "М" in user.academic_group.upper()
-        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
+        # Безпечна обробка відсутнього academic_group
+        user_academic_group = getattr(user, "academic_group", "") or ""
+        is_master = "М" in user_academic_group.upper()
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user_academic_group)
         if match:
             user_stream = (
                 match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
@@ -416,7 +418,8 @@ class TeacherModalView(
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = "Очікує"
         
-        is_master = "М" in self.request.user.academic_group.upper()
+        user_academic_group = getattr(self.request.user, "academic_group", "") or ""
+        is_master = "М" in user_academic_group.upper()
         student_stream_code = form.instance.extract_stream_from_academic_group() + (
             "м" if is_master else ""
         )
@@ -1001,6 +1004,15 @@ def add_comment(request, file_id):
                 return redirect("profile")
 
         comment = FileComment(file=file, author=request.user, text=text or "")
+        # Optional threaded reply
+        try:
+            parent_id = request.POST.get("parent_id")
+            if parent_id:
+                parent = FileComment.objects.filter(pk=parent_id, file=file).first()
+                if parent:
+                    comment.parent = parent
+        except Exception:
+            pass
 
         attachment = request.FILES.get("attachment")
         if attachment:
