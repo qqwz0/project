@@ -262,52 +262,56 @@ class Request(models.Model):
             return f"{match.group(1)}-{match.group(2)}"
         
         return None
-    
-    def save(self, *args, **kwargs):
-        # Перевіряємо чи змінюється статус і чи потрібно заблокувати тему
-        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
-            self.is_topic_locked = True
-            
-            # Зберігаємо тему в текстове поле при затвердженні
-            if self.teacher_theme:
-                self.topic_name = self.teacher_theme.theme
-                self.topic_description = self.teacher_theme.theme_description
-            elif self.approved_student_theme:
-                self.topic_name = self.approved_student_theme.theme
-            elif self.custom_student_theme:
-                self.topic_name = self.custom_student_theme
+    def clean(self):
+        super().clean()
+        
+        # --- Блок перевірки дедлайнів семестру ---
+        semestr_settings = None
+        if self.teacher_id and self.teacher_id.department and self.academic_year:
+            current_month = timezone.now().month
+            current_semester_num = 1 if 9 <= current_month <= 12 or 1 <= current_month <= 2 else 2
+            try:
+                semestr_settings = Semestr.objects.get(
+                    department=self.teacher_id.department,
+                    academic_year=self.academic_year,
+                    semestr=current_semester_num
+                )
+            except Semestr.DoesNotExist:
+                pass # Якщо налаштувань немає, перевірки дат не застосовуються
 
-        # Захист від зміни заблокованої теми - перевіряємо ТІЛЬКИ якщо тема вже заблокована
-        if self.is_topic_locked and self.pk:  # Перевіряємо тільки для існуючих об'єктів
+        original = None
+        if self.pk:
             try:
                 original = Request.objects.get(pk=self.pk)
-                if original.is_topic_locked and original.topic_name != self.topic_name:  # Додаємо перевірку is_topic_locked
-                    raise ValidationError("Неможливо змінити затверджену тему")
             except Request.DoesNotExist:
                 pass
 
-        # Існуюча логіка для слотів
-        if not self.slot:
-            student_stream_code = self.extract_stream_from_academic_group()
-            if not student_stream_code:
-                raise ValidationError("Student academic group is missing or invalid.")
+        if semestr_settings:
+            # 1. Перевірка при створенні нового запиту
+            if not self.pk and not semestr_settings.can_student_create_request():
+                raise ValidationError("Дедлайн подачі нових запитів минув. Створення неможливе.")
 
-            try:
-                stream = Stream.objects.get(stream_code=student_stream_code)
-            except Stream.DoesNotExist:
-                raise ValidationError(f"No stream found with code: {student_stream_code}")
+            if original:
+                # 2. Перевірка при спробі скасувати активний запит
+                if original.request_status == 'Активний' and self.request_status == 'Відхилено':
+                    if semestr_settings.should_lock_cancellations():
+                        raise ValidationError("Дедлайн для скасування активних робіт минув.")
 
-            available_slot = Slot.objects.filter(
-                teacher_id=self.teacher_id,
-                stream_id=stream
-            ).filter(occupied__lt=models.F('quota')).first()
+                # 3. Перевірка при спробі завершити роботу
+                if self.request_status == 'Завершено' and original.request_status != 'Завершено':
+                    if not semestr_settings.can_complete_requests():
+                        raise ValidationError("Завершення робіт наразі не дозволено.")
+                
+                # 4. Перевірка зміни теми після блокування
+                if original.topic_name != self.topic_name and semestr_settings.should_lock_teacher_editing_themes():
+                    raise ValidationError("Дедлайн для редагування тем минув.")
 
-            if not available_slot:
-                raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
+        # Захист від зміни заблокованої теми
+        if original and original.is_topic_locked and original.topic_name != self.topic_name:
+            raise ValidationError("Неможливо змінити затверджену тему, оскільки вона заблокована.")
 
-            self.slot = available_slot
-
-        # Встановлення навчального року
+    def save(self, *args, **kwargs):
+        # Встановлення навчального року (має бути до clean, бо clean його використовує)
         if not self.academic_year:
             current_year = timezone.now().year
             month = timezone.now().month
@@ -316,31 +320,65 @@ class Request(models.Model):
             else:
                 self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
 
-        # Обробка зміни статусу для слотів (переносимо після встановлення academic_year)
+        # 1. Викликаємо валідацію перед збереженням
+        self.clean()
+
+        # 2. Логіка, яка модифікує поля перед збереженням
+        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
+            self.is_topic_locked = True
+            if self.teacher_theme:
+                self.topic_name = self.teacher_theme.theme
+                self.topic_description = self.teacher_theme.theme_description
+            elif self.approved_student_theme:
+                self.topic_name = self.approved_student_theme.theme
+            elif self.custom_student_theme:
+                self.topic_name = self.custom_student_theme
+
+        if not self.slot:
+            student_stream_code = self.extract_stream_from_academic_group()
+            if not student_stream_code:
+                raise ValidationError("Академічна група студента відсутня або некоректна.")
+            try:
+                stream = Stream.objects.get(stream_code=student_stream_code)
+                available_slot = Slot.objects.filter(
+                    teacher_id=self.teacher_id,
+                    stream_id=stream,
+                    occupied__lt=models.F('quota')
+                ).first()
+                if not available_slot:
+                    raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
+                self.slot = available_slot
+            except Stream.DoesNotExist:
+                raise ValidationError(f"Не знайдено потік з кодом: {student_stream_code}")
+
+        # Обробка зміни статусу для слотів
         status_changed = False
+        old_status = None
         if self.pk:
             try:
                 old_request = Request.objects.get(pk=self.pk)
                 if old_request.request_status != self.request_status:
                     status_changed = True
+                    old_status = old_request.request_status
             except Request.DoesNotExist:
                 pass
+        else: # Якщо це новий запит
+            status_changed = True
 
-        # Завжди викликаємо super().save() в кінці
+        # 3. Зберігаємо об'єкт
         super().save(*args, **kwargs)
         
-        # Після збереження обробляємо зміни статусу
+        # 4. Побічні ефекти, які виконуються після збереження
         if status_changed:
             if self.request_status == 'Активний':
                 self.slot.update_occupied_slots(+1)
-            elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
+            elif old_status == 'Активний' and self.request_status != 'Активний':
                 self.slot.update_occupied_slots(-1)
                 
-            # Free teacher theme when request is completed or rejected
             if self.request_status in ['Завершено', 'Відхилено'] and self.teacher_theme:
                 self.teacher_theme.is_occupied = False
                 self.teacher_theme.save()
-    
+                
     def get_themes_display(self):
         """
         Returns a readable string of the selected themes.
@@ -381,7 +419,7 @@ class TeacherTheme(models.Model):
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
     streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')
-
+    
     class Meta:
         verbose_name = "Тема викладача"
         verbose_name_plural = "Теми викладачів"
@@ -724,3 +762,149 @@ class Announcement(models.Model):
     def __str__(self):
         return f"[{self.get_announcement_type_display()}] {self.title}"
 
+class Semestr(models.Model):
+    
+    department = models.ForeignKey('Department', null=True, blank=True,
+                                   verbose_name="Кафедра", on_delete=models.SET_NULL,)
+    academic_year = models.CharField(max_length=7, verbose_name="Навчальний рік", help_text="Формат: 2024/25")
+    semestr = models.IntegerField(choices=[(1, '1 семестр'), (2, '2 семестр')], verbose_name="Семестр")
+    lock_student_requests_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування подачі запитів студентами")
+    student_requests_locked_at = models.DateTimeField(null=True, blank=True, editable=False)
+    lock_teacher_editing_themes_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування редагування тем викладачами")
+    teacher_editing_locked_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Редагування тем заблоковано о")
+    lock_cancel_requests_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування скасування запитів викладачами")
+    allow_complete_work_date = models.DateField(null=True, blank=True, verbose_name="Дата дозволу завершення робіт")
+    
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['department','academic_year','semestr'],
+                                    name='uniq_department_year_sem')
+        ]
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        import re
+        super().clean()
+
+        errors = {}
+
+        # Унікальність (дублює UniqueConstraint, але дає дружнє повідомлення раніше)
+        if self.department and Semestr.objects.exclude(pk=self.pk).filter(
+            department=self.department,
+            academic_year=self.academic_year,
+            semestr=self.semestr
+        ).exists():
+            errors['academic_year'] = "Комбінація 'Навчальний рік' і 'Семестр' для цієї кафедри вже існує."
+
+        # Перевірка наявності кафедри
+        if not self.department:
+            errors['department'] = "Потрібно вибрати кафедру."
+
+        # Формат навчального року (YYYY/YY) і послідовність
+        if self.academic_year:
+            if not re.match(r'^\d{4}/\d{2}$', self.academic_year):
+                errors['academic_year'] = "Формат має бути YYYY/YY (наприклад 2024/25)."
+            else:
+                start_year = int(self.academic_year[:4])
+                end_suffix = int(self.academic_year[-2:])
+                if (start_year + 1) % 100 != end_suffix:
+                    errors['academic_year'] = "Друга частина року має бути (перший рік + 1). Приклад: 2024/25."
+
+        d_student = self.lock_student_requests_date
+        d_teacher = self.lock_teacher_editing_themes_date
+        d_cancel = self.lock_cancel_requests_date
+        d_complete = self.allow_complete_work_date
+
+        lock_dates = [d for d in [d_student, d_teacher, d_cancel] if d]
+        if d_complete and lock_dates and d_complete < max(lock_dates):
+            errors['allow_complete_work_date'] = "Дата дозволу завершення має бути не раніше за всі дати блокувань."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.academic_year} - {self.get_semestr_display()} ({self.department.department_name})"
+    
+    def is_lock_student_requests_passed(self):
+        return self.lock_student_requests_date and timezone.now().date() >= self.lock_student_requests_date
+    
+    def apply_student_requests_lock(self):
+        """
+        Відхиляє всі запити зі статусом 'Очікує' для цієї кафедри / року / семестру
+        (ідентифікація через academic_year + department викладача).
+        Повертає кількість оновлених записів. Ідемпотентно (повторний виклик безпечний).
+        """
+        if self.student_requests_locked_at or not self.is_lock_student_requests_passed():
+            return 0
+
+        qs = Request.objects.filter(
+            request_status='Очікує',
+            academic_year=self.academic_year,
+            teacher_id__department=self.department
+        )
+
+        updated = qs.update(
+            request_status='Відхилено',
+            rejected_reason='Автоматично відхилено після дати блокування подачі',
+            completion_date=timezone.now()
+        )
+        if updated:
+            self.student_requests_locked_at = timezone.now()
+            self.save(update_fields=['student_requests_locked_at'])
+        return updated
+    
+    def is_teacher_editing_lock_passed(self):
+        return self.lock_teacher_editing_themes_date and timezone.now().date() >= self.lock_teacher_editing_themes_date
+    
+    def apply_teacher_editing_lock(self):
+        """
+        Масово блокує редагування тем (is_topic_locked=True) для всіх активних запитів цього семестру.
+        Ідемпотентно.
+        """
+        if self.teacher_editing_locked_at or not self.is_teacher_editing_lock_passed():
+            return 0
+        qs = Request.objects.filter(
+            teacher_id__department=self.department,
+            academic_year=self.academic_year,
+            request_status='Активний',
+            is_topic_locked=False
+        )
+        updated = qs.update(is_topic_locked=True)
+        if updated or not self.teacher_editing_locked_at:
+            self.teacher_editing_locked_at = timezone.now()
+            self.save(update_fields=['teacher_editing_locked_at'])
+        return updated
+    
+    def can_complete_requests(self):
+        today = timezone.now().date()
+        return self.allow_complete_work_date and today >= self.allow_complete_work_date
+    
+    def apply_all_deadlines(self):
+        """
+        Виконує всі можливі дії (студентські відхилення + блок редагування тем).
+        Повертає dict зі статистикою.
+        """
+        return {
+            'rejected_pending': self.apply_student_requests_lock(),
+            'locked_themes': self.apply_teacher_editing_lock(),
+            'can_complete': self.can_complete_requests()
+        }
+    @staticmethod
+    def for_department_and_year(department, academic_year):
+        return Semestr.objects.filter(department=department, academic_year=academic_year).first()
+
+    def can_student_create_request(self):
+        today = timezone.now().date()
+        return not self.lock_student_requests_date or today < self.lock_student_requests_date
+
+    def should_lock_teacher_editing_themes(self):
+        today = timezone.now().date()
+        return self.lock_teacher_editing_themes_date and today >= self.lock_teacher_editing_themes_date
+
+    def should_lock_cancellations(self):
+        today = timezone.now().date()
+        return self.lock_cancel_requests_date and today >= self.lock_cancel_requests_date
+
+    def can_complete_requests(self):
+        today = timezone.now().date()
+        return self.allow_complete_work_date and today >= self.allow_complete_work_date

@@ -42,6 +42,12 @@ from .models import (
 )
 from .templatetags.catalog_extras import get_profile_picture_url
 from .utils import FileAccessMixin, HtmxModalFormAccessMixin
+from apps.catalog.semestr_rules import (
+    assert_can_cancel,
+    assert_can_complete,
+    assert_can_create,
+    assert_can_edit,
+)
 
 
 class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
@@ -341,11 +347,14 @@ class TeacherModalView(
             return JsonResponse({"success": False, "errors": form.errors}, status=400)
         return super().form_invalid(form)
     
+    
     def form_valid(self, form):
         """
         Processes valid form data. Creates a request, saves themes, and returns JSON for XMLHttpRequests.
         """
         try:
+            teacher = self.get_object()
+            assert_can_create(teacher)
             # First try to assign the slot and save the request
             req = form.save(commit=False)
             self.assign_request_fields(form)
@@ -465,6 +474,10 @@ class CompleteRequestView(View):
             request.user.role == "Викладач"
             and req.teacher_id.teacher_id == request.user
         ):
+            try:
+                assert_can_complete(req)
+            except ValidationError as e:
+                return JsonResponse({"success": False, "error": str(e)}, status=400)
             # Отримуємо обрані файли
             selected_files_json = request.POST.get("selected_files", "[]")
             logger.error(f"[COMPLETE DEBUG] selected_files_json: {selected_files_json}")

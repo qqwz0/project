@@ -51,7 +51,11 @@ from .services.registration_services import (
     create_student_profile,
     create_teacher_profile
 )
-
+from apps.catalog.semestr_rules import (
+    assert_can_complete,
+    assert_can_cancel,
+    assert_can_edit
+)
 # Load environment variables
 load_dotenv()
 
@@ -1108,6 +1112,10 @@ def complete_request(request, request_id):
                     "error": "У вас немає прав для завершення цього запиту",
                 }
             )
+        try:
+            assert_can_complete(req)
+        except ValidationError as e:
+            return JsonResponse({"success": False, "error": str(e)})
 
         # Get the grade from POST data
         grade = request.POST.get("grade")
@@ -1670,6 +1678,12 @@ def edit_request_theme(request, request_id):
                 {"error": "У вас немає прав для редагування цієї теми"}, status=403
             )
 
+        try:
+            if req.teacher_theme:
+                assert_can_edit(req.teacher_theme)
+        except ValidationError as e:
+            logger.warning(f"Cannot edit theme: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=400)    
         # Parse JSON data
         data = json.loads(request.body.decode("utf-8"))
         new_theme = data.get("new_theme", "").strip()
@@ -2254,6 +2268,10 @@ def cancel_active_request(request, request_id):
         if req.teacher_id.teacher_id != request.user:
             return JsonResponse({"success": False, "error": "У вас немає прав для скасування цього запиту"})
             
+        try:
+            assert_can_cancel(req)
+        except ValidationError as e:
+            return JsonResponse({"success": False, "error": str(e)})
         
         rejected_reason = request.POST.get("rejected_reason")
 

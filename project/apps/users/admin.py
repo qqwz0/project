@@ -7,6 +7,9 @@ from django.urls import reverse
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 import re
+from django.urls import path
+from django.shortcuts import redirect, get_object_or_404
+from django.utils import timezone
 
 from docxtpl import DocxTemplate
 
@@ -19,6 +22,7 @@ from apps.catalog.models import (
     TeacherTheme,
     Request,
     StudentTheme,
+    Semestr,
 )
 from .export_service import export_requests_to_word
 
@@ -920,6 +924,118 @@ class RequestAdmin(admin.ModelAdmin):
             self.message_user(request, str(e), level=messages.ERROR)
     export_to_word.short_description = "Експортувати шаблон запитів у Word"
 
+class SemestrAdmin(admin.ModelAdmin):
+    list_display = (
+        'department',
+        'academic_year',
+        'semestr',
+        'lock_student_requests_date',
+        'student_requests_locked_at',
+        'lock_teacher_editing_themes_date',
+        'teacher_editing_locked_at',
+        'lock_cancel_requests_date',
+        'allow_complete_work_date',
+        'can_complete_requests_display',
+    )
+    list_filter = ('academic_year', 'semestr', 'department')
+    search_fields = ('academic_year', 'department__department_name')
+    readonly_fields = ('student_requests_locked_at', 'teacher_editing_locked_at')
+    actions = ['action_lock_student_requests', 'action_lock_teacher_editing', 'action_apply_all']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        if request.user.groups.filter(name='department_admin').exists():
+            return qs.filter(department=request.user.department)
+        return qs.none()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'department' and not request.user.is_superuser:
+            if request.user.groups.filter(name='department_admin').exists():
+                kwargs['queryset'] = kwargs['queryset'].filter(pk=request.user.department_id)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_readonly_fields(self, request, obj=None):
+        ro = list(self.readonly_fields)
+        if not request.user.is_superuser:
+            # Адмін кафедри не може змінювати кафедру
+            ro.append('department')
+        return ro
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if obj is None:
+            return True
+        if request.user.groups.filter(name='department_admin').exists():
+            return obj.department_id == request.user.department_id
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        # Можна дозволити видалення лише свого запису або заборонити повністю
+        if request.user.groups.filter(name='department_admin').exists():
+            return obj and obj.department_id == request.user.department_id
+        return False
+
+    def has_add_permission(self, request):
+        if request.user.is_superuser:
+            return True
+        # Адмін кафедри може створити семестр лише для своєї кафедри й не більше 2 (1 і 2 семестр) на рік
+        if request.user.groups.filter(name='department_admin').exists():
+            return True
+        return False
+
+    @admin.display(description="Можна завершувати?")
+    def can_complete_requests_display(self, obj):
+        return "Так" if obj.can_complete_requests() else "Ні"
+
+    @admin.action(description="Застосувати: блокування подачі (pending)")
+    def action_lock_student_requests(self, request, queryset):
+        total = 0
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            count = sem.apply_student_requests_lock()
+            total += count
+        self.message_user(request, f"Відхилено очікуючих запитів: {total}")
+
+    @admin.action(description="Застосувати: блокування редагування тем")
+    def action_lock_teacher_editing(self, request, queryset):
+        total = 0
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            count = sem.apply_teacher_editing_lock()
+            total += count
+        self.message_user(request, f"Заблоковано тем у активних запитах: {total}")
+
+    @admin.action(description="Застосувати всі доступні дедлайни")
+    def action_apply_all(self, request, queryset):
+        stats = {'rejected': 0, 'locked': 0}
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            result = sem.apply_all_deadlines()
+            stats['rejected'] += result['rejected_pending']
+            stats['locked'] += result['locked_themes']
+        self.message_user(
+            request,
+            f"Підсумок: Відхилено {stats['rejected']}, Заблоковано тем {stats['locked']}."
+        )
+
+    def _allowed(self, request, sem):
+        if request.user.is_superuser:
+            return True
+        if request.user.groups.filter(name='department_admin').exists():
+            return sem.department_id == request.user.department_id
+        return False
+    
 # І нарешті реєструємо модель:
 admin.site.register(Stream, StreamAdmin)
 
@@ -933,3 +1049,4 @@ admin.site.register(TeacherTheme, TeacherThemeAdmin)
 # Correctly register the model with the admin site:
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Slot, SlotAdmin)
+admin.site.register(Semestr, SemestrAdmin)
