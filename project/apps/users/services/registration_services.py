@@ -94,11 +94,13 @@ def create_teacher_profile(user, job_title, department_name):
         profile_link = None
 
     try:
-        OnlyTeacher.objects.create(
+        OnlyTeacher.objects.get_or_create(
             teacher_id=user,
-            academic_level=academic_level,
-            department=department_obj,
-            profile_link=profile_link
+            defaults={
+                'academic_level': academic_level,
+                'department': department_obj,
+                'profile_link': profile_link
+            }
         )
     except Exception as e:
         logger.error(f"Error creating OnlyTeacher for user {user.email}: {str(e)}", exc_info=True)
