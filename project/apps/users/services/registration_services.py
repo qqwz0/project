@@ -93,12 +93,16 @@ def create_teacher_profile(user, job_title, department_name):
     else:
         profile_link = None
 
-    OnlyTeacher.objects.create(
-        teacher_id=user,
-        academic_level=academic_level,
-        department=department_obj,
-        profile_link=profile_link
-    )
+    try:
+        OnlyTeacher.objects.create(
+            teacher_id=user,
+            academic_level=academic_level,
+            department=department_obj,
+            profile_link=profile_link
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for user {user.email}: {str(e)}", exc_info=True)
+        raise  # Передаємо помилку далі
     logger.info(f"Created OnlyTeacher for {user.email} with department {department_obj.department_name} and profile link {profile_link}")
 
 def url_exists(url):

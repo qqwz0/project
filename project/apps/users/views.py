@@ -416,14 +416,17 @@ def fake_login(request):
             password=make_password("fake_password"),
         )
     # Використовуємо get_or_create для OnlyTeacher
-    OnlyTeacher.objects.get_or_create(
-        teacher_id=user,
-        defaults={
-            "academic_level": "Доцент",
-            "additional_email": "teacher.test@lnu.edu.ua",
-            "phone_number": "+380991234567",
-        },
-    )
+    try:
+        OnlyTeacher.objects.get_or_create(
+            teacher_id=user,
+            defaults={
+                "academic_level": "Доцент",
+                "additional_email": "teacher.test@lnu.edu.ua",
+                "phone_number": "+380991234567",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for fake user {user.email}: {str(e)}", exc_info=True)
     auth_login(request, user)
     return redirect("profile")
 
@@ -817,10 +820,15 @@ def teacher_profile_edit(request):
         messages.error(request, "Доступ заборонено")
         return redirect("profile")
 
-    teacher_profile, created = OnlyTeacher.objects.get_or_create(
-        teacher_id=request.user,
-        defaults={"position": "Не вказано", "academic_level": "Аспірант"},
-    )
+    try:
+        teacher_profile, created = OnlyTeacher.objects.get_or_create(
+            teacher_id=request.user,
+            defaults={"position": "Не вказано", "academic_level": "Аспірант"},
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for user {request.user.email}: {str(e)}", exc_info=True)
+        messages.error(request, f"Помилка створення профілю викладача: {str(e)}")
+        return redirect("profile")
 
     if request.method == "POST":
         form = TeacherProfileForm(
