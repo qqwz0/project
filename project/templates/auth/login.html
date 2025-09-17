@@ -60,6 +60,7 @@
         </div>
 
         <!-- Development Login Options -->
+        {% if show_fake_users %}
         <div class="dev-buttons">
           <div class="input-box button">
             <a href="{% url 'fake_login' %}?redirect=true" class="login-button dev-button">
@@ -85,6 +86,7 @@
             </a>
           </div>
         </div>
+        {% endif %}
         
         <!-- Registration link -->
         <div class="text">

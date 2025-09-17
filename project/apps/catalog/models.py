@@ -508,10 +508,12 @@ class OnlyStudent(models.Model):
     
     @property
     def course(self):
-        """Вираховує курс на основі року вступу потоку"""
-        from datetime import datetime
-        current_year = datetime.now().year
-        return current_year - self.group.stream.year_of_entry + 1
+        """Вираховує курс з коду потоку (наприклад, ФЕС-2 -> курс 2)"""
+        import re
+        match = re.match(r'^[А-ЯІЇЄҐ]+-(\d)', self.group.stream.stream_code)
+        if match:
+            return int(match.group(1))
+        return None
     
     def __str__(self):
         return f"Student: {self.student_id.get_full_name()} ({self.group.group_code})"

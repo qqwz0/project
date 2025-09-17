@@ -197,6 +197,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 ACAUSE_EMAIL_SUBJECT_PREFIX = 'SciAvisor - '
 
+# Development settings
+SHOW_FAKE_USERS = os.getenv('SHOW_FAKE_USERS', 'false').lower() == 'true'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -275,6 +278,7 @@ IMAGE_CROPPING_BACKEND_PARAMS = {}
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
+    "https://advisor-search.lnu.edu.ua",
     "https://project-mddj.onrender.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -301,7 +305,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-BASE_URL = 'https://project-mddj.onrender.com'
+BASE_URL = 'https://advisor-search.lnu.edu.ua'
 
 LOGIN_URL = '/users/login/'
 
@@ -324,6 +328,7 @@ REST_FRAMEWORK = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://advisor-search.lnu.edu.ua',
     'https://project-mddj.onrender.com',
 ]
 

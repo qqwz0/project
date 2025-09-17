@@ -145,7 +145,7 @@ def microsoft_login(request):
         if not request.GET.get("redirect"):
             logger.debug("Rendering login page before redirecting to Microsoft.")
             return render(
-                request, "auth/login.html"
+                request, "auth/login.html", {"show_fake_users": settings.SHOW_FAKE_USERS}
             )  # Update with the correct template path
 
         CSRF_STATE = get_random_string(32)
