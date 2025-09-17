@@ -42,7 +42,7 @@ class OnlyTeacher(models.Model):
 
 @receiver(post_save, sender=CustomUser)
 def create_only_teacher(sender, instance, created, **kwargs):
-    if instance.role == "Викладач":
+    if created and instance.role == "Викладач":
         OnlyTeacher.objects.get_or_create(teacher_id=instance)
 
 class Stream(models.Model):
