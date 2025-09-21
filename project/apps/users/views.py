@@ -1115,7 +1115,7 @@ def complete_request(request, request_id):
         try:
             assert_can_complete(req)
         except ValidationError as e:
-            return JsonResponse({"success": False, "error": str(e)})
+            return JsonResponse({"success": False, "error": e.message}, status=400)
 
         # Get the grade from POST data
         grade = request.POST.get("grade")
@@ -1679,11 +1679,12 @@ def edit_request_theme(request, request_id):
             )
 
         try:
-            if req.teacher_theme:
-                assert_can_edit(req.teacher_theme)
+            if req.teacher_id :
+                assert_can_edit(req.teacher_id)
         except ValidationError as e:
             logger.warning(f"Cannot edit theme: {str(e)}")
-            return JsonResponse({"error": str(e)}, status=400)    
+            return JsonResponse({"success": False, "error": e.message}, status=400)
+        
         # Parse JSON data
         data = json.loads(request.body.decode("utf-8"))
         new_theme = data.get("new_theme", "").strip()
@@ -2271,7 +2272,7 @@ def cancel_active_request(request, request_id):
         try:
             assert_can_cancel(req)
         except ValidationError as e:
-            return JsonResponse({"success": False, "error": str(e)})
+            return JsonResponse({"success": False, "error": e.message}, status=400)
         
         rejected_reason = request.POST.get("rejected_reason")
 

@@ -63,5 +63,5 @@ def assert_can_complete(req: Request):
 def assert_can_cancel(req: Request):
     return assert_can_cancel_request(req)
 
-def assert_can_edit(theme_obj, academic_year: str | None = None):
-    return assert_can_teacher_edit_themes(theme_obj, academic_year)
+def assert_can_edit(teacher_obj, academic_year: str | None = None):
+    return assert_can_teacher_edit_themes(teacher_obj, academic_year)

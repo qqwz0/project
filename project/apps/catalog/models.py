@@ -325,7 +325,6 @@ class Request(models.Model):
 
         # 2. Логіка, яка модифікує поля перед збереженням
         if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
-            self.is_topic_locked = True
             if self.teacher_theme:
                 self.topic_name = self.teacher_theme.theme
                 self.topic_description = self.teacher_theme.theme_description
@@ -768,12 +767,28 @@ class Semestr(models.Model):
                                    verbose_name="Кафедра", on_delete=models.SET_NULL,)
     academic_year = models.CharField(max_length=7, verbose_name="Навчальний рік", help_text="Формат: 2024/25")
     semestr = models.IntegerField(choices=[(1, '1 семестр'), (2, '2 семестр')], verbose_name="Семестр")
-    lock_student_requests_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування подачі запитів студентами")
-    student_requests_locked_at = models.DateTimeField(null=True, blank=True, editable=False)
-    lock_teacher_editing_themes_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування редагування тем викладачами")
+    lock_student_requests_date = models.DateField(
+        null=True, blank=True,
+        verbose_name="Дата блокування подачі запитів студентами",
+        help_text="Після настання цієї дати застосуйте дію для відхилення запитів зі статусом «Очікує»."
+    )
+    student_requests_locked_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Запити заблоковано о")
+    lock_teacher_editing_themes_date = models.DateField(
+        null=True, blank=True,
+        verbose_name="Дата блокування редагування тем викладачами",
+        help_text="Після настання цієї дати застосуйте дію для блокування редагування тем (is_topic_locked=True)."
+    )
     teacher_editing_locked_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Редагування тем заблоковано о")
-    lock_cancel_requests_date = models.DateField(null=True, blank=True, verbose_name="Дата блокування скасування запитів викладачами")
-    allow_complete_work_date = models.DateField(null=True, blank=True, verbose_name="Дата дозволу завершення робіт")
+    lock_cancel_requests_date = models.DateField(
+        null=True, blank=True,
+        verbose_name="Дата блокування скасування запитів викладачами",
+        help_text="Після настання цієї дати скасування активних робіт буде заборонено."
+    )
+    allow_complete_work_date = models.DateField(
+        null=True, blank=True,
+        verbose_name="Дата дозволу завершення робіт",
+        help_text="Починаючи з цієї дати дозволено завершувати роботи та виставляти оцінки."
+    )
     
     
     class Meta:
@@ -781,6 +796,9 @@ class Semestr(models.Model):
             models.UniqueConstraint(fields=['department','academic_year','semestr'],
                                     name='uniq_department_year_sem')
         ]
+        verbose_name = "Семестр"
+        verbose_name_plural = "Семестри"
+        ordering = ['-academic_year', 'department', 'semestr']
     def clean(self):
         from django.core.exceptions import ValidationError
         import re
@@ -788,7 +806,7 @@ class Semestr(models.Model):
 
         errors = {}
 
-        # Унікальність (дублює UniqueConstraint, але дає дружнє повідомлення раніше)
+    
         if self.department and Semestr.objects.exclude(pk=self.pk).filter(
             department=self.department,
             academic_year=self.academic_year,
@@ -821,14 +839,26 @@ class Semestr(models.Model):
 
         if errors:
             raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        
+        self.clean()
+        
+        if not self.lock_student_requests_date and self.student_requests_locked_at:
+            self.student_requests_locked_at = None
+            
+        if not self.lock_teacher_editing_themes_date and self.teacher_editing_locked_at:
+            self.teacher_editing_locked_at = None
+        
+        super().save(*args, **kwargs)    
 
     def __str__(self):
         return f"{self.academic_year} - {self.get_semestr_display()} ({self.department.department_name})"
     
     def is_lock_student_requests_passed(self):
         return self.lock_student_requests_date and timezone.now().date() >= self.lock_student_requests_date
-    
-    def apply_student_requests_lock(self):
+
+    def apply_student_requests_cancellation(self):
         """
         Відхиляє всі запити зі статусом 'Очікує' для цієї кафедри / року / семестру
         (ідентифікація через academic_year + department викладача).
@@ -878,17 +908,26 @@ class Semestr(models.Model):
     def can_complete_requests(self):
         today = timezone.now().date()
         return self.allow_complete_work_date and today >= self.allow_complete_work_date
-    
+        
     def apply_all_deadlines(self):
         """
-        Виконує всі можливі дії (студентські відхилення + блок редагування тем).
-        Повертає dict зі статистикою.
+        Виконує всі можливі дії з логуванням.
         """
-        return {
-            'rejected_pending': self.apply_student_requests_lock(),
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        stats = {
+            'rejected_pending': self.apply_student_requests_cancellation(),
             'locked_themes': self.apply_teacher_editing_lock(),
-            'can_complete': self.can_complete_requests()
         }
+        
+        if stats['rejected_pending'] > 0:
+            logger.info(f"Semester {self}: Auto-rejected {stats['rejected_pending']} pending requests")
+        
+        if stats['locked_themes'] > 0:
+            logger.info(f"Semester {self}: Auto-locked {stats['locked_themes']} active themes")
+        
+        return stats
     @staticmethod
     def for_department_and_year(department, academic_year):
         return Semestr.objects.filter(department=department, academic_year=academic_year).first()

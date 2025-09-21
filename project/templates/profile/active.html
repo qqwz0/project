@@ -924,10 +924,12 @@ function submitComplete() {
         body: formData
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            }
+            return data;
+        });
     })
     .then(data => {
         if (data.success) {
@@ -935,6 +937,7 @@ function submitComplete() {
             closeCompleteModal();
             window.location.reload();
         } else {
+            // Цей блок може бути зайвим, але залишаємо для безпеки
             throw new Error(data.error || 'Не вдалося завершити роботу');
         }
     })
@@ -987,7 +990,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Функції для редагування теми
 function showEditThemeModal(requestId, currentTheme) {
     document.body.classList.add('modal-open');
     document.getElementById('editThemeRequestId').value = requestId;
@@ -1001,64 +1003,75 @@ function closeEditThemeModal() {
     document.getElementById('editThemeForm').reset();
 }
 
-// Обробка форми редагування теми
-document.getElementById('editThemeForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const requestId = document.getElementById('editThemeRequestId').value;
-    const newTheme = document.getElementById('newTheme').value.trim();
-    
-    if (!newTheme) {
-        alert('Будь ласка, введіть нову тему');
-        return;
+document.addEventListener('DOMContentLoaded', function() {
+    const editThemeForm = document.getElementById('editThemeForm');
+    if (editThemeForm) {
+        editThemeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const requestId = document.getElementById('editThemeRequestId').value;
+            const newTheme = document.getElementById('newTheme').value.trim();
+            
+            if (!newTheme) {
+                alert('Будь ласка, введіть нову тему');
+                return;
+            }
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Show loading state - виправлений селектор
+            const submitBtn = document.querySelector('#editThemeForm .edit-theme-btn-submit');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Збереження...';
+            
+            // Send request to server
+            fetch(`/users/edit-request-theme/${requestId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    new_theme: newTheme
+                })
+            })
+            .then(response => {
+                return response.json().then(data => {
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    }
+                    return data;
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    // Close modal and reload page
+                    closeEditThemeModal();
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error || 'Не вдалося оновити тему');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message);
+                
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            });
+        });
     }
-    
-    // Get CSRF token
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    // Show loading state
-    const submitBtn = document.querySelector('#editThemeForm .btn-submit');
-    const originalText = submitBtn.textContent;
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Збереження...';
-    
-    // Send request to server
-    fetch(`/users/edit-request-theme/${requestId}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-            new_theme: newTheme
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Close modal and reload page
-            closeEditThemeModal();
-            window.location.reload();
-        } else {
-            throw new Error(data.error || 'Не вдалося оновити тему');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert(error.message);
-        
-        // Reset button state
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    });
-});
 
-// Close modal with Escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeEditThemeModal();
-    }
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditThemeModal();
+        }
+    });
 });
 
 function showCancelModal(requestId) {
@@ -1098,7 +1111,14 @@ function handleCancelSubmit(event) {
         },
         body: `rejected_reason=${encodeURIComponent(reason)}`
     })
-    .then(response => response.json())
+    .then(response => {
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            }
+            return data;
+        });
+    })
     .then(data => {
         if (data.success) {
             closeCancelModal();

@@ -477,7 +477,7 @@ class CompleteRequestView(View):
             try:
                 assert_can_complete(req)
             except ValidationError as e:
-                return JsonResponse({"success": False, "error": str(e)}, status=400)
+                return JsonResponse({"success": False, "error": e.message}, status=400)
             # Отримуємо обрані файли
             selected_files_json = request.POST.get("selected_files", "[]")
             logger.error(f"[COMPLETE DEBUG] selected_files_json: {selected_files_json}")
