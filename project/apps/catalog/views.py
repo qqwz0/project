@@ -174,10 +174,9 @@ class TeachersListView(LoginRequiredMixin, ListView):
                         course = int(match.group(1))
                 
                 # Оновлена, більш точна умова фільтрації
-                if user.department and ((course and course >= 3) or is_master):
-                    teachers = teachers.filter(
-                        teacher_id__department__iexact=user.department.strip()
-                    )
+                user_department = user.get_department()
+                if user_department and ((course and course >= 3) or is_master):
+                    teachers = teachers.filter(department=user_department)
                 
                 teacher_ids = [t.pk for t in teachers]
                 # ---
@@ -230,7 +229,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                                 "id": teacher.teacher_id.id,
                                 "first_name": teacher.teacher_id.first_name,
                                 "last_name": teacher.teacher_id.last_name,
-                                "department": teacher.teacher_id.department,
+                                "department": teacher.teacher_id.get_department_name(),
                                 "full_name": full_name,
                             },
                         },
@@ -1154,7 +1153,7 @@ class AutocompleteView(LoginRequiredMixin, View):
                     "type": "teacher",
                     "id": teacher.pk,
                     "label": f"👨‍🏫 {teacher.teacher_id.first_name} {teacher.teacher_id.last_name}",
-                    "description": f"{teacher.academic_level} • {teacher.teacher_id.department}",
+                    "description": f"{teacher.academic_level} • {teacher.teacher_id.get_department_name()}",
                     "url": "#"  # Не потрібен URL, фільтрування буде на тій же сторінці
                 })
             
@@ -1215,8 +1214,9 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
                     if match:
                         course = int(match.group(1))
-                if getattr(user, 'department', None) and ((course and course >= 3) or is_master):
-                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                user_department = user.get_department()
+                if user_department and ((course and course >= 3) or is_master):
+                    teachers = teachers.filter(department=user_department)
                 
                 # Витягуємо потік студента
                 slots = Slot.filter_by_available_slots()
@@ -1251,7 +1251,7 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     'theme_description': theme.theme_description or '',
                     'teacher_name': theme.teacher_id.teacher_id.get_full_name(),
                     'teacher_id': theme.teacher_id.teacher_id.id,
-                    'department': theme.teacher_id.teacher_id.department or '',
+                    'department': theme.teacher_id.teacher_id.get_department_name() or '',
                 })
             
             return JsonResponse(themes_data, safe=False)

@@ -22,7 +22,7 @@
         {% endif %}
         
         <!-- Display teacher's department -->
-        <h3>Кафедра {{ teacher.teacher_id.department | capfirst }}</h3>
+        <h3>Кафедра {{ teacher.teacher_id.get_department_name | capfirst }}</h3>
 
         <!-- Display slot availability -->
         {% if is_matched %}

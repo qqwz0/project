@@ -17,7 +17,7 @@
                             <p class="card-text">
                                 {% if theme.teacher_id and theme.teacher_id.teacher_id %}
                                     <strong>Викладач:</strong> {{ theme.teacher_id.teacher_id.get_full_name }}<br>
-                                    <strong>Кафедра:</strong> {{ theme.teacher_id.teacher_id.department }}<br>
+                                    <strong>Кафедра:</strong> {{ theme.teacher_id.teacher_id.get_department_name }}<br>
                                 {% else %}
                                     <strong>Викладач:</strong> <span class="text-muted">Не вказано</span><br>
                                 {% endif %}

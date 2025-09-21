@@ -53,19 +53,10 @@ class CustomUser(AbstractUser):
         ('Викладач', 'Викладач'),
     ]
 
-    DEPARTMENT_CHOICES = [
-        ('Сенсорної та напівпровідникової електроніки', 'Сенсорної та напівпровідникової електроніки'),
-        ('Системного проектування', 'Системного проектування'),
-        ('Фізичної та біомедичної електроніки', 'Фізичної та біомедичної електроніки'),
-        ('Радіофізики та комп\'ютерних технологій', 'Радіофізики та комп\'ютерних технологій'),
-        ('Радіоелектронних і комп\'ютерних систем', 'Радіоелектронних і комп\'ютерних систем'),
-        ('Оптоелектроніки та інформаційних технологій', 'Оптоелектроніки та інформаційних технологій'),
-    ]
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
     academic_group = models.CharField(max_length=9, blank=False, null=True)  # For students
-    department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     patronymic = models.CharField("По-батькові", max_length=150, blank=True, null=True)
 
@@ -115,25 +106,30 @@ class CustomUser(AbstractUser):
         return None
 
     def get_department(self):
+        """
+        Повертає Department об'єкт через профіль (нова система)
+        """
         profile = self.get_profile()
-        if profile and profile.department:
-            print(f"[DEBUG] User {self.username}: кафедра у профілі → {profile.department}")
+        if profile and hasattr(profile, 'department') and profile.department:
             return profile.department
 
-        active_request = self.users_student_requests.filter(
-            request_status="Активний"
-        ).select_related("teacher_id__department").first()
+        # Для студентів - через активний запит
+        if self.role == 'Студент':
+            active_request = self.users_student_requests.filter(
+                request_status="Активний"
+            ).select_related("teacher_id__department").first()
 
-        if active_request:
-            print(f"[DEBUG] User {self.username}: активний запит {active_request.id}")
-            if active_request.teacher_id and active_request.teacher_id.department:
-                print(f"[DEBUG] Кафедра через викладача → {active_request.teacher_id.department}")
+            if active_request and active_request.teacher_id and active_request.teacher_id.department:
                 return active_request.teacher_id.department
-            else:
-                print(f"[DEBUG] Викладач не має кафедри")
 
-        print(f"[DEBUG] User {self.username}: кафедру не знайдено")
         return None
+    
+    def get_department_name(self):
+        """
+        Повертає назву кафедри як строку (для зворотної сумісності)
+        """
+        department = self.get_department()
+        return department.department_name if department else None
 
 
 # @receiver(pre_save, sender=CustomUser)

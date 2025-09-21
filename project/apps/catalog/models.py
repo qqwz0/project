@@ -20,7 +20,7 @@ class OnlyTeacher(models.Model):
     teacher_id = models.OneToOneField('users.CustomUser', 
                                       on_delete=models.CASCADE, 
                                       primary_key=True, 
-                                      limit_choices_to={'role': 'teacher'},
+                                      limit_choices_to={'role': 'Викладач'},
                                       related_name='catalog_teacher_profile')
     academic_level = models.CharField(max_length=50, default='Викладач')
     additional_email = models.EmailField(blank=True, null=True)
@@ -460,7 +460,7 @@ class TeacherTheme(models.Model):
 
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'Студент'}, related_name='users_student_themes')
     request = models.ForeignKey('Request', on_delete=models.CASCADE, related_name='student_themes')
     theme = models.CharField(max_length=100)
     
@@ -477,7 +477,7 @@ class OnlyStudent(models.Model):
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
-                                    limit_choices_to={'role': 'student'},
+                                    limit_choices_to={'role': 'Студент'},
                                     related_name='catalog_student_profile_new')
     group = models.ForeignKey('Group', on_delete=models.CASCADE,
                              related_name='students',

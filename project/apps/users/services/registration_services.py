@@ -49,33 +49,27 @@ def fail_and_redirect(request, msg, log_msg=None, level="error"):
     return redirect("register")
 
 
-def create_student_profile(user, group_code, email):
-    from apps.catalog.models import Group
+def create_student_profile(user, group_code, email, department=None):
+    from apps.catalog.models import Group, OnlyStudent
     try:
         group_obj = Group.objects.get(group_code=group_code)
-        OnlyStudent.objects.create(student_id=user, group=group_obj)
-        logger.info(f"Created OnlyStudent for {email} with group {group_code}")
+        OnlyStudent.objects.create(student_id=user, group=group_obj, department=department)
+        logger.info(f"Created OnlyStudent for {email} with group {group_code} and department {department}")
     except Group.DoesNotExist:
         logger.warning(f"Group {group_code} not found for {email}, using fallback group.")
         fallback = Group.objects.first()
         if fallback:
-            OnlyStudent.objects.create(student_id=user, group=fallback)
-            logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code}")
+            OnlyStudent.objects.create(student_id=user, group=fallback, department=department)
+            logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
         else:
             logger.error("No groups available in DB for student creation.")
 
 
-def create_teacher_profile(user, job_title, department_name):
-    from apps.catalog.models import Department, OnlyTeacher
-
-    try:
-        department_obj = Department.objects.get(department_name=department_name)
-    except Department.DoesNotExist:
-        logger.warning(f"Department {department_name} not found for {user.email}, using fallback.")
-        department_obj = Department.objects.first()
-        if not department_obj:
-            logger.error("No departments available in DB for teacher creation.")
-            return
+def create_teacher_profile(user, job_title, department_obj):
+    """
+    Створює профіль викладача з Department об'єктом
+    """
+    from apps.catalog.models import OnlyTeacher
 
     academic_level = job_title if job_title else "Викладач"
     faculty_short_name = department_obj.faculty.short_name if department_obj.faculty else "unknown"

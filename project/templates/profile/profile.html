@@ -41,12 +41,12 @@
 
                     {% if user_profile.role == "Викладач" %}
                         <h3>{{ teacher_profile.academic_level }}</h3>
-                        <p>Кафедра: {{ user_profile.department }}</p>
+                        <p>Кафедра: {{ user_profile.get_department_name }}</p>
                     {% elif user_profile.role == "Студент" %}
                         <h3>{{ user_profile.role }}</h3>
                         <p>Група: {{ user_profile.academic_group }}</p>
-                        {% if student_course and student_course >= 3 and user_profile.department %}
-                            <p>Кафедра: {{ user_profile.department }}</p>
+                        {% if student_course and student_course >= 3 and user_profile.get_department_name %}
+                            <p>Кафедра: {{ user_profile.get_department_name }}</p>
                         {% endif %}
                     {% endif %}
                 </div>

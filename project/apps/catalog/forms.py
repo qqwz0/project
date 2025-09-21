@@ -72,10 +72,12 @@ class FilteringSearchingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        departments = CustomUser.objects.values_list('department', flat=True).distinct()
+        # Беремо кафедри з Department моделі
+        from .models import Department
+        departments = Department.objects.values_list('department_name', flat=True).distinct()
         self.fields['departments'].choices = [
-            (department, (department[:25] + '...' if len(department) > 25 else department))
-            for department in departments if department
+            (dept, (dept[:25] + '...' if len(dept) > 25 else dept))
+            for dept in departments
         ]
         academic_levels = OnlyTeacher.objects.values_list('academic_level', flat=True).distinct()
         self.fields['academic_levels'].choices = [

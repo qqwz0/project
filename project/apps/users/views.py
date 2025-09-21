@@ -95,7 +95,9 @@ def microsoft_register(request):
             # Store form data in session
             request.session["role"] = form.cleaned_data["role"]
             request.session["group"] = form.cleaned_data.get("group")
-            request.session["department"] = form.cleaned_data.get("department")
+            # Зберігаємо тільки ID кафедри, а не об'єкт
+            department = form.cleaned_data.get("department")
+            request.session["department_id"] = department.id if department else None
 
             CSRF_STATE = get_random_string(32)
             request.session["csrf_state"] = CSRF_STATE
@@ -237,6 +239,22 @@ def microsoft_callback(request):
         return redirect("login")
 
 
+def get_student_course(group):
+    """
+    Визначає курс студента за назвою групи
+    Повертає номер курсу або None якщо не вдалося визначити
+    """
+    if not group:
+        return None
+    
+    import re
+    # Шукаємо першу цифру в назві групи (наприклад, ФЕС-3 -> 3)
+    match = re.search(r'-(\d)', group)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def handle_registration_callback(request, code):
     logger.debug("Handling registration callback.")
 
@@ -255,7 +273,16 @@ def handle_registration_callback(request, code):
         derived_role = "Студент" if "Student" in job_title else "Викладач"
         submitted_role = request.session.get("role")
         group = request.session.get("group")
-        department = request.session.get("department")
+        department_id = request.session.get("department_id")
+        
+        # Отримуємо Department об'єкт з ID
+        department = None
+        if department_id:
+            from apps.catalog.models import Department
+            try:
+                department = Department.objects.get(id=department_id)
+            except Department.DoesNotExist:
+                logger.warning(f"Department with ID {department_id} not found")
 
         if submitted_role != derived_role:
             return fail_and_redirect(
@@ -274,7 +301,6 @@ def handle_registration_callback(request, code):
                     "is_active": True,
                     "role": derived_role,
                     "academic_group": group if derived_role == "Студент" else None,
-                    "department": department if derived_role == "Викладач" else None,
                 },
             )
 
@@ -289,8 +315,16 @@ def handle_registration_callback(request, code):
                 logger.info("New user registered: %s", email)
                 # Створюємо профіль в залежності від ролі
                 if derived_role == "Студент":
-                    create_student_profile(user, group, email)
+                    # Перевіряємо курс студента для визначення чи потрібна кафедра
+                    course = get_student_course(group)
+                    if course and course >= 3:
+                        # Студент 3-4 курсу - передаємо кафедру
+                        create_student_profile(user, group, email, department)
+                    else:
+                        # Студент 1-2 курсу - без кафедри
+                        create_student_profile(user, group, email, None)
                 else:
+                    # department тепер є Department об'єктом
                     create_teacher_profile(user, job_title, department)
 
         messages.success(request, "Успішно зареєстровано! Будь ласка, увійдіть.")
@@ -841,7 +875,7 @@ def teacher_profile_edit(request):
                     request.user.first_name = form.cleaned_data["first_name"]
                     request.user.last_name = form.cleaned_data["last_name"]
                     request.user.patronymic = form.cleaned_data["patronymic"]
-                    request.user.department = form.cleaned_data["department"]
+                    # Кафедра тепер оновлюється через форму OnlyTeacher
                     request.user.save()
 
                     form.save()
