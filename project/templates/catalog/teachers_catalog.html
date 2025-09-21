@@ -294,12 +294,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
   
     <!-- Desktop filter wrapper (hidden on mobile) -->
     <div class="filter-wrapper" x-show="!isMobile" x-cloak>
-      <!-- Help Button -->
-      <div class="help-section">
-        <button id="start-tour-catalog" class="help-icon-btn" title="Допомога з пошуком">
-          <i class="fas fa-question-circle"></i>
-        </button>
-      </div>
       <!-- Search Mode Switchers move to sidebar on desktop -->
       <div class="search-mode-switchers">
         <div class="switcher-header">
@@ -364,10 +358,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      <!-- Search Section -->
      <div class="search-section">
        <div class="search-header">
-         <h1>Знайди свого наукового керівника!</h1>
-         <button id="start-tour-catalog-mobile" class="help-icon-btn mobile-help-btn" title="Допомога з пошуком">
-           <i class="fas fa-question-circle"></i>
-         </button>
+         <h1>Знайди свого наукового керівника!
+           <button id="start-tour-catalog" class="help-icon-btn desktop-help-btn" title="Допомога з пошуком">
+             <i class="fas fa-question-circle"></i>
+           </button>
+           <button id="start-tour-catalog-mobile" class="help-icon-btn mobile-help-btn" title="Допомога з пошуком">
+             <i class="fas fa-question-circle"></i>
+           </button>
+         </h1>
        </div>
       <!-- Mobile: show type switchers on top (card) -->
       <div class="search-mode-switchers" x-show="isMobile" x-cloak>
@@ -482,8 +480,8 @@ When a user triggers the HX request (via button click), the modal is swapped in 
            <p>Спробуйте змінити критерії пошуку або фільтри.</p>
          </div>
 
-         <!-- Unified Results Layout -->
-         <div class="unified-results" x-show="searchQuery.trim()">
+        <!-- Unified Results Layout -->
+        <div class="unified-results" x-show="searchQuery.trim() && (filteredTeachers.length > 0 || filteredThemes.length > 0)">
            <!-- Teachers Results (only teachers mode) -->
            <div class="results-section" x-show="searchTeachers && !searchThemes && filteredTeachers.length > 0">
              <h3>Викладачі (<span x-text="filteredTeachers.length"></span>)</h3>
@@ -572,6 +570,19 @@ When a user triggers the HX request (via button click), the modal is swapped in 
  
          <!-- Default View (all teachers or all themes) -->
          <div class="all-content" x-show="!searchQuery.trim()">
+           <!-- No Teachers Message -->
+           <div class="no-results" 
+                x-show="searchTeachers && !searchThemes && filteredData.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
+           </div>
+           
            <!-- All Teachers View -->
            <div class="results-section" x-show="searchTeachers && !searchThemes && filteredData.length > 0">
              <h3>Всі викладачі</h3>
@@ -580,6 +591,19 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                  {% include "catalog/teacher_cards.html" %}
                </template>
              </div>
+           </div>
+           
+           <!-- No Themes Message -->
+           <div class="no-results" 
+                x-show="searchThemes && !searchTeachers && allThemes.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
            </div>
            
            <!-- All Themes View -->
@@ -600,6 +624,19 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                 </div>
                </template>
              </div>
+           </div>
+           
+           <!-- No Combined Results Message -->
+           <div class="no-results" 
+                x-show="searchTeachers && searchThemes && filteredData.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
            </div>
            
            <!-- Combined default view (both teachers and their themes) -->
