@@ -20,7 +20,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
   x-data="{ 
      data: [], 
      departments: [], 
-     academic_levels: [], 
      slots: null,
      show_occupied: false,
      full_names: [], 
@@ -41,7 +40,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      activeFiltersCount() {
        let count = 0;
        if (Array.isArray(this.departments)) count += this.departments.length;
-       if (Array.isArray(this.academic_levels)) count += this.academic_levels.length;
        if (this.slots !== null && this.slots !== undefined && Number(this.slots) > 0) count += 1;
        if (this.show_occupied) count += 1;
        return count;
@@ -340,10 +338,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         </div>
 
         <hr class="devider">
-        <h3 class="option-label">Посада</h3>
-        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
-        
-        <hr class="devider">
         <div class="checkbox-wrapper">
         <span class="checkbox-text">Викладачі без вільних місць</span>
         {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
@@ -443,10 +437,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
               </template>
               <span class="range-value" x-text="slots || '0'"></span>
             </div>
-
-            <hr class="devider">
-            <h3 class="option-label">Посада</h3>
-            {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
 
             <hr class="devider">
             <div class="checkbox-wrapper">

@@ -808,6 +808,13 @@ def crop_profile_picture(request):
                 # Use the uploaded file if available
                 if "profile_picture" in request.FILES:
                     image_file = request.FILES["profile_picture"]
+                    
+                    # Check file size (1MB limit)
+                    if image_file.size > 1024 * 1024:  # 1MB in bytes
+                        return JsonResponse(
+                            {"success": False, "error": "File size too large. Maximum size is 1MB."}
+                        )
+                    
                     image = Image.open(image_file).convert("RGB")
                 else:
                     return JsonResponse(
@@ -830,14 +837,24 @@ def crop_profile_picture(request):
                 timestamp = int(time.time())
                 file_name = f"profile_pics/profile_{user.id}_{timestamp}.jpg"
                 
-                # Delete old profile pictures for this user
-                old_files = default_storage.listdir("profile_pics")[1]  # Get files
-                for old_file in old_files:
-                    if old_file.startswith(f"profile_{user.id}_") and old_file.endswith(".jpg"):
+                # Delete old profile pictures for this user from Cloudinary
+                try:
+                    # Get all files from Cloudinary storage
+                    if hasattr(default_storage, 'listdir'):
                         try:
-                            default_storage.delete(f"profile_pics/{old_file}")
+                            old_files = default_storage.listdir("profile_pics")[1]  # Get files
+                            for old_file in old_files:
+                                if old_file.startswith(f"profile_{user.id}_") and old_file.endswith(".jpg"):
+                                    try:
+                                        default_storage.delete(f"profile_pics/{old_file}")
+                                    except:
+                                        pass
                         except:
+                            # If listdir doesn't work (e.g., with Cloudinary), skip deletion
                             pass
+                except Exception as e:
+                    logger.warning(f"Could not list old files for user {user.id}: {e}")
+                    pass
                 
                 saved_file_name = default_storage.save(file_name, img_content)
                 user.profile_picture.name = saved_file_name

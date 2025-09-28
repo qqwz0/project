@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'cloudinary',
     'cloudinary_storage',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -181,12 +182,54 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Media storage selection: use Cloudinary in production if credentials are present,
 # otherwise fall back to local FileSystemStorage for localhost/dev.
 CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
-USE_LOCAL_MEDIA = os.getenv('USE_LOCAL_MEDIA', 'true' if not CLOUDINARY_URL else 'false').lower() == 'true'
+USE_LOCAL_MEDIA = os.getenv('USE_LOCAL_MEDIA', 'false').lower() == 'true'
 
-if USE_LOCAL_MEDIA:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# Azure Blob Storage configuration
+AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
+
+if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
+    # Use Azure Blob Storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.azure_storage.AzureStorage",
+            "OPTIONS": {
+                "account_name": AZURE_ACCOUNT_NAME,
+                "account_key": AZURE_ACCOUNT_KEY,
+                "azure_container": AZURE_CONTAINER,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 else:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    # Fallback to local file storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+# Cloudinary configuration
+if CLOUDINARY_URL:
+    from urllib.parse import urlparse
+    parsed = urlparse(CLOUDINARY_URL)
+    CLOUDINARY_CLOUD_NAME = parsed.hostname
+    CLOUDINARY_API_KEY = parsed.username
+    CLOUDINARY_API_SECRET = parsed.password
+    
+    # Configure Cloudinary
+    import cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET
+    )
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
 EMAIL_HOST = 'smtp.office365.com'

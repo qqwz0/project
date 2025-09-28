@@ -1,5 +1,6 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
+{% load catalog_extras %}
 
 {% block title %}Профіль користувача{% endblock %}
 
@@ -27,7 +28,7 @@
             <div class="profile-info">
                 <!-- Profile Picture (view-only; editing moved to Edit Profile pages) -->
                 <div class="profile-pic">
-                    <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
+                    <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                 </div>
 
                 <!-- Profile Text -->

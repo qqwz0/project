@@ -46,11 +46,6 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    academic_levels = forms.CharField(
-        label='Посада',
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-input'}),
-        required=False
-    )
     slots = forms.IntegerField(
         label='Кількість місць',
         widget=forms.NumberInput(attrs={
@@ -78,10 +73,6 @@ class FilteringSearchingForm(forms.Form):
         self.fields['departments'].choices = [
             (dept, (dept[:25] + '...' if len(dept) > 25 else dept))
             for dept in departments
-        ]
-        academic_levels = OnlyTeacher.objects.values_list('academic_level', flat=True).distinct()
-        self.fields['academic_levels'].choices = [
-            (level, level) for level in academic_levels if level
         ]
         slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
         min_slots = min(slot_values) if slot_values else 1
