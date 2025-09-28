@@ -38,16 +38,16 @@ html body main.profile-main div.profile-content form.edit-form .form-sections.te
     box-sizing: border-box;
 }
 
-/* ЛІВА КОЛОНКА - РІВНА З ПРАВОЮ */
+/* ЛІВА КОЛОНКА - Особиста інформація + Контакти */
 html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:first-child {
-    flex: 1; /* Особиста інформація 50% */
-    max-width: 50%;
+    flex: 0 0 40%; /* Особиста інформація + контакти 40% */
+    max-width: 40%;
 }
 
-/* ПРАВА КОЛОНКА - РІВНА З ЛІВОЮ */
+/* ПРАВА КОЛОНКА - Теми (займає всю решту) */
 html body main.profile-main div.profile-content form.edit-form .form-sections.teacher-sections > div:last-child {
-    flex: 1; /* Контакти + теми 50% */
-    max-width: 50%;
+    flex: 1; /* Теми займають всю решту ширини */
+    max-width: none;
 }
 
 /* ULTRA-SPECIFIC ДЛЯ ОСОБИСТОЇ ІНФОРМАЦІЇ */
@@ -73,7 +73,7 @@ html body main.profile-main div.profile-content form.edit-form div.form-sections
 html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
     display: flex;
     flex-direction: column;
-    height: 600px; /* Збільшена висота для зручності перегляду */
+    height: 940px; /* Фіксована висота для скролу, як дві ліві секції разом */
     background: #F9FAFB;
     border-radius: 12px;
     width: 100%;
@@ -255,6 +255,7 @@ html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-
     }
     
     html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+        padding: 5px;
         height: auto; /* Автоматична висота замість фіксованої */
         min-height: 300px; /* Мінімальна висота */
         max-height: 60vh; /* Максимальна висота - 60% від висоти екрану */
@@ -307,5 +308,102 @@ html body main.profile-main div.profile-content .themes-grid::-webkit-scrollbar-
         min-height: 250px; /* Мінімальна висота для дуже маленьких екранів */
         max-height: 50vh; /* Максимальна висота - 50% від висоти екрану */
         border-radius: 4px;
+        padding: 8px; /* Зменшуємо padding для мобільних */
     }
+    
+    /* Зменшуємо padding для карток тем в мобільному */
+    @media (max-width: 768px) {
+        html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section {
+            padding: 4px; /* Ще менший padding */
+        }
+        
+        html body main.profile-main div.profile-content form.edit-form div.form-sections.teacher-sections div.themes-section .themes-grid {
+            padding: 8px; /* Зменшуємо padding для списку тем */
+            gap: 8px; /* Зменшуємо відступи між картками */
+        }
+        
+        /* Зменшуємо padding для карток тем в мобільному */
+        .theme-card {
+            padding: 5px; /* Зменшуємо padding карток */
+            margin: 4px 0; /* Зменшуємо margin */
+        }
+        
+        /* Зменшуємо розміри елементів всередині карток */
+        .theme-card .theme-title {
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        
+        .theme-card .theme-description {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .theme-card .theme-actions {
+            gap: 6px;
+        }
+        
+        .theme-card .action-btn {
+            padding: 6px 8px;
+            font-size: 11px;
+        }
+    }
+}
+
+/* Стилі для розгортання потоків на картках тем */
+.theme-streams-container {
+    margin-top: 12px;
+}
+
+.streams-header {
+    margin-bottom: 8px;
+}
+
+.streams-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6B7280;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toggle-streams-btn {
+    background: #3B82F6; /* Блакитний колір як на модалці */
+    border: none;
+    cursor: pointer;
+    padding: 1px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px; /* Зменшуємо розмір */
+    height: 14px; /* Зменшуємо розмір */
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-left: 4px;
+}
+
+.toggle-streams-btn:hover {
+    background-color: #2563EB; /* Темніший блакитний при hover */
+    transform: scale(1.1);
+}
+
+.chevron-icon {
+    width: 10px; /* Зменшуємо розмір іконки */
+    height: 10px; /* Зменшуємо розмір іконки */
+    transition: transform 0.3s ease;
+    color: white; /* Білий колір для контрасту з блакитним фоном */
+}
+
+.toggle-streams-btn[data-expanded="true"] .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.hidden-stream {
+    display: none;
+}
+
+.hidden-stream.show {
+    display: flex;
 } 

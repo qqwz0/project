@@ -84,7 +84,13 @@ def populate_initial_data(apps, schema_editor):
             education_levels.append('master')
         
         for education_level in education_levels:
-            for course in range(1, 5):  # Курси 1-4
+            # Визначаємо кількість курсів залежно від рівня освіти
+            if education_level == 'master':
+                courses = range(1, 3)  # Магістратура: 1-2 курси
+            else:
+                courses = range(1, 5)  # Бакалаврат: 1-4 курси
+            
+            for course in courses:
                 # Формуємо код потоку
                 stream_code = f"{faculty_code}-{course}"
                 if education_level == 'master':

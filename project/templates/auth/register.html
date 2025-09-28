@@ -39,47 +39,7 @@
                 {% endfor %}
               </div>
             {% endif %}
-            <div id="department-field" style="display: none; margin-top: 20px;">
-              <label for="{{ form.department.id_for_label }}" class="form-h3">{{ form.department.label }}</label>
-              <div class="input-box">
-                {{ form.department }}
-              </div>
-              {% if form.department.errors %}
-                <div class="error-message">
-                  {% for error in form.department.errors %}
-                    <p>{{ error }}</p>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            </div>
           `;
-          
-          // Додаємо обробник для поля групи
-          const groupInput = document.querySelector('input[name="group"]');
-          if (groupInput) {
-            groupInput.addEventListener('input', function() {
-              const groupValue = this.value;
-              const departmentField = document.getElementById('department-field');
-              
-              // Перевіряємо чи це 3-4 курс
-              const match = groupValue.match(/^ФЕ[СМЛПІ]-([34])/);
-              if (match) {
-                departmentField.style.display = 'block';
-                // Робимо поле кафедри обов'язковим
-                const departmentSelect = document.querySelector('select[name="department"]');
-                if (departmentSelect) {
-                  departmentSelect.required = true;
-                }
-              } else {
-                departmentField.style.display = 'none';
-                // Робимо поле кафедри необов'язковим
-                const departmentSelect = document.querySelector('select[name="department"]');
-                if (departmentSelect) {
-                  departmentSelect.required = false;
-                }
-              }
-            });
-          }
         } else if (role === "Викладач") {
           groupContainer.innerHTML = `
           <label for="{{ form.department.id_for_label }}" class="form-h3">{{ form.department.label }}</label>

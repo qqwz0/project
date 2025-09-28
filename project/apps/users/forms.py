@@ -122,12 +122,8 @@ class RegistrationForm(forms.Form):
             if not department:
                 raise ValidationError("Це поле обов'язкове.")
         elif role == 'Студент' and group:
-            # Перевіряємо чи це 3-4 курс
-            import re
-            match = re.match(r'^ФЕ[СМЛПІ]-([34])', group.upper())
-            if match:
-                if not department:
-                    raise ValidationError("Для студентів 3-4 курсу обов'язково виберіть кафедру.")
+            # Для студентів 3-4 курсу кафедра не потрібна - буде визначена адміністратором
+            pass
         
         return department
 

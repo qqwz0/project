@@ -370,11 +370,15 @@ document.addEventListener('DOMContentLoaded', function(){
       })
       .then(r => r.json())
       .then(data => {
+        console.log('Crop response:', data);
         if (data.success) {
-          document.getElementById('profile-preview').src = data.new_profile_picture_url + '?t=' + new Date().getTime();
+          const newUrl = data.new_profile_picture_url + '?t=' + new Date().getTime();
+          console.log('Setting new profile picture URL:', newUrl);
+          document.getElementById('profile-preview').src = newUrl;
           closeModal();
           showSuccessMessage('Фото профілю успішно оновлено');
         } else {
+          console.error('Crop error:', data.error);
           alert('Error cropping image: ' + (data.error || 'Unknown error'));
         }
       })

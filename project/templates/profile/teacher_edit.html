@@ -43,7 +43,7 @@
             {% csrf_token %}
     
             <div class="form-sections teacher-sections">
-                <!-- LEFT COLUMN: Особиста інформація + Місця -->
+                <!-- LEFT COLUMN: Особиста інформація + Контакти -->
                 <div>
                   <div class="personal-info">
                     <h3>Особиста інформація</h3>
@@ -75,6 +75,30 @@
                       <div class="error-message" id="academic_level-error"></div>
                     </div>
                   </div>
+                  
+                  <!-- Контакти -->
+                  <div class="contacts">
+                    <h3>Контакти</h3>
+                    <div class="form-group">
+                      <label for="{{ form.additional_email.id_for_label }}">Додаткова електронна скринька</label>
+                      {{ form.additional_email }}
+                      <div class="error-message" id="additional_email-error"></div>
+                    </div>
+                    <div class="form-group phone-group">
+                      <label for="{{ form.phone_number.id_for_label }}">Робочий номер телефону</label>
+                      <div class="phone-input">
+                        <span class="country-code">+380</span>
+                        {{ form.phone_number }}
+                      </div>
+                      <div class="error-message" id="phone_number-error"></div>
+                    </div>
+                    <div class="form-group fac-link">
+                      <label for="{{ form.profile_link.id_for_label }}">Посилання на сторінку на сайті факультету</label>
+                      {{ form.profile_link }}
+                      <div class="error-message" id="profile_link-error"></div>
+                    </div>
+                  </div>
+                  
                   <!-- Місця -->
                   <!-- ЗАКОМЕНТОВАНО: функціонал зміни квот (буде відновлено пізніше)
                   <div class="quota-section">
@@ -129,29 +153,8 @@
                   -->
                 </div>
                 <!-- Модальне вікно для вибору потоку -->
-                <!-- RIGHT COLUMN: Контакти + Теми -->
+                <!-- RIGHT COLUMN: Теми -->
                 <div>
-                  <div class="contacts">
-                    <h3>Контакти</h3>
-                    <div class="form-group">
-                      <label for="{{ form.additional_email.id_for_label }}">Додаткова електронна скринька</label>
-                      {{ form.additional_email }}
-                      <div class="error-message" id="additional_email-error"></div>
-                    </div>
-                    <div class="form-group phone-group">
-                      <label for="{{ form.phone_number.id_for_label }}">Робочий номер телефону</label>
-                      <div class="phone-input">
-                        <span class="country-code">+380</span>
-                        {{ form.phone_number }}
-                      </div>
-                      <div class="error-message" id="phone_number-error"></div>
-                    </div>
-                    <div class="form-group fac-link">
-                      <label for="{{ form.profile_link.id_for_label }}">Посилання на сторінку на сайті факультету</label>
-                      {{ form.profile_link }}
-                      <div class="error-message" id="profile_link-error"></div>
-                    </div>
-                  </div>
                 <!-- ТЕМИ -->
                   <div class="themes-section">
                     <h3>Управління темами робіт</h3>
@@ -193,10 +196,21 @@
                             
                             <!-- Потоки -->
                             <div class="theme-streams-container">
-                                <label class="streams-label">Потоки:</label>
+                                <div class="streams-header">
+                                    <label class="streams-label">
+                                        Потоки:
+                                        {% if theme.streams.count > 3 or all_streams|length > 3 %}
+                                        <button type="button" class="toggle-streams-btn" data-theme-id="{{ theme.id }}" data-expanded="false">
+                                            <svg class="chevron-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </label>
+                                </div>
                                 <div class="streams-list" data-theme-id="{{ theme.id }}">
                                     {% for stream in theme.streams.all %}
-                                        <div class="stream-item">
+                                        <div class="stream-item {% if forloop.counter > 3 %}hidden-stream{% endif %}">
                                             <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
                                                    value="{{ stream.id }}" checked 
                                                    onchange="updateThemeStreams({{ theme.id }})">
@@ -205,7 +219,7 @@
                                     {% endfor %}
                                     {% for stream in all_streams %}
                                         {% if stream not in theme.streams.all %}
-                                        <div class="stream-item">
+                                        <div class="stream-item {% if forloop.counter0|add:theme.streams.count > 3 %}hidden-stream{% endif %}">
                                             <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
                                                    value="{{ stream.id }}" 
                                                    onchange="updateThemeStreams({{ theme.id }})">
@@ -401,13 +415,17 @@ document.addEventListener('DOMContentLoaded', function(){
     })
     .then(r => r.json())
     .then(data => {
+      console.log('Crop response:', data);
       if (data.success) {
-        document.getElementById('profile-preview').src = data.new_profile_picture_url + '?t=' + new Date().getTime();
+        const newUrl = data.new_profile_picture_url + '?t=' + new Date().getTime();
+        console.log('Setting new profile picture URL:', newUrl);
+        document.getElementById('profile-preview').src = newUrl;
         closeModal();
         if (typeof showMessage === 'function') {
           showMessage('Фото профілю успішно оновлено', 'success');
         }
       } else {
+        console.error('Crop error:', data.error);
         alert('Error cropping image: ' + (data.error || 'Unknown error'));
       }
     })
@@ -1383,6 +1401,31 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.', 'error');
         });
+    });
+
+    // Функціонал розгортання потоків на картках тем
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-streams-btn')) {
+            const button = e.target.closest('.toggle-streams-btn');
+            const themeId = button.getAttribute('data-theme-id');
+            const isExpanded = button.getAttribute('data-expanded') === 'true';
+            const themeCard = button.closest('.theme-card');
+            const hiddenStreams = themeCard.querySelectorAll('.hidden-stream');
+            
+            if (isExpanded) {
+                // Згортаємо - приховуємо додаткові потоки
+                hiddenStreams.forEach(stream => {
+                    stream.classList.remove('show');
+                });
+                button.setAttribute('data-expanded', 'false');
+            } else {
+                // Розгортаємо - показуємо всі потоки
+                hiddenStreams.forEach(stream => {
+                    stream.classList.add('show');
+                });
+                button.setAttribute('data-expanded', 'true');
+            }
+        }
     });
 });
 </script>

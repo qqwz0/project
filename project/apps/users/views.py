@@ -268,7 +268,7 @@ def handle_registration_callback(request, code):
             )
 
         user_info = get_user_info(access_token)
-        email, first_name, last_name, job_title = extract_user_data(user_info)
+        email, first_name, last_name, job_title, microsoft_department = extract_user_data(user_info)
 
         derived_role = "Студент" if "Student" in job_title else "Викладач"
         submitted_role = request.session.get("role")
@@ -289,6 +289,15 @@ def handle_registration_callback(request, code):
                 request,
                 "Будь ласка, вкажіть правильну роль.",
                 f"Role mismatch. Submitted: {submitted_role}, Derived: {derived_role}"
+            )
+
+        # Перевірка факультету через Microsoft Graph API
+        from apps.users.services.registration_services import validate_faculty_from_microsoft
+        if not validate_faculty_from_microsoft(microsoft_department):
+            return fail_and_redirect(
+                request,
+                "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій.",
+                f"Faculty validation failed. Microsoft department: {microsoft_department}"
             )
 
         with transaction.atomic():
@@ -315,14 +324,8 @@ def handle_registration_callback(request, code):
                 logger.info("New user registered: %s", email)
                 # Створюємо профіль в залежності від ролі
                 if derived_role == "Студент":
-                    # Перевіряємо курс студента для визначення чи потрібна кафедра
-                    course = get_student_course(group)
-                    if course and course >= 3:
-                        # Студент 3-4 курсу - передаємо кафедру
-                        create_student_profile(user, group, email, department)
-                    else:
-                        # Студент 1-2 курсу - без кафедри
-                        create_student_profile(user, group, email, None)
+                    # Для всіх студентів кафедра буде визначена адміністратором
+                    create_student_profile(user, group, email, None)
                 else:
                     # department тепер є Department об'єктом
                     create_teacher_profile(user, job_title, department)
@@ -389,14 +392,29 @@ def handle_login_callback(request, code):
         # Fetch user info
         headers = {"Authorization": f"Bearer {access_token}"}
         logger.debug("Fetching user info from Microsoft Graph.")
-        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
+        # Отримуємо department з Microsoft Graph API
+        params = {
+            '$select': 'mail,userPrincipalName,department'
+        }
+        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers, params=params).json()
 
         # Extract user details
         email = user_info.get("mail") or user_info.get("userPrincipalName")
+        microsoft_department = user_info.get("department", "")
+        
         if not email:
             logger.error("Email not found in Microsoft account.")
             messages.error(
                 request, "Електронна пошта не знайдена в обліковому записі Microsoft."
+            )
+            return redirect("login")
+
+        # Перевірка факультету через Microsoft Graph API
+        from apps.users.services.registration_services import validate_faculty_from_microsoft
+        if not validate_faculty_from_microsoft(microsoft_department):
+            logger.error("Faculty validation failed for user %s. Microsoft department: %s", email, microsoft_department)
+            messages.error(
+                request, "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій."
             )
             return redirect("login")
 
@@ -807,12 +825,24 @@ def crop_profile_picture(request):
 
                 # Save to configured storage (Cloudinary in prod or local in dev)
                 user = request.user
-                file_name = f"profile_pics/profile_{user.id}.jpg"
-                if default_storage.exists(file_name):
-                    default_storage.delete(file_name)
+                # Generate unique filename with timestamp to avoid caching issues
+                import time
+                timestamp = int(time.time())
+                file_name = f"profile_pics/profile_{user.id}_{timestamp}.jpg"
+                
+                # Delete old profile pictures for this user
+                old_files = default_storage.listdir("profile_pics")[1]  # Get files
+                for old_file in old_files:
+                    if old_file.startswith(f"profile_{user.id}_") and old_file.endswith(".jpg"):
+                        try:
+                            default_storage.delete(f"profile_pics/{old_file}")
+                        except:
+                            pass
+                
                 saved_file_name = default_storage.save(file_name, img_content)
                 user.profile_picture.name = saved_file_name
                 user.save(update_fields=["profile_picture"])
+                user.refresh_from_db()
                 new_url = default_storage.url(saved_file_name)
 
                 logger.debug(

@@ -29,7 +29,12 @@ def get_access_token(code, request):
 
 def get_user_info(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
-    return requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
+    # Отримуємо department з Microsoft Graph API
+    params = {
+        '$select': 'mail,userPrincipalName,givenName,surname,jobTitle,department'
+    }
+    response = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers, params=params)
+    return response.json()
 
 
 def extract_user_data(user_info):
@@ -38,8 +43,34 @@ def extract_user_data(user_info):
         email,
         user_info.get("givenName", ""),
         user_info.get("surname", ""),
-        user_info.get("jobTitle", "")
+        user_info.get("jobTitle", ""),
+        user_info.get("department", "")
     )
+
+
+def validate_faculty_from_microsoft(department):
+    """
+    Перевіряє чи факультет користувача з Microsoft підтримується системою
+    """
+    if not department:
+        return False
+    
+    # Дозволені варіанти назв факультету
+    allowed_faculties = [
+        "Факультет електроніки та комп'ютерних технологій",
+        "Факультет електроніки та КТ",
+        "Факультет електроніки",
+        "Faculty of Electronics and Computer Technologies",
+        "Faculty of Electronics and CT"
+    ]
+    
+    # Перевіряємо чи department містить один з дозволених факультетів
+    department_lower = department.lower()
+    for faculty in allowed_faculties:
+        if faculty.lower() in department_lower:
+            return True
+    
+    return False
 
 
 def fail_and_redirect(request, msg, log_msg=None, level="error"):
