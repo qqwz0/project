@@ -7,6 +7,9 @@ from django.urls import reverse
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 import re
+from django.urls import path
+from django.shortcuts import redirect, get_object_or_404
+from django.utils import timezone
 
 from docxtpl import DocxTemplate
 
@@ -19,6 +22,8 @@ from apps.catalog.models import (
     TeacherTheme,
     Request,
     StudentTheme,
+    Semestr,
+    Department
 )
 from .export_service import export_requests_to_word
 
@@ -920,6 +925,243 @@ class RequestAdmin(admin.ModelAdmin):
             self.message_user(request, str(e), level=messages.ERROR)
     export_to_word.short_description = "Експортувати шаблон запитів у Word"
 
+class SemestrAdmin(admin.ModelAdmin):
+    list_display = (
+        'department',
+        'academic_year',
+        'semestr',
+        'lock_student_requests_date',
+        'get_student_lock_status',
+        'lock_teacher_editing_themes_date',
+        'get_teacher_lock_status',
+        'lock_cancel_requests_date',
+        'allow_complete_work_date',
+        'can_complete_requests_display',
+    )
+    list_filter = ('academic_year', 'semestr', 'department')
+    search_fields = ('academic_year', 'department__department_name')
+    readonly_fields = ('student_requests_locked_at', 'teacher_editing_locked_at')
+    actions = ['action_reject_pending_requests', 'action_lock_active_themes', 'action_apply_all']
+    actions_on_top = True
+    actions_on_bottom = False
+
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('department', 'academic_year', 'semestr'),
+            'description': (
+                "Налаштування семестру для конкретної кафедри. "
+                "Комбінація «Кафедра + Рік + Семестр» має бути унікальною."
+            )
+        }),
+        ('Дедлайни та застосування дій', {
+            'fields': (
+                'lock_student_requests_date',
+                'student_requests_locked_at',
+                'lock_teacher_editing_themes_date',
+                'teacher_editing_locked_at',
+                'lock_cancel_requests_date',
+                'allow_complete_work_date',
+            ),
+            'description': (
+                "<b>Інструкція:</b><br>"
+                "• Після настання дат дедлайнів скористайтеся діями вгорі списку, щоб застосувати зміни.<br>"
+                "• «Відхилити запити, що очікують» — відхиляє всі запити зі статусом «Очікує».<br>"
+                "• «Заблокувати теми в активних роботах» — увімкне блокування редагування тем (is_topic_locked=True).<br>"
+                "• «Застосувати всі» — виконує обидві дії за потреби.<br>"
+                "• Поля «...заблоковано о» заповнюються автоматично після виконання відповідних дій."
+            )
+        }),
+    )
+
+    # ----- access helpers (use OnlyTeacher.department) -----
+    def _is_dept_admin(self, request):
+        return request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser
+
+    def _get_user_department(self, request):
+        user = request.user  # <-- виправлено тут!
+        if hasattr(user, "role") and user.role == "Викладач":
+            try:
+                ot = OnlyTeacher.objects.select_related('department').get(teacher_id=user)
+                return ot.department
+            except OnlyTeacher.DoesNotExist:
+                return None
+        elif hasattr(user, "role") and user.role == "Студент":
+            try:
+                os = OnlyStudent.objects.select_related('group__stream').get(student_id=user)
+                if os.group and os.group.stream and hasattr(os.group.stream, "department"):
+                    return os.group.stream.department
+                if hasattr(os, "department"):
+                    return os.department
+            except OnlyStudent.DoesNotExist:
+                return None
+        return None
+
+    def _allowed(self, request, obj):
+        if request.user.is_superuser:
+            return True
+        if not self._is_dept_admin(request):
+            return False
+        user_dept = self._get_user_department(request)
+        return user_dept and obj.department_id == user_dept.id
+
+    # ----- queryset and form scoping -----
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if self._is_dept_admin(request):
+            dept = self._get_user_department(request)
+            if dept:
+                return qs.filter(department=dept)
+            # if no OnlyTeacher department, show nothing
+            return qs.none()
+        return qs
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'department' and self._is_dept_admin(request):
+            dept = self._get_user_department(request)
+            kwargs['queryset'] = Department.objects.filter(pk=dept.pk) if dept else Department.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_changeform_initial_data(self, request):
+        data = super().get_changeform_initial_data(request)
+        if self._is_dept_admin(request):
+            dept = self._get_user_department(request)
+            if dept:
+                data['department'] = dept.pk
+        return data
+
+    # enforce department on save for dept admins
+    def save_model(self, request, obj, form, change):
+        if self._is_dept_admin(request):
+            dept = self._get_user_department(request)
+            if not dept:
+                self.message_user(request, "Не знайдено кафедру для користувача в OnlyTeacher.", level=messages.ERROR)
+                return
+            obj.department = dept
+        super().save_model(request, obj, form, change)
+
+    # ----- object-level permissions -----
+    def has_view_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if not self._is_dept_admin(request):
+            return False
+        if obj is None:
+            return True
+        return self._allowed(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if not self._is_dept_admin(request):
+            return False
+        if obj is None:
+            return True
+        return self._allowed(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if not self._is_dept_admin(request):
+            return False
+        if obj is None:
+            return False
+        return self._allowed(request, obj)
+
+    def has_add_permission(self, request):
+        if request.user.is_superuser:
+            return True
+        if not self._is_dept_admin(request):
+            return False
+        return self._get_user_department(request) is not None
+
+
+
+    @admin.display(description="Статус блокування подачі")
+    def get_student_lock_status(self, obj):
+        if obj.student_requests_locked_at:
+            return f"Застосовано {obj.student_requests_locked_at.strftime('%d.%m.%Y %H:%M')}"
+        if obj.lock_student_requests_date:
+            today = timezone.now().date()
+            return ("Дедлайн минув, очікує застосування"
+                    if today >= obj.lock_student_requests_date
+                    else f"Дедлайн {obj.lock_student_requests_date.strftime('%d.%m.%Y')}")
+        return "—"
+
+    @admin.display(description="Статус блокування тем")
+    def get_teacher_lock_status(self, obj):
+        if obj.teacher_editing_locked_at:
+            return f"Застосовано {obj.teacher_editing_locked_at.strftime('%d.%m.%Y %H:%M')}"
+        if obj.lock_teacher_editing_themes_date:
+            today = timezone.now().date()
+            return ("Дедлайн минув, очікує застосування"
+                    if today >= obj.lock_teacher_editing_themes_date
+                    else f"Дедлайн {obj.lock_teacher_editing_themes_date.strftime('%d.%m.%Y')}")
+        return "—"
+
+    @admin.display(description="Можна завершувати роботи")
+    def can_complete_requests_display(self, obj):
+        if obj.can_complete_requests():
+            return "Так"
+        if obj.allow_complete_work_date:
+            return f"З {obj.allow_complete_work_date.strftime('%d.%m.%Y')}"
+        return "Ні"
+
+    @admin.action(description="Відхилити запити, що очікують (після дедлайну)")
+    def action_reject_pending_requests(self, request, queryset):
+        total = 0
+        processed = 0
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            count = sem.apply_student_requests_cancellation()
+            total += count
+            processed += 1
+        if total:
+            self.message_user(request, f"Успішно відхилено {total} запитів (семестрів: {processed}).", level=messages.SUCCESS)
+        else:
+            self.message_user(request, "Жодних запитів для відхилення не знайдено або дедлайни ще не настали.", level=messages.INFO)
+
+    @admin.action(description="Заблокувати теми в активних роботах (після дедлайну)")
+    def action_lock_active_themes(self, request, queryset):
+        total = 0
+        processed = 0
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            count = sem.apply_teacher_editing_lock()
+            total += count
+            processed += 1
+        if total:
+            self.message_user(request, f"Заблоковано {total} тем (семестрів: {processed}).", level=messages.SUCCESS)
+        else:
+            self.message_user(request, "Жодних тем для блокування не знайдено або дедлайни ще не настали.", level=messages.INFO)
+
+    @admin.action(description="Застосувати всі дедлайни (комплексна дія)")
+    def action_apply_all(self, request, queryset):
+        stats = {'rejected': 0, 'locked': 0, 'processed': 0}
+        for sem in queryset:
+            if not self._allowed(request, sem):
+                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
+                continue
+            result = sem.apply_all_deadlines()
+            stats['rejected'] += result['rejected_pending']
+            stats['locked'] += result['locked_themes']
+            stats['processed'] += 1
+        if stats['rejected'] or stats['locked']:
+            self.message_user(
+                request,
+                f"Оброблено {stats['processed']} семестрів. Відхилено: {stats['rejected']}, Заблоковано: {stats['locked']}.",
+                level=messages.SUCCESS
+            )
+        else:
+            self.message_user(
+                request,
+                f"Оброблено {stats['processed']} семестрів. Змін не виявлено.",
+                level=messages.INFO
+            )
+    
 # І нарешті реєструємо модель:
 admin.site.register(Stream, StreamAdmin)
 
@@ -933,3 +1175,4 @@ admin.site.register(TeacherTheme, TeacherThemeAdmin)
 # Correctly register the model with the admin site:
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Slot, SlotAdmin)
+admin.site.register(Semestr, SemestrAdmin)

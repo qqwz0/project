@@ -51,7 +51,11 @@ from .services.registration_services import (
     create_student_profile,
     create_teacher_profile
 )
-
+from apps.catalog.semestr_rules import (
+    assert_can_complete,
+    assert_can_cancel,
+    assert_can_edit
+)
 # Load environment variables
 load_dotenv()
 
@@ -1187,6 +1191,10 @@ def complete_request(request, request_id):
                     "error": "У вас немає прав для завершення цього запиту",
                 }
             )
+        try:
+            assert_can_complete(req)
+        except ValidationError as e:
+            return JsonResponse({"success": False, "error": e.message}, status=400)
 
         # Get the grade from POST data
         grade = request.POST.get("grade")
@@ -1696,10 +1704,10 @@ def student_refuse_request(request, request_id):
         req = Request.objects.select_related("teacher_theme").get(id=request_id)
         if request.user.role != "Студент" or req.student_id != request.user:
             return JsonResponse({"error": "Forbidden"}, status=403)
-        if req.request_status not in ["Очікує", "Активний"]:
+        if req.request_status not in ["Очікує"]:
             return JsonResponse(
                 {
-                    "error": 'Відмовитися можна лише від запиту зі статусом "Очікує" або "Активний"'
+                    "error": 'Відмовитися можна лише від запиту зі статусом "Очікує" '
                 },
                 status=400,
             )
@@ -1749,6 +1757,13 @@ def edit_request_theme(request, request_id):
                 {"error": "У вас немає прав для редагування цієї теми"}, status=403
             )
 
+        try:
+            if req.teacher_id :
+                assert_can_edit(req.teacher_id)
+        except ValidationError as e:
+            logger.warning(f"Cannot edit theme: {str(e)}")
+            return JsonResponse({"success": False, "error": e.message}, status=400)
+        
         # Parse JSON data
         data = json.loads(request.body.decode("utf-8"))
         new_theme = data.get("new_theme", "").strip()
@@ -2333,6 +2348,10 @@ def cancel_active_request(request, request_id):
         if req.teacher_id.teacher_id != request.user:
             return JsonResponse({"success": False, "error": "У вас немає прав для скасування цього запиту"})
             
+        try:
+            assert_can_cancel(req)
+        except ValidationError as e:
+            return JsonResponse({"success": False, "error": e.message}, status=400)
         
         rejected_reason = request.POST.get("rejected_reason")
 

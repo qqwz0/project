@@ -43,6 +43,12 @@ from .models import (
 )
 from .templatetags.catalog_extras import get_profile_picture_url
 from .utils import FileAccessMixin, HtmxModalFormAccessMixin
+from apps.catalog.semestr_rules import (
+    assert_can_cancel,
+    assert_can_complete,
+    assert_can_create,
+    assert_can_edit,
+)
 
 
 class TeachersCatalogView(LoginRequiredMixin, TemplateView, FormView):
@@ -343,11 +349,14 @@ class TeacherModalView(
             return JsonResponse({"success": False, "errors": form.errors}, status=400)
         return super().form_invalid(form)
     
+    
     def form_valid(self, form):
         """
         Processes valid form data. Creates a request, saves themes, and returns JSON for XMLHttpRequests.
         """
         try:
+            teacher = self.get_object()
+            assert_can_create(teacher)
             # First try to assign the slot and save the request
             req = form.save(commit=False)
             self.assign_request_fields(form)
@@ -399,9 +408,11 @@ class TeacherModalView(
                 return response
             return super().form_valid(form)
         
+#NEED TO REWRITE  - temporary solution
         except ValidationError as e:
             print(f"Validation error: {str(e)}")
-            messages.error(self.request, str(e))
+            if not any("дедлайн минув" in msg.lower() or "семестр не створений" in msg.lower() for msg in e.messages):
+                messages.error(self.request, str(e))
             if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
                 return JsonResponse(
                     {"success": False, "errors": {"__all__": e.messages}}, status=400
@@ -468,6 +479,10 @@ class CompleteRequestView(View):
             request.user.role == "Викладач"
             and req.teacher_id.teacher_id == request.user
         ):
+            try:
+                assert_can_complete(req)
+            except ValidationError as e:
+                return JsonResponse({"success": False, "error": e.message}, status=400)
             # Отримуємо обрані файли
             selected_files_json = request.POST.get("selected_files", "[]")
             logger.error(f"[COMPLETE DEBUG] selected_files_json: {selected_files_json}")
