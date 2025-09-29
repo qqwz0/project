@@ -4,7 +4,7 @@
     {% load static %}
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quick Header</title>
+    <title>Advisor Finder</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
     <script
@@ -13,6 +13,7 @@
     ></script>
     <link rel="stylesheet" href="{% static 'css/notification.css' %}" />
     <link rel="stylesheet" href="{% static 'css/header.css' %}" />
+    <link rel="stylesheet" href="https://unpkg.com/intro.js/minified/introjs.min.css" />
   </head>
   <body hx-ext="ws" ws-connect="/ws/notifications/">
     <header class="header">
@@ -22,13 +23,14 @@
         </div>
 
         {% if user.is_authenticated %}
-        <nav class="nav-icons">
-          <a href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
+        <!-- Desktop navigation - visible on screens > 768px -->
+        <nav class="nav-icons desktop-nav">
+          <a id="nav-home" href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
             <i class="fas fa-home"></i>
             <span class="nav-tooltip">Головна</span>
           </a>
           {% if user_profile.role == 'Студент' %}
-            <a href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
+            <a id="nav-search" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
               <i class="fas fa-search"></i>
               <span class="nav-tooltip">Пошук</span>
             </a>
@@ -91,7 +93,7 @@
             </div>
           </div>
 
-          <div class="profile-wrapper">
+          <div class="profile-wrapper" id="nav-profile">
             <a href="{% url 'profile' %}" class="profile-link">
               <img
                 src="{{ profile_picture_url }}"
@@ -102,6 +104,56 @@
             </a>
           </div>
         </nav>
+
+        <!-- Burger menu button for mobile -->
+        <button class="burger-menu" id="burger-menu" aria-label="Toggle navigation">
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+        </button>
+
+        <!-- Mobile menu wrapper for collapsible navigation -->
+        <div class="mobile-menu" id="mobile-menu">
+          <nav class="nav-icons mobile-nav">
+            <a id="nav-home-mobile" href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
+              <i class="fas fa-home"></i>
+              <span class="nav-tooltip">Головна</span>
+            </a>
+            {% if user_profile.role == 'Студент' %}
+              <a id="nav-search-mobile" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
+                <i class="fas fa-search"></i>
+                <span class="nav-tooltip">Пошук</span>
+              </a>
+            {% endif %}
+            
+            <div class="nav-icon notification-wrapper" id="dropdownMenuButtonMobile">
+              <i class="fas fa-bell"></i>
+              <span class="nav-tooltip">Сповіщення</span>
+              <i class="notification-dot" id="notification-indicator-mobile"></i>
+            </div>
+
+            <div class="nav-icon message-wrapper" id="messageDropdownButtonMobile">
+              <i class="fas fa-envelope"></i>
+              <span class="nav-tooltip">Повідомлення</span>
+              {%if unread%}
+              <span class="message-badge">
+                {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
+              </span>
+              {%endif%}
+            </div>
+
+            <div class="profile-wrapper" id="nav-profile-mobile">
+              <a href="{% url 'profile' %}" class="profile-link">
+                <img
+                  src="{{ profile_picture_url }}"
+                  alt="Фото профілю"
+                  class="profile-avatar"
+                />
+                <span class="nav-tooltip">Профіль</span>
+              </a>
+            </div>
+          </nav>
+        </div>
         {% else %}
         <div class="auth-section">
           <a
@@ -132,6 +184,185 @@
       </div>
     </div>
 
+    <!-- Full-screen mobile notifications overlay -->
+    <div class="mobile-fullscreen-overlay" id="mobile-notifications-overlay">
+      <div class="mobile-fullscreen-header">
+        <h2 class="mobile-fullscreen-title">Сповіщення</h2>
+        <button class="mobile-fullscreen-close" id="close-mobile-notifications">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mobile-fullscreen-content" id="mobile-notifications-content">
+        <div class="mobile-empty-state">
+          <div class="mobile-empty-icon">
+            <i class="fas fa-bell"></i>
+          </div>
+          <h3 class="mobile-empty-title">Сповіщень немає</h3>
+          <p class="mobile-empty-message">Тут з'являтимуться ваші сповіщення</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-screen mobile messages overlay -->
+    <div class="mobile-fullscreen-overlay" id="mobile-messages-overlay">
+      <div class="mobile-fullscreen-header">
+        <h2 class="mobile-fullscreen-title">Повідомлення</h2>
+        <button class="mobile-fullscreen-close" id="close-mobile-messages">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mobile-fullscreen-content" id="mobile-messages-content">
+        {% if message_list %}
+          {% for item in message_list %}
+          <div class="mobile-message-item {% if item.is_read %}read{% endif %}" data-id="{{ item.id }}">
+            <div class="mobile-item-text">
+              {{ item.message_text }}
+              {% if item.status == 'відхилив' or item.status == 'скасував' %}
+              <button
+                type="button"
+                class="view-rejection-reason-btn"
+                data-reason="{{ item.related_request.rejected_reason|default:'Причина не вказана.' }}"
+                style="margin-top: 8px; padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 12px;"
+              >
+                Переглянути причину →
+              </button>
+              {% endif %}
+            </div>
+            <div class="mobile-item-timestamp">{{ item.created_at|date:"d.m.Y H:i" }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="mobile-empty-state">
+            <div class="mobile-empty-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <h3 class="mobile-empty-title">Ваша скринька порожня</h3>
+            <p class="mobile-empty-message">Тут з'являтимуться ваші повідомлення</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
     <script src="{% static 'js/notification.js' %}"></script>
+    {% comment %} <script src="{% static 'js/main.js' %}"></script> {% endcomment %}
+    <script>window.APP_ROLE = "{{ user_profile.role|default_if_none:'' }}";</script>
+    <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
+    <script src="{% static 'js/intro_tour.js' %}"></script>
+    <!-- Added burger menu functionality -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const burgerMenu = document.getElementById('burger-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileNotificationsBtn = document.getElementById('dropdownMenuButtonMobile');
+        const mobileMessagesBtn = document.getElementById('messageDropdownButtonMobile');
+        const mobileNotificationsOverlay = document.getElementById('mobile-notifications-overlay');
+        const mobileMessagesOverlay = document.getElementById('mobile-messages-overlay');
+        const closeMobileNotifications = document.getElementById('close-mobile-notifications');
+        const closeMobileMessages = document.getElementById('close-mobile-messages');
+        
+        // Burger menu functionality
+        if (burgerMenu && mobileMenu) {
+          burgerMenu.addEventListener('click', function(event) {
+            event.stopPropagation();
+            burgerMenu.classList.toggle('active');
+            mobileMenu.classList.toggle('active');
+          });
+
+          mobileMenu.addEventListener('click', function(event) {
+  event.stopPropagation();
+});
+
+          // Close menu when clicking outside
+          document.addEventListener('click', function(event) {
+            if (!burgerMenu.contains(event.target) && !mobileMenu.contains(event.target)) {
+              burgerMenu.classList.remove('active');
+              mobileMenu.classList.remove('active');
+            }
+          });
+
+          // Close menu when clicking on nav links
+          const navLinks = mobileMenu.querySelectorAll('.nav-icon');
+          navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+              // Don't close menu for notifications and messages
+              if (!link.classList.contains('notification-wrapper') && !link.classList.contains('message-wrapper')) {
+                burgerMenu.classList.remove('active');
+                mobileMenu.classList.remove('active');
+              }
+            });
+          });
+        }
+
+        // Mobile notifications full-screen
+        if (mobileNotificationsBtn && mobileNotificationsOverlay) {
+          mobileNotificationsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            mobileNotificationsOverlay.classList.add('active');
+            // Close mobile menu
+            burgerMenu.classList.remove('active');
+            mobileMenu.classList.remove('active');
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+          });
+        }
+
+        // Mobile messages full-screen
+        if (mobileMessagesBtn && mobileMessagesOverlay) {
+          mobileMessagesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            mobileMessagesOverlay.classList.add('active');
+            // Close mobile menu
+            burgerMenu.classList.remove('active');
+            mobileMenu.classList.remove('active');
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+          });
+        }
+
+        // Close mobile notifications
+        if (closeMobileNotifications) {
+          closeMobileNotifications.addEventListener('click', function() {
+            mobileNotificationsOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+          });
+        }
+
+        // Close mobile messages
+        if (closeMobileMessages) {
+          closeMobileMessages.addEventListener('click', function() {
+            mobileMessagesOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+          });
+        }
+
+        // Close overlays when clicking outside content
+        [mobileNotificationsOverlay, mobileMessagesOverlay].forEach(overlay => {
+          if (overlay) {
+            overlay.addEventListener('click', function(e) {
+              if (e.target === overlay) {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+              }
+            });
+          }
+        });
+
+        // Close overlays on escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            if (mobileNotificationsOverlay && mobileNotificationsOverlay.classList.contains('active')) {
+              mobileNotificationsOverlay.classList.remove('active');
+              document.body.style.overflow = '';
+            }
+            if (mobileMessagesOverlay && mobileMessagesOverlay.classList.contains('active')) {
+              mobileMessagesOverlay.classList.remove('active');
+              document.body.style.overflow = '';
+            }
+          }
+        });
+      });
+    </script>
   </body>
 </html>

@@ -3,8 +3,6 @@
  * Shows a modal dialog when content is swapped into the inner_modal element.
  */
 document.addEventListener("htmx:afterSwap", function (event) {
-  console.log("HTMX swap завершено", event.detail.target);
-
   if (event.detail.target.id === "inner_modal") {
     document.getElementById("details_request_modal").showModal();
   }
@@ -87,7 +85,9 @@ document
         "X-CSRFToken": document.getElementById("csrf_token").value,
       },
     })
-      .then((response) => {console.log(response); return response.json();})
+      .then((response) => {
+        return response.json();
+      })
       .then((data) => {
         if (!data.success && pendingTheme) {
           inputField.value = pendingTheme;

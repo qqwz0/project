@@ -34,7 +34,7 @@ def assert_can_create_request(teacher, academic_year: str | None = None):
 def assert_can_cancel_request(req: Request):
     sem = _get_semestr(req.teacher_id.department, req.academic_year)
     if sem and sem.should_lock_cancellations():
-        raise ValidationError("Скасування заблоковано.")
+        raise ValidationError("Можливість скасування робіт заблоковано.")
 
 def assert_can_complete_request(req: Request):
     sem = _get_semestr(req.teacher_id.department, req.academic_year)
@@ -42,7 +42,7 @@ def assert_can_complete_request(req: Request):
     if not sem:
         raise ValidationError("Семестр не створений.")
     if not sem.can_complete_requests():
-        raise ValidationError("Завершення ще не дозволено.")
+        raise ValidationError("Ще не дозволено завершувати роботи.")
 
 def assert_can_teacher_edit_themes(teacher, academic_year: str | None = None):
     ay = _resolve_academic_year(academic_year)

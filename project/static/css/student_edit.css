@@ -429,15 +429,19 @@ div.message.error,
 
 @media (max-width: 480px) {
     .edit-profile-container {
-        padding: 12px;
+        padding: 8px; /* Зменшуємо зовнішні відступи */
+        margin: 0; /* Прибираємо зовнішні відступи */
     }
     
     .form-content {
-        padding: 16px;
+        padding: 12px; /* Зменшуємо внутрішні відступи */
+        margin: 0; /* Прибираємо зовнішні відступи */
+        border-radius: 8px; /* Менші закруглення */
     }
     
     .personal-info, .contacts {
-        padding: 16px;
+        padding: 12px; /* Зменшуємо внутрішні відступи */
+        border-radius: 6px; /* Менші закруглення */
     }
     
     .profile-title h1 {
@@ -522,11 +526,19 @@ div.message.error,
 
 @media (max-width: 360px) {
     .edit-profile-container {
-        padding: 12px;
+        padding: 4px; /* Ще менші відступи для дуже маленьких екранів */
+        margin: 0;
     }
 
     .form-content {
-        padding: 12px;
+        padding: 8px; /* Ще менші внутрішні відступи */
+        margin: 0;
+        border-radius: 6px;
+    }
+    
+    .personal-info, .contacts {
+        padding: 8px;
+        border-radius: 4px;
     }
 
     h3 {

@@ -43,16 +43,25 @@
 
                 <!-- Секція файлів -->
                 <div class="files-section mt-4">
-                        <h4 class="d-flex align-items-center">
-                            <span class="paperclip-icon">📎</span> Файли
-                        </h4>
                         {% with files=active_request_files|get_item:request_obj.id %}
-                            <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" class="files-scroll-container">
+                            <!-- Контейнер для файлів з заголовком усередині -->
+                            <div class="files-scroll-container">
+                                <div class="files-header">Файли</div>
                                 {% for file in files %}
                                     <div class="file-block">
                                         <div class="file-header">
-                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-title-block">
+                                                <div class="file-name file-name-ellipsis">{{ file.get_filename }}</div>
+                                                <div class="file-meta">
+                                                    <span class="file-owner">{{ file.uploaded_by.get_full_name }}</span>
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-role">{{ file.uploaded_by.role }}</span>
+                                                    {% if file.uploaded_at %}
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-date">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                             <div class="file-actions">
                                                 <a href="{% url 'download_file' file.pk %}" class="download-button">
                                                     <i class="fas fa-download download-icon"></i>
@@ -66,22 +75,30 @@
                                                 {% endif %}
                                             </div>
                                         </div>
-                                        
-                                        <!-- Секція опису файлу -->
                                         <div class="file-description-block">
-                                            <p class="file-description-text">
-                                                <strong>Опис:</strong><br>
-                                                {{ file.description }}
-                                            </p>
+                                            {% if file.description %}
+                                                <p class="file-description-text subtle">{{ file.description }}</p>
+                                            {% endif %}
                                         </div>
 
-                                        <!-- Показуємо коментарі викладача для студента -->
-                                        {% if file.comments.all %}
-                                        <div class="teacher-comments-block">
-                                            <h6 class="teacher-comments-title">Коментарі викладача:</h6>
+                                        <!-- Коментарі (обидві ролі) -->
+                                        <div class="file-comments">
+                                            <div class="comments-header">
+                                                <span>Коментарі ({{ file.comments.count }})</span>
+                                            </div>
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}" data-comment-id="{{ comment.id }}">
+                                                        {% if comment.parent %}
+                                                        <!-- Цитування батьківського коментаря -->
+                                                        <div class="quoted-comment">
+                                                            <div class="quoted-comment-header">
+                                                                <span class="quoted-author">{{ comment.parent.author.get_full_name }}</span>
+                                                                <span class="quoted-date">{{ comment.parent.created_at|date:"d.m.y H:i" }}</span>
+                                                            </div>
+                                                            <p class="quoted-text">{{ comment.parent.text|truncatechars:100 }}</p>
+                                                        </div>
+                                                        {% endif %}
                                                         <div class="comment-header">
                                                             <span class="comment-author">{{ comment.author.get_full_name }}</span>
                                                             <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
@@ -95,14 +112,29 @@
                                                             </a>
                                                         </div>
                                                         {% endif %}
-                                                        {% if user == comment.author %}
+                                                        <div class="comment-actions">
+                                                            <button class="reply-btn" type="button" data-parent-id="{{ comment.id }}" data-author="{{ comment.author.get_full_name }}">Відповісти</button>
+                                                            {% if user == comment.author %}
                                                             <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
-                                                        {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
+                                                {% empty %}
+                                                    <p class="no-files" style="margin: 8px 0 0;">Коментарів ще немає</p>
                                                 {% endfor %}
                                             </div>
+
+                                            <!-- Інпут під списком -->
+                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mt-2 reply-form" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="replying-pill"><span class="replying-to"></span><button type="button" class="replying-clear">Скасувати</button></div>
+                                                <input type="hidden" name="parent_id" value="" class="reply-parent-input">
+                                                <div class="comment-input-bar">
+                                                    <textarea name="text" class="form-control comment-textarea" rows="1" placeholder="Додайте коментар..."></textarea>
+                                                    <button type="submit" class="add-comment-btn">Відправити</button>
+                                                </div>
+                                            </form>
                                         </div>
-                                        {% endif %}
                                     </div>
                                 {% empty %}
                                     <p class="no-files">Немає завантажених файлів</p>
@@ -235,16 +267,25 @@
 
                 <!-- Секція файлів -->
                 <div class="files-section mt-4">
-                        <h4 class="d-flex align-items-center">
-                            <span class="paperclip-icon">📎</span> Файли
-                        </h4>
                     {% with files=active_request_files|get_item:request.id %}
-                            <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" class="files-scroll-container">
+                            <!-- Контейнер для файлів з заголовком усередині (як у студента) -->
+                            <div class="files-scroll-container">
+                                <div class="files-header">Файли</div>
                                 {% for file in files %}
                                     <div class="file-block">
                                         <div class="file-header">
-                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-title-block">
+                                                <div class="file-name file-name-ellipsis">{{ file.get_filename }}</div>
+                                                <div class="file-meta">
+                                                    <span class="file-owner">{{ file.uploaded_by.get_full_name }}</span>
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-role">{{ file.uploaded_by.role }}</span>
+                                                    {% if file.uploaded_at %}
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-date">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                             <div class="file-actions">
                                                 <a href="{% url 'download_file' file.pk %}" class="download-button">
                                                     <i class="fas fa-download download-icon"></i>
@@ -258,64 +299,32 @@
                                                 {% endif %}
                                             </div>
                                         </div>
-                                        
+
                                         <!-- Секція опису файлу -->
                                         <div class="file-description-block">
-                                            <p class="file-description-text">
-                                                <strong>Опис:</strong><br>
-                                                {{ file.description }}
-                                            </p>
+                                            {% if file.description %}
+                                                <p class="file-description-text subtle">{{ file.description }}</p>
+                                            {% endif %}
                                         </div>
 
-                                        <!-- Секція коментарів -->
+                                        <!-- Коментарі (обидві ролі) -->
                                         <div class="file-comments">
-                                            <h6 class="file-comments-title">Коментарі:</h6>
-                                            
-                                            <!-- Форма додавання коментаря -->
-                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mb-3" enctype="multipart/form-data">
-                                                {% csrf_token %}
-                                                <div class="form-group">
-                                                    <textarea name="text" class="form-control comment-textarea" rows="2" placeholder="Додайте коментар..." style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px;"></textarea>
-                                                    {% if user.role == "Викладач" %}
-                                                    <div class="file-attachment-wrapper">
-                                                        <div class="custom-file" style="margin-bottom: 8px;">
-                                                            <input type="file" 
-                                                                   name="attachment" 
-                                                                   class="custom-file-input" 
-                                                                   id="comment-file-{{ file.pk }}" 
-                                                                   style="display: none;"
-                                                                   onchange="updateCommentFile(this)">
-                                                            <label for="comment-file-{{ file.pk }}" class="comment-file-label">
-                                                                <i class="fas fa-paperclip"></i> Вибрати файл
-                                                            </label>
-                                                            <span id="file-label-{{ file.pk }}" class="file-label">Файл не вибрано</span>
-                                                        </div>
-                                                        <div id="attachment-feedback-{{ file.pk }}" class="attachment-feedback">
-                                                            <span class="attachment-message">
-                                                                <i class="fas fa-check-circle attachment-check"></i> 
-                                                                <span>Файл додано і буде завантажено при відправці коментаря</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                                <button type="submit" class="add-comment-btn">Додати коментар</button>
-                                                <div class="comment-status">
-                                                    <div class="sending-status">
-                                                        <i class="fas fa-spinner fa-spin"></i>
-                                                        <span>Відправляємо коментар...</span>
-                                                    </div>
-                                                    <div class="success-status">
-                                                        <i class="fas fa-check-circle"></i>
-                                                        <span>Коментар успішно додано</span>
-                                                    </div>
-                                                </div>
-                                            </form>
-
-                                            <!-- Список коментарів -->
+                                            <div class="comments-header">
+                                                <span>Коментарі ({{ file.comments.count }})</span>
+                                            </div>
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}" data-comment-id="{{ comment.id }}">
+                                                        {% if comment.parent %}
+                                                        <!-- Цитування батьківського коментаря -->
+                                                        <div class="quoted-comment">
+                                                            <div class="quoted-comment-header">
+                                                                <span class="quoted-author">{{ comment.parent.author.get_full_name }}</span>
+                                                                <span class="quoted-date">{{ comment.parent.created_at|date:"d.m.y H:i" }}</span>
+                                                            </div>
+                                                            <p class="quoted-text">{{ comment.parent.text|truncatechars:100 }}</p>
+                                                        </div>
+                                                        {% endif %}
                                                         <div class="comment-header">
                                                             <span class="comment-author">{{ comment.author.get_full_name }}</span>
                                                             <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
@@ -329,12 +338,28 @@
                                                             </a>
                                                         </div>
                                                         {% endif %}
-                                                        {% if user == comment.author %}
+                                                        <div class="comment-actions">
+                                                            <button class="reply-btn" type="button" data-parent-id="{{ comment.id }}" data-author="{{ comment.author.get_full_name }}">Відповісти</button>
+                                                            {% if user == comment.author %}
                                                             <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
-                                                        {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
+                                                {% empty %}
+                                                    <p class="no-files" style="margin: 8px 0 0;">Коментарів ще немає</p>
                                                 {% endfor %}
                                             </div>
+
+                                            <!-- Інпут під списком -->
+                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mt-2 reply-form" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="replying-pill"><span class="replying-to"></span><button type="button" class="replying-clear">Скасувати</button></div>
+                                                <input type="hidden" name="parent_id" value="" class="reply-parent-input">
+                                                <div class="comment-input-bar">
+                                                    <textarea name="text" class="form-control comment-textarea" rows="1" placeholder="Додайте коментар..."></textarea>
+                                                    <button type="submit" class="add-comment-btn">Відправити</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 {% empty %}
@@ -458,23 +483,16 @@ function updateFileName(input) {
 
 // Глобальна функція для оновлення назви файлу для коментаря
 function updateCommentFile(input) {
-    console.log('File selection changed:', input.id);
     // Отримуємо ID файлу з ID поля вводу
     var fileId = input.id.replace('comment-file-', '');
-    console.log('File ID:', fileId);
     
     // Знаходимо відповідний елемент для відображення імені файлу
     var fileLabel = document.getElementById('file-label-' + fileId);
     // Знаходимо елемент для відображення повідомлення про успішне додавання
     var feedback = document.getElementById('attachment-feedback-' + fileId);
     
-    console.log('File label element:', fileLabel);
-    console.log('Feedback element:', feedback);
-    console.log('Has files:', input.files.length > 0);
-    
     // Оновлюємо текст та стилі
     if (input.files.length > 0) {
-        console.log('Selected file name:', input.files[0].name);
         fileLabel.textContent = input.files[0].name;
         fileLabel.style.color = '#000000';
         if (feedback) {
@@ -563,8 +581,8 @@ $(document).ready(function() {
         });
     });
 
-    // Обробник для форм відправки коментарів
-    $('form[action^="/catalog/file/"][action$="/comment/"]').on('submit', function(e) {
+    // Обробник для форм відправки коментарів (тільки для старих форм без reply-form)
+    $('form[action^="/catalog/file/"][action$="/comment/"]:not(.reply-form)').on('submit', function(e) {
         e.preventDefault();
         
         var form = $(this);
@@ -575,10 +593,9 @@ $(document).ready(function() {
         var commentStatus = form.find('.comment-status');
         var sendingStatus = commentStatus.find('.sending-status');
         var successStatus = commentStatus.find('.success-status');
-        var hasAttachment = form.find('input[type="file"]').prop('files').length > 0;
-        
-        console.log('Submitting comment for file ID:', fileId);
-        
+        var fileInput = form.find('input[type="file"]');
+        var hasAttachment = (fileInput.length && fileInput[0].files && fileInput[0].files.length > 0) ? true : false;
+                
         // Перевіряємо наявність тексту або файлу
         if (!commentText && !hasAttachment) {
             alert('Будь ласка, введіть текст коментаря або прикріпіть файл');
@@ -808,7 +825,6 @@ function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
                         </div>
                     </label>
                 `;
-                console.log('Created checkbox for file:', file.id, file.file_name);
                 filesCheckboxes.appendChild(fileDiv);
             });
             filesSection.style.display = 'block';
@@ -881,17 +897,8 @@ function submitComplete() {
     const checkboxes = document.querySelectorAll('input[name="selected_files"]');
     const checkedBoxes = document.querySelectorAll('input[name="selected_files"]:checked');
     
-    console.log('All checkboxes:', checkboxes.length);
-    console.log('Checked checkboxes:', checkedBoxes.length);
-    
-    checkedBoxes.forEach(checkbox => {
-        console.log('Checked file ID:', checkbox.value, 'ID:', checkbox.id);
-    });
-    
     const selectedFiles = Array.from(checkedBoxes).map(checkbox => checkbox.value);
-    
-    console.log('Selected files:', selectedFiles);
-    
+        
     // Check if files are selected
     if (selectedFiles.length === 0) {
         showError('Будь ласка, оберіть хоча б один файл для збереження в архіві');
@@ -912,8 +919,6 @@ function submitComplete() {
     formData.append('grade', grade);
     formData.append('selected_files', JSON.stringify(selectedFiles));
     
-    console.log('FormData selected_files:', JSON.stringify(selectedFiles));
-
     // Send request to server
     fetch(`/users/complete_request/${requestId}/`, {
         method: 'POST',
@@ -990,6 +995,64 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Динамічна висота контейнера файлів: показує рівно один файл (з описом і коментарями)
+function setFilesContainersHeight() {
+    const containers = document.querySelectorAll('.files-scroll-container');
+    containers.forEach(container => {
+        const firstBlock = container.querySelector('.file-block');
+        if (!firstBlock) {
+            container.style.removeProperty('--files-container-max');
+            return;
+        }
+        const header = container.querySelector('.files-header');
+        const containerStyles = getComputedStyle(container);
+        const paddingTop = parseFloat(containerStyles.paddingTop) || 0;
+        const paddingBottom = parseFloat(containerStyles.paddingBottom) || 0;
+
+        const blockStyles = getComputedStyle(firstBlock);
+        const marginTop = parseFloat(blockStyles.marginTop) || 0;
+        const marginBottom = parseFloat(blockStyles.marginBottom) || 0;
+        const blockOuter = firstBlock.offsetHeight + marginTop + marginBottom;
+        const headerHeight = header ? header.offsetHeight : 0;
+        const total = blockOuter + headerHeight + paddingTop + paddingBottom;
+        container.style.setProperty('--files-container-max', `${Math.ceil(total)}px`);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setFilesContainersHeight();
+});
+
+window.addEventListener('load', setFilesContainersHeight);
+window.addEventListener('resize', setFilesContainersHeight);
+
+// Додатково: спостерігаємо за змінами розміру першого блоку (зображення, коментарі)
+const filesResizeObservers = [];
+function observeFilesContainers() {
+    const containers = document.querySelectorAll('.files-scroll-container');
+    containers.forEach(container => {
+        const firstBlock = container.querySelector('.file-block');
+        if (!firstBlock || firstBlock._resizeObserved) return;
+
+        const ro = new ResizeObserver(() => setFilesContainersHeight());
+        ro.observe(firstBlock);
+        filesResizeObservers.push(ro);
+
+        // На випадок додавання нових елементів усередині (MutationObserver)
+        const mo = new MutationObserver(() => setFilesContainersHeight());
+        mo.observe(firstBlock, { childList: true, subtree: true });
+        filesResizeObservers.push(mo);
+
+        firstBlock._resizeObserved = true;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', observeFilesContainers);
+window.addEventListener('load', observeFilesContainers);
+</script>
+
+<script>
+// Функції для редагування теми
 function showEditThemeModal(requestId, currentTheme) {
     document.body.classList.add('modal-open');
     document.getElementById('editThemeRequestId').value = requestId;
@@ -1102,38 +1165,35 @@ function handleCancelSubmit(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Скасування...';
 
-    fetch(`/users/cancel-request/${requestId}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: `rejected_reason=${encodeURIComponent(reason)}`
-    })
-    .then(response => {
-        return response.json().then(data => {
-            if (!response.ok) {
-                throw new Error(data.error || `HTTP error! status: ${response.status}`);
-            }
-            return data;
-        });
-    })
-    .then(data => {
-        if (data.success) {
-            closeCancelModal();
-            window.location.reload();
-        } else {
-            alert('Помилка: ' + (data.error || 'Не вдалося скасувати роботу.'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Сталася помилка. Спробуйте ще раз.');
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    });
+fetch(`/users/cancel-request/${requestId}/`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: `rejected_reason=${encodeURIComponent(reason)}`
+})
+.then(response => response.json().then(data => {
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+    return data;
+}))
+.then(data => {
+    if (data.success) {
+        closeCancelModal();
+        window.location.reload();
+    } else {
+        alert(data.error || 'Не вдалося скасувати роботу.');
+    }
+})
+.catch(error => {
+    alert(error.message || 'Сталася помилка. Спробуйте ще раз.');
+})
+.finally(() => {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+});
 }
 </script>

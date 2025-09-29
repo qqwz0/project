@@ -29,7 +29,12 @@ def get_access_token(code, request):
 
 def get_user_info(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
-    return requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
+    # Отримуємо department з Microsoft Graph API
+    params = {
+        '$select': 'mail,userPrincipalName,givenName,surname,jobTitle,department'
+    }
+    response = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers, params=params)
+    return response.json()
 
 
 def extract_user_data(user_info):
@@ -38,8 +43,34 @@ def extract_user_data(user_info):
         email,
         user_info.get("givenName", ""),
         user_info.get("surname", ""),
-        user_info.get("jobTitle", "")
+        user_info.get("jobTitle", ""),
+        user_info.get("department", "")
     )
+
+
+def validate_faculty_from_microsoft(department):
+    """
+    Перевіряє чи факультет користувача з Microsoft підтримується системою
+    """
+    if not department:
+        return False
+    
+    # Дозволені варіанти назв факультету
+    allowed_faculties = [
+        "Факультет електроніки та комп'ютерних технологій",
+        "Факультет електроніки та КТ",
+        "Факультет електроніки",
+        "Faculty of Electronics and Computer Technologies",
+        "Faculty of Electronics and CT"
+    ]
+    
+    # Перевіряємо чи department містить один з дозволених факультетів
+    department_lower = department.lower()
+    for faculty in allowed_faculties:
+        if faculty.lower() in department_lower:
+            return True
+    
+    return False
 
 
 def fail_and_redirect(request, msg, log_msg=None, level="error"):
@@ -49,33 +80,27 @@ def fail_and_redirect(request, msg, log_msg=None, level="error"):
     return redirect("register")
 
 
-def create_student_profile(user, group_code, email):
-    from apps.catalog.models import Group
+def create_student_profile(user, group_code, email, department=None):
+    from apps.catalog.models import Group, OnlyStudent
     try:
         group_obj = Group.objects.get(group_code=group_code)
-        OnlyStudent.objects.create(student_id=user, group=group_obj)
-        logger.info(f"Created OnlyStudent for {email} with group {group_code}")
+        OnlyStudent.objects.create(student_id=user, group=group_obj, department=department)
+        logger.info(f"Created OnlyStudent for {email} with group {group_code} and department {department}")
     except Group.DoesNotExist:
         logger.warning(f"Group {group_code} not found for {email}, using fallback group.")
         fallback = Group.objects.first()
         if fallback:
-            OnlyStudent.objects.create(student_id=user, group=fallback)
-            logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code}")
+            OnlyStudent.objects.create(student_id=user, group=fallback, department=department)
+            logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
         else:
             logger.error("No groups available in DB for student creation.")
 
 
-def create_teacher_profile(user, job_title, department_name):
-    from apps.catalog.models import Department, OnlyTeacher
-
-    try:
-        department_obj = Department.objects.get(department_name=department_name)
-    except Department.DoesNotExist:
-        logger.warning(f"Department {department_name} not found for {user.email}, using fallback.")
-        department_obj = Department.objects.first()
-        if not department_obj:
-            logger.error("No departments available in DB for teacher creation.")
-            return
+def create_teacher_profile(user, job_title, department_obj):
+    """
+    Створює профіль викладача з Department об'єктом
+    """
+    from apps.catalog.models import OnlyTeacher
 
     academic_level = job_title if job_title else "Викладач"
     faculty_short_name = department_obj.faculty.short_name if department_obj.faculty else "unknown"
@@ -93,12 +118,18 @@ def create_teacher_profile(user, job_title, department_name):
     else:
         profile_link = None
 
-    OnlyTeacher.objects.create(
-        teacher_id=user,
-        academic_level=academic_level,
-        department=department_obj,
-        profile_link=profile_link
-    )
+    try:
+        OnlyTeacher.objects.get_or_create(
+            teacher_id=user,
+            defaults={
+                'academic_level': academic_level,
+                'department': department_obj,
+                'profile_link': profile_link
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for user {user.email}: {str(e)}", exc_info=True)
+        raise  # Передаємо помилку далі
     logger.info(f"Created OnlyTeacher for {user.email} with department {department_obj.department_name} and profile link {profile_link}")
 
 def url_exists(url):

@@ -20,7 +20,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
   x-data="{ 
      data: [], 
      departments: [], 
-     academic_levels: [], 
      slots: null,
      show_occupied: false,
      full_names: [], 
@@ -33,9 +32,33 @@ When a user triggers the HX request (via button click), the modal is swapped in 
      filteredData: [],
      searchTeachers: true,
      searchThemes: false,
-     allThemes: [],  
+     allThemes: [],
+     userHasActive: false,
      toggleFilters() {
        this.showFilters = !this.showFilters;
+     },
+     activeFiltersCount() {
+       let count = 0;
+       if (Array.isArray(this.departments)) count += this.departments.length;
+       if (this.slots !== null && this.slots !== undefined && Number(this.slots) > 0) count += 1;
+       if (this.show_occupied) count += 1;
+       return count;
+     },
+     iconFor(label){
+       const icons = ['💡','📘','🔬','🧪','🧠','💻','🌐'];
+       const text = (label || '').toString();
+       let hash = 0; for(let i=0;i<text.length;i++){ hash = (hash*31 + text.charCodeAt(i)) >>> 0; }
+       return icons[hash % icons.length];
+     },
+     getThemeDesc(theme){
+       if (theme && theme.theme_description) return theme.theme_description;
+       try{
+         const byId = this.allThemes && this.allThemes.find(t => t.id === theme.id);
+         if (byId && byId.theme_description) return byId.theme_description;
+         const byName = this.allThemes && this.allThemes.find(t => t.theme === theme.theme);
+         if (byName && byName.theme_description) return byName.theme_description;
+       }catch(e){}
+       return '';
      },
      updateScreenSize() {
        this.isMobile = window.innerWidth <= 780;  // Ensure breakpoint matches CSS
@@ -56,6 +79,10 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         }
         this.data = data;
         this.filteredData = data.filter(i => i.free_slots.some(slot => slot.get_available_slots > 0));
+        // user activity flag used to disable request buttons globally
+        if (Array.isArray(data) && data.length > 0) {
+          this.userHasActive = !!data.find(i => i.has_active === true);
+        }
         
         // Завантажуємо всі теми для відображення без пошуку
         await this.loadAllThemes();
@@ -257,16 +284,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
     window.catalogMainComponent = $data;
   "
   @update-search.window="
-    console.log('Received search event:', $event.detail);
     searchQuery = $event.detail.query;
     applyAutocompleteSearch()
   "
   @search-query.window="searchQuery = $event.detail.query; applyAutocompleteSearch()"
   
-
-    <!-- Filter Section -->
-    <div class="filter-wrapper">
-            <!-- Search Mode Switchers -->
+    <!-- Desktop filter wrapper (hidden on mobile) -->
+    <div class="filter-wrapper" x-show="!isMobile" x-cloak>
+      <!-- Search Mode Switchers move to sidebar on desktop -->
       <div class="search-mode-switchers">
         <div class="switcher-header">
           <h4>Оберіть тип пошуку:</h4>
@@ -289,12 +314,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
           </button>
         </div>
       </div>
-      
-      <div x-show="showFilters"
-          x-transition.opacity.duration.300ms
-          class="filter-section shadow-sm"
-          @click.away="isMobile && (showFilters = false)"
-      >
+      <div class="filter-section shadow-sm">
         <div class="filter-header">
         <h3>Фільтри</h3>
         <img src="{% static 'images/filters.svg' %}" alt="Filters">
@@ -317,24 +337,52 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         </div>
 
         <hr class="devider">
-        <h3 class="option-label">Посада</h3>
-        {% render_field form.academic_levels class="form-checkbox" autocomplete="off" @change="academic_levels = changeAcademicLevels($el, academic_levels)" %}
-        
-        <hr class="devider">
         <div class="checkbox-wrapper">
         <span class="checkbox-text">Викладачі без вільних місць</span>
         {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
         </div>
-        <button class="filter-button" @click="applyFilters(); isMobile && (showFilters = false)">Фільтрувати</button>
+        <button class="filter-button" @click="applyFilters()">Фільтрувати</button>
         </div>
-        </div>
+      </div>
     </div>
 
     <!-- Content Section -->
     <div class="content-section">
      <!-- Search Section -->
      <div class="search-section">
-      <h1>Знайди свого ідеального наукового керівника!</h1>
+       <div class="search-header">
+         <h1>Знайди свого наукового керівника!
+           <button id="start-tour-catalog" class="help-icon-btn desktop-help-btn" title="Допомога з пошуком">
+             <i class="fas fa-question-circle"></i>
+           </button>
+           <button id="start-tour-catalog-mobile" class="help-icon-btn mobile-help-btn" title="Допомога з пошуком">
+             <i class="fas fa-question-circle"></i>
+           </button>
+         </h1>
+       </div>
+      <!-- Mobile: show type switchers on top (card) -->
+      <div class="search-mode-switchers" x-show="isMobile" x-cloak>
+        <div class="switcher-header">
+          <h4>Оберіть тип пошуку:</h4>
+        </div>
+        <div class="segment-switcher">
+          <button class="segment-btn"
+                  :class="{ 'active': searchTeachers && !searchThemes }"
+                  @click="searchTeachers = true; searchThemes = false; applyAutocompleteSearch()">
+            Викладачі
+          </button>
+          <button class="segment-btn"
+                  :class="{ 'active': searchThemes && !searchTeachers }"
+                  @click="searchThemes = true; searchTeachers = false; applyAutocompleteSearch()">
+            Теми
+          </button>
+          <button class="segment-btn"
+                  :class="{ 'active': searchTeachers && searchThemes }"
+                  @click="searchTeachers = true; searchThemes = true; applyAutocompleteSearch()">
+            Всі
+          </button>
+        </div>
+      </div>
       <div class="autocomplete-wrapper" x-data="autocompleteSearch()" style="position: relative;">
         <div class="search-container autocomplete-container">
          <input type="text" 
@@ -356,13 +404,47 @@ When a user triggers the HX request (via button click), the modal is swapped in 
          <!-- Suggestions disabled: results render inline below -->
          <div class="autocomplete-suggestions" x-show="false"></div>
       </div>
-      <!-- Toggle button for small screens -->
-        <button class="mobile-filter-toggle" 
-        @click="toggleFilters()" 
-        x-show="isMobile"
-        >
-            Фільтри
-        </button>
+      <!-- Mobile collapsible top filter bar -->
+        <div class="mobile-filter-bar" x-show="isMobile" @click="toggleFilters()">
+          <div class="bar-left">
+            <img src="{% static 'images/filters.svg' %}" alt="Filters" class="bar-icon">
+            <span class="bar-title">Фільтри</span>
+          </div>
+          <div class="bar-right">
+            <button type="button" class="bar-chev-btn" :class="{ open: showFilters }" aria-label="Перемикач фільтрів" tabindex="-1">
+              <span class="bar-chev-icon" :class="{ open: showFilters }">▾</span>
+            </button>
+          </div>
+        </div>
+        <!-- Mobile inline filter panel (expands under the bar) -->
+        <div x-show="isMobile && showFilters"
+             x-transition.opacity.duration.200ms
+             class="filter-section shadow-sm"
+             x-cloak>
+          <div class="filter-content">
+            <h3 class="option-label">{{ form.departments.label }}</h3>
+            {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+
+            <hr class="devider">
+            <h3 class="option-label">{{ form.slots.label }}</h3>
+            <div class="range-container">
+              <template x-if="show_occupied">
+                {% render_field form.slots class="form-range" autocomplete="off" x-bind="{disabled: show_occupied}" @input="slots = $el.value" %}
+              </template>
+              <template x-if="!show_occupied">
+                {% render_field form.slots class="form-range" autocomplete="off" @input="slots = $el.value" %}
+              </template>
+              <span class="range-value" x-text="slots || '0'"></span>
+            </div>
+
+            <hr class="devider">
+            <div class="checkbox-wrapper">
+              <span class="checkbox-text">Викладачі без вільних місць</span>
+              {% render_field form.show_occupied class="form-boolean" autocomplete="off" @change="handleShowOccupied($el)" %}
+            </div>
+            <button class="filter-button" @click="applyFilters(); isMobile && (showFilters = false)">Фільтрувати</button>
+          </div>
+        </div>
      </div>
 
      <!-- Main Results Container -->
@@ -387,8 +469,8 @@ When a user triggers the HX request (via button click), the modal is swapped in 
            <p>Спробуйте змінити критерії пошуку або фільтри.</p>
          </div>
 
-         <!-- Unified Results Layout -->
-         <div class="unified-results" x-show="searchQuery.trim()">
+        <!-- Unified Results Layout -->
+        <div class="unified-results" x-show="searchQuery.trim() && (filteredTeachers.length > 0 || filteredThemes.length > 0)">
            <!-- Teachers Results (only teachers mode) -->
            <div class="results-section" x-show="searchTeachers && !searchThemes && filteredTeachers.length > 0">
              <h3>Викладачі (<span x-text="filteredTeachers.length"></span>)</h3>
@@ -410,8 +492,8 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                   <template x-if="theme.theme_description">
                     <p class="topic-description" x-text="theme.theme_description"></p>
                   </template>
-                  <button class="theme-select-btn" 
-                          @click="selectThemeAndShowModal(theme.teacher_id)">
+                  <button class="theme-select-btn" :disabled="userHasActive"
+                          @click="!userHasActive && selectThemeAndShowModal(theme.teacher_id)">
                     Обрати викладача
                   </button>
                 </div>
@@ -420,7 +502,7 @@ When a user triggers the HX request (via button click), the modal is swapped in 
            </div>
 
            <!-- Combined Results (both teachers and themes) -->
-          <div class="results-section" x-show="searchTeachers && searchThemes">
+          <div class="results-section" x-show="searchTeachers && searchThemes && (filteredTeachers.length > 0 || filteredThemes.length > 0)">
             <h3>Результати</h3>
             <!-- Teachers subsection -->
             <div class="catalog-container" x-show="filteredTeachers.length > 0">
@@ -444,11 +526,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                         </button>
                       </div>
                     </div>
-                    <div class="topics-grid" x-show="expanded">
+                    <div class="topics-grid enhanced" x-show="expanded">
                       <template x-for="(theme, tIndex) in themesForTeacher(item)" :key="theme?.id || tIndex">
                         <div class="topic-card">
                           <h5 class="topic-name" x-text="theme.theme"></h5>
-                          <p class="topic-description" x-text="theme.theme_description"></p>
+                          <template x-if="getThemeDesc(theme)">
+                            <p class="topic-description" x-text="getThemeDesc(theme)"></p>
+                          </template>
+                          <button class="theme-select-btn" :disabled="userHasActive" @click="!userHasActive && selectThemeAndShowModal(theme.teacher_id)">Обрати викладача</button>
                         </div>
                       </template>
                     </div>
@@ -462,11 +547,10 @@ When a user triggers the HX request (via button click), the modal is swapped in 
               <template x-for="(theme, index) in filteredThemes || []" :key="theme?.id || index">
                 <div class="topic-card">
                   <h5 class="topic-name" x-text="theme.theme"></h5>
-                  <p class="theme-teacher" x-text="'Викладач: ' + theme.teacher_name"></p>
                   <template x-if="theme.theme_description">
                     <p class="topic-description" x-text="theme.theme_description"></p>
                   </template>
-                  <button class="theme-select-btn" @click="selectThemeAndShowModal(theme.teacher_id)">Обрати викладача</button>
+                  <button class="theme-select-btn" :disabled="userHasActive" @click="!userHasActive && selectThemeAndShowModal(theme.teacher_id)">Обрати викладача</button>
                 </div>
               </template>
             </div>
@@ -475,8 +559,21 @@ When a user triggers the HX request (via button click), the modal is swapped in 
  
          <!-- Default View (all teachers or all themes) -->
          <div class="all-content" x-show="!searchQuery.trim()">
+           <!-- No Teachers Message -->
+           <div class="no-results" 
+                x-show="searchTeachers && !searchThemes && filteredData.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
+           </div>
+           
            <!-- All Teachers View -->
-           <div class="results-section" x-show="searchTeachers && !searchThemes">
+           <div class="results-section" x-show="searchTeachers && !searchThemes && filteredData.length > 0">
              <h3>Всі викладачі</h3>
              <div class="teachers-list">
                <template x-for="(item, index) in filteredData || []" :key="item?.teacher?.pk || index">
@@ -485,10 +582,23 @@ When a user triggers the HX request (via button click), the modal is swapped in 
              </div>
            </div>
            
+           <!-- No Themes Message -->
+           <div class="no-results" 
+                x-show="searchThemes && !searchTeachers && allThemes.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
+           </div>
+           
            <!-- All Themes View -->
-           <div class="results-section" x-show="searchThemes && !searchTeachers">
+           <div class="results-section" x-show="searchThemes && !searchTeachers && allThemes.length > 0">
              <h3>Всі теми робіт (<span x-text="allThemes.length"></span>)</h3>
-             <div class="themes-list">
+             <div class="themes-list enhanced">
                <template x-for="(theme, index) in allThemes || []" :key="theme?.id || index">
                 <div class="topic-card">
                   <h5 class="topic-name" x-text="theme.theme"></h5>
@@ -496,8 +606,8 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                   <template x-if="theme.theme_description">
                     <p class="topic-description" x-text="theme.theme_description"></p>
                   </template>
-                  <button class="theme-select-btn" 
-                          @click="selectThemeAndShowModal(theme.teacher_id)">
+                  <button class="theme-select-btn" :disabled="userHasActive"
+                          @click="!userHasActive && selectThemeAndShowModal(theme.teacher_id)">
                     Обрати викладача
                   </button>
                 </div>
@@ -505,8 +615,21 @@ When a user triggers the HX request (via button click), the modal is swapped in 
              </div>
            </div>
            
+           <!-- No Combined Results Message -->
+           <div class="no-results" 
+                x-show="searchTeachers && searchThemes && filteredData.length === 0">
+             <div class="search-icon-wrapper">
+               <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24">
+                 <circle cx="11" cy="11" r="8"></circle>
+                 <line x1="21" y1="21" x2="16.7" y2="16.7"></line>
+               </svg>
+             </div>
+             <h2>Нічого не знайдено!</h2>
+             <p>Спробуйте змінити критерії пошуку або фільтри.</p>
+           </div>
+           
            <!-- Combined default view (both teachers and their themes) -->
-           <div class="results-section" x-show="searchTeachers && searchThemes">
+           <div class="results-section" x-show="searchTeachers && searchThemes && filteredData.length > 0">
              <h3>Всі викладачі та їх теми</h3>
              <div class="catalog-container">
                <template x-for="(item, index) in filteredData || []" :key="item?.teacher?.pk || index">
@@ -529,11 +652,14 @@ When a user triggers the HX request (via button click), the modal is swapped in 
                          </button>
                        </div>
                      </div>
-                     <div class="topics-grid" x-show="expanded">
+                     <div class="topics-grid enhanced" x-show="expanded">
                        <template x-for="(theme, tIndex) in themesForTeacher(item)" :key="theme?.id || tIndex">
                          <div class="topic-card">
                            <h5 class="topic-name" x-text="theme.theme"></h5>
-                           <p class="topic-description" x-text="theme.theme_description"></p>
+                           <template x-if="getThemeDesc(theme)">
+                             <p class="topic-description" x-text="getThemeDesc(theme)"></p>
+                           </template>
+                           <button class="theme-select-btn" :disabled="userHasActive" @click="!userHasActive && selectThemeAndShowModal(theme.teacher_id)">Обрати викладача</button>
                          </div>
                        </template>
                      </div>

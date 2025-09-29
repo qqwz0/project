@@ -39,6 +39,7 @@ from .models import (
     Stream,
     StudentTheme,
     TeacherTheme,
+    Announcement
 )
 from .templatetags.catalog_extras import get_profile_picture_url
 from .utils import FileAccessMixin, HtmxModalFormAccessMixin
@@ -179,10 +180,9 @@ class TeachersListView(LoginRequiredMixin, ListView):
                         course = int(match.group(1))
                 
                 # Оновлена, більш точна умова фільтрації
-                if user.department and ((course and course >= 3) or is_master):
-                    teachers = teachers.filter(
-                        teacher_id__department__iexact=user.department.strip()
-                    )
+                user_department = user.get_department()
+                if user_department and ((course and course >= 3) or is_master):
+                    teachers = teachers.filter(department=user_department)
                 
                 teacher_ids = [t.pk for t in teachers]
                 # ---
@@ -235,7 +235,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                                 "id": teacher.teacher_id.id,
                                 "first_name": teacher.teacher_id.first_name,
                                 "last_name": teacher.teacher_id.last_name,
-                                "department": teacher.teacher_id.department,
+                                "department": teacher.teacher_id.get_department_name(),
                                 "full_name": full_name,
                             },
                         },
@@ -318,8 +318,10 @@ class TeacherModalView(
         
         # Filter slots by user's academic group if the user is a student.
         user = self.request.user
-        is_master = "М" in user.academic_group.upper()
-        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
+        # Безпечна обробка відсутнього academic_group
+        user_academic_group = getattr(user, "academic_group", "") or ""
+        is_master = "М" in user_academic_group.upper()
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user_academic_group)
         if match:
             user_stream = (
                 match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
@@ -406,9 +408,11 @@ class TeacherModalView(
                 return response
             return super().form_valid(form)
         
+#NEED TO REWRITE  - temporary solution
         except ValidationError as e:
             print(f"Validation error: {str(e)}")
-            messages.error(self.request, str(e))
+            if not any("дедлайн минув" in msg.lower() or "семестр не створений" in msg.lower() for msg in e.messages):
+                messages.error(self.request, str(e))
             if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
                 return JsonResponse(
                     {"success": False, "errors": {"__all__": e.messages}}, status=400
@@ -424,7 +428,8 @@ class TeacherModalView(
         form.instance.teacher_id = self.get_object()
         form.instance.request_status = "Очікує"
         
-        is_master = "М" in self.request.user.academic_group.upper()
+        user_academic_group = getattr(self.request.user, "academic_group", "") or ""
+        is_master = "М" in user_academic_group.upper()
         student_stream_code = form.instance.extract_stream_from_academic_group() + (
             "м" if is_master else ""
         )
@@ -1013,6 +1018,15 @@ def add_comment(request, file_id):
                 return redirect("profile")
 
         comment = FileComment(file=file, author=request.user, text=text or "")
+        # Optional threaded reply
+        try:
+            parent_id = request.POST.get("parent_id")
+            if parent_id:
+                parent = FileComment.objects.filter(pk=parent_id, file=file).first()
+                if parent:
+                    comment.parent = parent
+        except Exception:
+            pass
 
         attachment = request.FILES.get("attachment")
         if attachment:
@@ -1098,7 +1112,35 @@ def delete_theme(request, theme_id):
         )
 
 def home(request):
-    return render(request, "home.html")
+    faculty_announcements = []
+    department_announcements = []
+
+    if request.user.is_authenticated:
+        faculty = request.user.get_faculty()
+        department = request.user.get_department()
+
+        # Факультетські оголошення
+        if faculty:
+            faculty_announcements = Announcement.objects.filter(
+                author_type="faculty",
+                author_faculty=faculty,
+                is_active=True
+            )
+
+        # Кафедральні оголошення
+        if department:
+            department_announcements = Announcement.objects.filter(
+                author_type="department",
+                author_department=department,
+                is_active=True
+            )
+
+    context = {
+        "faculty_announcements": faculty_announcements,
+        "department_announcements": department_announcements,
+    }
+    return render(request, "home.html", context)
+
 
 
 class AutocompleteView(LoginRequiredMixin, View):
@@ -1126,7 +1168,7 @@ class AutocompleteView(LoginRequiredMixin, View):
                     "type": "teacher",
                     "id": teacher.pk,
                     "label": f"👨‍🏫 {teacher.teacher_id.first_name} {teacher.teacher_id.last_name}",
-                    "description": f"{teacher.academic_level} • {teacher.teacher_id.department}",
+                    "description": f"{teacher.academic_level} • {teacher.teacher_id.get_department_name()}",
                     "url": "#"  # Не потрібен URL, фільтрування буде на тій же сторінці
                 })
             
@@ -1187,8 +1229,9 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
                     if match:
                         course = int(match.group(1))
-                if getattr(user, 'department', None) and ((course and course >= 3) or is_master):
-                    teachers = teachers.filter(teacher_id__department__iexact=user.department.strip())
+                user_department = user.get_department()
+                if user_department and ((course and course >= 3) or is_master):
+                    teachers = teachers.filter(department=user_department)
                 
                 # Витягуємо потік студента
                 slots = Slot.filter_by_available_slots()
@@ -1223,7 +1266,7 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     'theme_description': theme.theme_description or '',
                     'teacher_name': theme.teacher_id.teacher_id.get_full_name(),
                     'teacher_id': theme.teacher_id.teacher_id.id,
-                    'department': theme.teacher_id.teacher_id.department or '',
+                    'department': theme.teacher_id.teacher_id.get_department_name() or '',
                 })
             
             return JsonResponse(themes_data, safe=False)

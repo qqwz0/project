@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'cloudinary',
     'cloudinary_storage',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -178,9 +179,57 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Cloudinary settings for media files.
-# The library will automatically use the CLOUDINARY_URL environment variable from Render.
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Media storage selection: use Cloudinary in production if credentials are present,
+# otherwise fall back to local FileSystemStorage for localhost/dev.
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
+USE_LOCAL_MEDIA = os.getenv('USE_LOCAL_MEDIA', 'false').lower() == 'true'
+
+# Azure Blob Storage configuration
+AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
+AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
+AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
+
+if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
+    # Use Azure Blob Storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.azure_storage.AzureStorage",
+            "OPTIONS": {
+                "account_name": AZURE_ACCOUNT_NAME,
+                "account_key": AZURE_ACCOUNT_KEY,
+                "azure_container": AZURE_CONTAINER,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # Fallback to local file storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+# Cloudinary configuration
+if CLOUDINARY_URL:
+    from urllib.parse import urlparse
+    parsed = urlparse(CLOUDINARY_URL)
+    CLOUDINARY_CLOUD_NAME = parsed.hostname
+    CLOUDINARY_API_KEY = parsed.username
+    CLOUDINARY_API_SECRET = parsed.password
+    
+    # Configure Cloudinary
+    import cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET
+    )
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
 EMAIL_HOST = 'smtp.office365.com'
@@ -190,6 +239,9 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 ACAUSE_EMAIL_SUBJECT_PREFIX = 'SciAvisor - '
+
+# Development settings
+SHOW_FAKE_USERS = os.getenv('SHOW_FAKE_USERS', 'false').lower() == 'true'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -269,6 +321,7 @@ IMAGE_CROPPING_BACKEND_PARAMS = {}
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
+    "https://advisor-search.lnu.edu.ua",
     "https://project-mddj.onrender.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -295,7 +348,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-BASE_URL = 'https://project-mddj.onrender.com'
+BASE_URL = 'https://advisor-search.lnu.edu.ua'
 
 LOGIN_URL = '/users/login/'
 
@@ -318,6 +371,7 @@ REST_FRAMEWORK = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://advisor-search.lnu.edu.ua',
     'https://project-mddj.onrender.com',
 ]
 

@@ -7,7 +7,7 @@ from io import BytesIO
 from urllib.parse import parse_qs, urlencode
 
 import requests
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from django.core.files.storage import default_storage
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
@@ -99,7 +99,9 @@ def microsoft_register(request):
             # Store form data in session
             request.session["role"] = form.cleaned_data["role"]
             request.session["group"] = form.cleaned_data.get("group")
-            request.session["department"] = form.cleaned_data.get("department")
+            # Зберігаємо тільки ID кафедри, а не об'єкт
+            department = form.cleaned_data.get("department")
+            request.session["department_id"] = department.id if department else None
 
             CSRF_STATE = get_random_string(32)
             request.session["csrf_state"] = CSRF_STATE
@@ -149,7 +151,7 @@ def microsoft_login(request):
         if not request.GET.get("redirect"):
             logger.debug("Rendering login page before redirecting to Microsoft.")
             return render(
-                request, "auth/login.html"
+                request, "auth/login.html", {"show_fake_users": settings.SHOW_FAKE_USERS}
             )  # Update with the correct template path
 
         CSRF_STATE = get_random_string(32)
@@ -241,6 +243,22 @@ def microsoft_callback(request):
         return redirect("login")
 
 
+def get_student_course(group):
+    """
+    Визначає курс студента за назвою групи
+    Повертає номер курсу або None якщо не вдалося визначити
+    """
+    if not group:
+        return None
+    
+    import re
+    # Шукаємо першу цифру в назві групи (наприклад, ФЕС-3 -> 3)
+    match = re.search(r'-(\d)', group)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def handle_registration_callback(request, code):
     logger.debug("Handling registration callback.")
 
@@ -254,18 +272,36 @@ def handle_registration_callback(request, code):
             )
 
         user_info = get_user_info(access_token)
-        email, first_name, last_name, job_title = extract_user_data(user_info)
+        email, first_name, last_name, job_title, microsoft_department = extract_user_data(user_info)
 
         derived_role = "Студент" if "Student" in job_title else "Викладач"
         submitted_role = request.session.get("role")
         group = request.session.get("group")
-        department = request.session.get("department")
+        department_id = request.session.get("department_id")
+        
+        # Отримуємо Department об'єкт з ID
+        department = None
+        if department_id:
+            from apps.catalog.models import Department
+            try:
+                department = Department.objects.get(id=department_id)
+            except Department.DoesNotExist:
+                logger.warning(f"Department with ID {department_id} not found")
 
         if submitted_role != derived_role:
             return fail_and_redirect(
                 request,
                 "Будь ласка, вкажіть правильну роль.",
                 f"Role mismatch. Submitted: {submitted_role}, Derived: {derived_role}"
+            )
+
+        # Перевірка факультету через Microsoft Graph API
+        from apps.users.services.registration_services import validate_faculty_from_microsoft
+        if not validate_faculty_from_microsoft(microsoft_department):
+            return fail_and_redirect(
+                request,
+                "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій.",
+                f"Faculty validation failed. Microsoft department: {microsoft_department}"
             )
 
         with transaction.atomic():
@@ -278,7 +314,6 @@ def handle_registration_callback(request, code):
                     "is_active": True,
                     "role": derived_role,
                     "academic_group": group if derived_role == "Студент" else None,
-                    "department": department if derived_role == "Викладач" else None,
                 },
             )
 
@@ -293,8 +328,10 @@ def handle_registration_callback(request, code):
                 logger.info("New user registered: %s", email)
                 # Створюємо профіль в залежності від ролі
                 if derived_role == "Студент":
-                    create_student_profile(user, group, email)
+                    # Для всіх студентів кафедра буде визначена адміністратором
+                    create_student_profile(user, group, email, None)
                 else:
+                    # department тепер є Department об'єктом
                     create_teacher_profile(user, job_title, department)
 
         messages.success(request, "Успішно зареєстровано! Будь ласка, увійдіть.")
@@ -359,14 +396,29 @@ def handle_login_callback(request, code):
         # Fetch user info
         headers = {"Authorization": f"Bearer {access_token}"}
         logger.debug("Fetching user info from Microsoft Graph.")
-        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers).json()
+        # Отримуємо department з Microsoft Graph API
+        params = {
+            '$select': 'mail,userPrincipalName,department'
+        }
+        user_info = requests.get(MICROSOFT_GRAPH_ME_ENDPOINT, headers=headers, params=params).json()
 
         # Extract user details
         email = user_info.get("mail") or user_info.get("userPrincipalName")
+        microsoft_department = user_info.get("department", "")
+        
         if not email:
             logger.error("Email not found in Microsoft account.")
             messages.error(
                 request, "Електронна пошта не знайдена в обліковому записі Microsoft."
+            )
+            return redirect("login")
+
+        # Перевірка факультету через Microsoft Graph API
+        from apps.users.services.registration_services import validate_faculty_from_microsoft
+        if not validate_faculty_from_microsoft(microsoft_department):
+            logger.error("Faculty validation failed for user %s. Microsoft department: %s", email, microsoft_department)
+            messages.error(
+                request, "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій."
             )
             return redirect("login")
 
@@ -415,19 +467,22 @@ def fake_login(request):
             last_name="Тестовий",
             patronymic="Петрович",
             role="Викладач",
-            department="Системного проектування",
             is_active=True,
             password=make_password("fake_password"),
         )
     # Використовуємо get_or_create для OnlyTeacher
-    OnlyTeacher.objects.get_or_create(
-        teacher_id=user,
-        defaults={
-            "academic_level": "Доцент",
-            "additional_email": "teacher.test@lnu.edu.ua",
-            "phone_number": "+380991234567",
-        },
-    )
+    try:
+        OnlyTeacher.objects.get_or_create(
+            teacher_id=user,
+            defaults={
+                "academic_level": "Доцент",
+                "additional_email": "teacher.test@lnu.edu.ua",
+                "phone_number": "+380991234567",
+                "department_id": 1,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for fake user {user.email}: {str(e)}", exc_info=True)
     auth_login(request, user)
     return redirect("profile")
 
@@ -757,6 +812,13 @@ def crop_profile_picture(request):
                 # Use the uploaded file if available
                 if "profile_picture" in request.FILES:
                     image_file = request.FILES["profile_picture"]
+                    
+                    # Check file size (1MB limit)
+                    if image_file.size > 1024 * 1024:  # 1MB in bytes
+                        return JsonResponse(
+                            {"success": False, "error": "File size too large. Maximum size is 1MB."}
+                        )
+                    
                     image = Image.open(image_file).convert("RGB")
                 else:
                     return JsonResponse(
@@ -772,25 +834,37 @@ def crop_profile_picture(request):
                 cropped_image.save(img_io, format="JPEG", quality=90)
                 img_content = ContentFile(img_io.getvalue())
 
-                # --- FORCE CLOUDINARY UPLOAD (DIAGNOSTIC STEP) ---
+                # Save to configured storage (Cloudinary in prod or local in dev)
                 user = request.user
-                storage = MediaCloudinaryStorage()
-                file_name = f"profile_pics/profile_{user.id}.jpg"
-
-                # Delete the old file from Cloudinary if it exists, to prevent duplicates
-                if storage.exists(file_name):
-                    storage.delete(file_name)
-
-                # Save the new file directly to Cloudinary
-                saved_file_name = storage.save(file_name, img_content)
-
-                # Manually update the user's model field with the path returned by Cloudinary
+                # Generate unique filename with timestamp to avoid caching issues
+                import time
+                timestamp = int(time.time())
+                file_name = f"profile_pics/profile_{user.id}_{timestamp}.jpg"
+                
+                # Delete old profile pictures for this user from Cloudinary
+                try:
+                    # Get all files from Cloudinary storage
+                    if hasattr(default_storage, 'listdir'):
+                        try:
+                            old_files = default_storage.listdir("profile_pics")[1]  # Get files
+                            for old_file in old_files:
+                                if old_file.startswith(f"profile_{user.id}_") and old_file.endswith(".jpg"):
+                                    try:
+                                        default_storage.delete(f"profile_pics/{old_file}")
+                                    except:
+                                        pass
+                        except:
+                            # If listdir doesn't work (e.g., with Cloudinary), skip deletion
+                            pass
+                except Exception as e:
+                    logger.warning(f"Could not list old files for user {user.id}: {e}")
+                    pass
+                
+                saved_file_name = default_storage.save(file_name, img_content)
                 user.profile_picture.name = saved_file_name
                 user.save(update_fields=["profile_picture"])
-
-                # Get the final URL directly from the storage
-                new_url = storage.url(saved_file_name)
-                # --- END OF DIAGNOSTIC STEP ---
+                user.refresh_from_db()
+                new_url = default_storage.url(saved_file_name)
 
                 logger.debug(
                     f"Forced Cloudinary upload successful for user {user.id}. URL: {new_url}"
@@ -831,10 +905,15 @@ def teacher_profile_edit(request):
         messages.error(request, "Доступ заборонено")
         return redirect("profile")
 
-    teacher_profile, created = OnlyTeacher.objects.get_or_create(
-        teacher_id=request.user,
-        defaults={"position": "Не вказано", "academic_level": "Аспірант"},
-    )
+    try:
+        teacher_profile, created = OnlyTeacher.objects.get_or_create(
+            teacher_id=request.user,
+            defaults={"position": "Не вказано", "academic_level": "Аспірант"},
+        )
+    except Exception as e:
+        logger.error(f"Error creating OnlyTeacher for user {request.user.email}: {str(e)}", exc_info=True)
+        messages.error(request, f"Помилка створення профілю викладача: {str(e)}")
+        return redirect("profile")
 
     if request.method == "POST":
         form = TeacherProfileForm(
@@ -847,7 +926,7 @@ def teacher_profile_edit(request):
                     request.user.first_name = form.cleaned_data["first_name"]
                     request.user.last_name = form.cleaned_data["last_name"]
                     request.user.patronymic = form.cleaned_data["patronymic"]
-                    request.user.department = form.cleaned_data["department"]
+                    # Кафедра тепер оновлюється через форму OnlyTeacher
                     request.user.save()
 
                     form.save()
@@ -1625,10 +1704,10 @@ def student_refuse_request(request, request_id):
         req = Request.objects.select_related("teacher_theme").get(id=request_id)
         if request.user.role != "Студент" or req.student_id != request.user:
             return JsonResponse({"error": "Forbidden"}, status=403)
-        if req.request_status not in ["Очікує", "Активний"]:
+        if req.request_status not in ["Очікує"]:
             return JsonResponse(
                 {
-                    "error": 'Відмовитися можна лише від запиту зі статусом "Очікує" або "Активний"'
+                    "error": 'Відмовитися можна лише від запиту зі статусом "Очікує" '
                 },
                 status=400,
             )

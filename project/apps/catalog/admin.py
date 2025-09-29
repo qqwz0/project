@@ -76,7 +76,7 @@ class AnnouncementAdmin(admin.ModelAdmin):
                 obj.author_department = user.get_department()
                 obj.author_faculty = user.get_faculty()
             elif user.groups.filter(name="faculty_admin").exists():
-                # obj.author_type = "faculty"
+                obj.author_type = "faculty"
                 obj.author_faculty = user.get_faculty()
                 # кафедру лишаємо порожньою для факультет-адміна
         super().save_model(request, obj, form, change)

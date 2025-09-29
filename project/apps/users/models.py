@@ -53,19 +53,10 @@ class CustomUser(AbstractUser):
         ('Викладач', 'Викладач'),
     ]
 
-    DEPARTMENT_CHOICES = [
-        ('Сенсорної та напівпровідникової електроніки', 'Сенсорної та напівпровідникової електроніки'),
-        ('Системного проектування', 'Системного проектування'),
-        ('Фізичної та біомедичної електроніки', 'Фізичної та біомедичної електроніки'),
-        ('Радіофізики та комп\'ютерних технологій', 'Радіофізики та комп\'ютерних технологій'),
-        ('Радіоелектронних і комп\'ютерних систем', 'Радіоелектронних і комп\'ютерних систем'),
-        ('Оптоелектроніки та інформаційних технологій', 'Оптоелектроніки та інформаційних технологій'),
-    ]
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='Студент')
     academic_group = models.CharField(max_length=9, blank=False, null=True)  # For students
-    department = models.CharField(max_length=100, choices=DEPARTMENT_CHOICES, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     patronymic = models.CharField("По-батькові", max_length=150, blank=True, null=True)
 
@@ -86,31 +77,60 @@ class CustomUser(AbstractUser):
             parts.append(self.patronymic)
         return ' '.join(parts)
     
-    def get_teacher_profile(self):
+    def get_profile(self):
         """
-        Повертає профіль OnlyTeacher або None.
-        Використовує related_name, без прямого query.
+        Повертає профіль користувача (OnlyTeacher або OnlyStudent), 
+        залежно від ролі. Якщо профілю нема — None.
         """
-        from apps.catalog.models import OnlyTeacher  # Імпортуємо тут, щоб уникнути циклічних імпортів
-        try:
-            print(f"[DEBUG] Found OnlyTeacher: {self.catalog_teacher_profile} for user")
-            return self.catalog_teacher_profile  # це OneToOneField, поверне профіль або викличе DoesNotExist
-        except OnlyTeacher.DoesNotExist:
-            print(f"[DEBUG] No OnlyTeacher profile for user {self.email}")
-            return None
+        if self.role == 'Викладач':
+            from apps.catalog.models import OnlyTeacher
+            try:
+                return self.catalog_teacher_profile  # OneToOneField
+            except OnlyTeacher.DoesNotExist:
+                return None
+
+        if self.role == 'Студент':
+            from apps.catalog.models import OnlyStudent
+            try:
+                return self.catalog_student_profile_new  # OneToOneField
+            except OnlyStudent.DoesNotExist:
+                return None
+
+        return None
+
 
     def get_faculty(self):
-        profile = self.get_teacher_profile()
+        profile = self.get_profile()
         if profile and profile.department:
             return profile.department.faculty
         return None
 
     def get_department(self):
-        profile = self.get_teacher_profile()
-        if profile:
-            print(f"[DEBUG] Found DEPARTMENT: {profile.department} for user")
+        """
+        Повертає Department об'єкт через профіль (нова система)
+        """
+        profile = self.get_profile()
+        if profile and hasattr(profile, 'department') and profile.department:
             return profile.department
+
+        # Для студентів - через активний запит
+        if self.role == 'Студент':
+            active_request = self.users_student_requests.filter(
+                request_status="Активний"
+            ).select_related("teacher_id__department").first()
+
+            if active_request and active_request.teacher_id and active_request.teacher_id.department:
+                return active_request.teacher_id.department
+
         return None
+    
+    def get_department_name(self):
+        """
+        Повертає назву кафедри як строку (для зворотної сумісності)
+        """
+        department = self.get_department()
+        return department.department_name if department else None
+
 
 # @receiver(pre_save, sender=CustomUser)
 # def auto_delete_old_file_on_change(sender, instance, **kwargs):

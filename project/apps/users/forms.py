@@ -32,14 +32,6 @@ class RegistrationForm(forms.Form):
         ('Викладач', 'Викладач'),
     ]
 
-    DEPARTMENT_CHOICES = [
-        ('Оптоелектроніки та інформаційних технологій', 'Оптоелектроніки та інформаційних технологій'),
-        ('Радіоелектроніки і комп\'ютерних систем', 'Радіоелектроніки і комп\'ютерних систем'),
-        ('Радіофізики та комп\'ютерних технологій', 'Радіофізики та комп\'ютерних технологій'),
-        ('Сенсорної та напівпровідникової електроніки', 'Сенсорної та напівпровідникової електроніки'),
-        ('Системного проектування', 'Системного проектування'),
-        ('Фізичної та біомедичної електроніки', 'Фізичної та біомедичної електроніки'),
-    ]
 
     role = forms.ChoiceField(
         choices=ROLE_CHOICES,
@@ -54,15 +46,20 @@ class RegistrationForm(forms.Form):
         widget=forms.TextInput(attrs={'placeholder': 'Академічна група', 'class': 'form-input'})
     )
 
-    department = forms.ChoiceField(
+    department = forms.ModelChoiceField(
         label='Кафедра',
-        choices=DEPARTMENT_CHOICES,
+        queryset=None,  # Буде встановлено в __init__
         required=False,
+        empty_label="Оберіть кафедру",
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Встановлюємо queryset для кафедр
+        from apps.catalog.models import Department
+        self.fields['department'].queryset = Department.objects.all()
         
         # Check if self.data is empty
         if not self.data:
@@ -116,6 +113,7 @@ class RegistrationForm(forms.Form):
     def clean_department(self):
         department = self.cleaned_data.get('department')
         role = self.cleaned_data.get('role')
+        group = self.cleaned_data.get('group')
 
         # Debugging log for department validation
         logger.debug(f"Cleaning 'department' field with value: {department} for role: {role}")
@@ -123,6 +121,9 @@ class RegistrationForm(forms.Form):
         if role == 'Викладач':
             if not department:
                 raise ValidationError("Це поле обов'язкове.")
+        elif role == 'Студент' and group:
+            # Для студентів 3-4 курсу кафедра не потрібна - буде визначена адміністратором
+            pass
         
         return department
 
@@ -166,9 +167,10 @@ class TeacherProfileForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    department = forms.ChoiceField(
+    department = forms.ModelChoiceField(
         label="Кафедра",
-        choices=CustomUser.DEPARTMENT_CHOICES,
+        queryset=None,  # Буде встановлено в __init__
+        empty_label="Оберіть кафедру",
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
@@ -215,10 +217,18 @@ class TeacherProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Зберігаємо user для використання в save()
+        self.user = user
+        
+        # Встановлюємо queryset для кафедр
+        from apps.catalog.models import Department
+        self.fields['department'].queryset = Department.objects.all()
+        
         if user:
             self.fields['first_name'].initial = user.first_name
             self.fields['last_name'].initial = user.last_name
-            self.fields['department'].initial = user.department
+            self.fields['department'].initial = user.get_department()
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
 
             instance = kwargs.get('instance')
@@ -237,6 +247,33 @@ class TeacherProfileForm(forms.ModelForm):
         if phone.startswith('380'):
             phone = phone[3:]
         return phone
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Оновлюємо поля CustomUser
+        if hasattr(self, 'user') and self.user:
+            self.user.first_name = self.cleaned_data['first_name']
+            self.user.last_name = self.cleaned_data['last_name']
+            self.user.patronymic = self.cleaned_data['patronymic']
+            
+            # Оновлюємо кафедру в OnlyTeacher
+            department = self.cleaned_data.get('department')
+            if department:
+                instance.department = department
+            
+            if commit:
+                self.user.save()
+                instance.save()
+        else:
+            # Якщо user не передано, все одно оновлюємо кафедру
+            department = self.cleaned_data.get('department')
+            if department:
+                instance.department = department
+            if commit:
+                instance.save()
+        
+        return instance
 
 class StudentProfileForm(forms.ModelForm):
     first_name = forms.CharField(

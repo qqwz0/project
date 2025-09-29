@@ -497,7 +497,7 @@ class TeacherProfileThemeEditTestCase(TestCase):
             'first_name': self.teacher_user.first_name,
             'last_name': self.teacher_user.last_name,
             'patronymic': 'Едітович',
-            'department': self.teacher_user.department,
+            'department': self.teacher_user.get_department_name(),
             'academic_level': self.teacher_profile.academic_level,
         }
 

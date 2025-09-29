@@ -20,7 +20,7 @@ class OnlyTeacher(models.Model):
     teacher_id = models.OneToOneField('users.CustomUser', 
                                       on_delete=models.CASCADE, 
                                       primary_key=True, 
-                                      limit_choices_to={'role': 'teacher'},
+                                      limit_choices_to={'role': 'Викладач'},
                                       related_name='catalog_teacher_profile')
     academic_level = models.CharField(max_length=50, default='Викладач')
     additional_email = models.EmailField(blank=True, null=True)
@@ -42,7 +42,7 @@ class OnlyTeacher(models.Model):
 
 @receiver(post_save, sender=CustomUser)
 def create_only_teacher(sender, instance, created, **kwargs):
-    if instance.role == "Викладач":
+    if created and instance.role == "Викладач":
         OnlyTeacher.objects.get_or_create(teacher_id=instance)
 
 class Stream(models.Model):
@@ -497,7 +497,7 @@ class TeacherTheme(models.Model):
 
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'Студент'}, related_name='users_student_themes')
     request = models.ForeignKey('Request', on_delete=models.CASCADE, related_name='student_themes')
     theme = models.CharField(max_length=100)
     
@@ -514,11 +514,13 @@ class OnlyStudent(models.Model):
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
-                                    limit_choices_to={'role': 'student'},
+                                    limit_choices_to={'role': 'Студент'},
                                     related_name='catalog_student_profile_new')
     group = models.ForeignKey('Group', on_delete=models.CASCADE,
                              related_name='students',
                              verbose_name="Група")
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Кафедра")
     additional_email = models.EmailField(blank=True, null=True, verbose_name="Додатковий email")
     phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Телефон")
     
@@ -543,10 +545,12 @@ class OnlyStudent(models.Model):
     
     @property
     def course(self):
-        """Вираховує курс на основі року вступу потоку"""
-        from datetime import datetime
-        current_year = datetime.now().year
-        return current_year - self.group.stream.year_of_entry + 1
+        """Вираховує курс з коду потоку (наприклад, ФЕС-2 -> курс 2)"""
+        import re
+        match = re.match(r'^[А-ЯІЇЄҐ]+-(\d)', self.group.stream.stream_code)
+        if match:
+            return int(match.group(1))
+        return None
     
     def __str__(self):
         return f"Student: {self.student_id.get_full_name()} ({self.group.group_code})"
@@ -667,6 +671,7 @@ class FileComment(models.Model):
     author = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     text = models.TextField()
     attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -933,17 +938,17 @@ class Semestr(models.Model):
         return Semestr.objects.filter(department=department, academic_year=academic_year).first()
 
     def can_student_create_request(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         return not self.lock_student_requests_date or today < self.lock_student_requests_date
 
     def should_lock_teacher_editing_themes(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         return self.lock_teacher_editing_themes_date and today >= self.lock_teacher_editing_themes_date
 
     def should_lock_cancellations(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         return self.lock_cancel_requests_date and today >= self.lock_cancel_requests_date
 
     def can_complete_requests(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         return self.allow_complete_work_date and today >= self.allow_complete_work_date

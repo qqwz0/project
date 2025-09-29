@@ -10,12 +10,13 @@
     box-shadow: 0 0 0 1px #0378ec;
     border-radius: 8px;
     width: 300px;
-    max-height: 20rem;
+    max-height: 24rem;
     min-height: 4.2rem; 
     opacity: 0; 
     transform: translateY(-10px); 
     transition: transform 0.3s ease;
     padding: 0.5rem;
+    overflow-x: hidden;
     overflow-y: auto;
   }
        

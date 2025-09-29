@@ -6,6 +6,8 @@
   background: #fff;
   box-shadow: 0.25rem 0.75rem 0.75rem rgba(0, 0, 0, 0.15);
 }
+/* Prevent body scroll when dialog is open */
+html:has(dialog[open]) { overflow: hidden; }
 .modal .info-request-section {
   display: flex;
   flex-direction: row;
@@ -354,10 +356,10 @@ label[for="id_teacher_themes"] {
   cursor: pointer;
   position: absolute;
   top: 0.75rem;
-  left: 0.875rem;
+  right: 0.875rem;
   font-size: 1.375rem;
-  width: 1.5%;
-  height: 3.5%;
+  width: auto;
+  height: auto;
   color: #a3a3a3;
   transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
   padding: 0.5rem;
@@ -419,17 +421,20 @@ textarea.error {
 .error-message {
   animation: shake 0.5s ease-in-out;
 }
-@media screen and (max-width: 768px) {
+/* Make modal scrollable on all small-to-medium screens; use viewport height */
+@media screen and (max-width: 1024px) {
   .modal {
     width: 100vw;
     min-height: min-content;
-    border-radius: 0;
+    border-radius: 16px; /* rounded on phones */
     overflow: hidden;
     padding: 5px;
     align-self: center;
     margin: 0 auto;
     max-height: 100vh;
   }
+  /* Make the dialog content box the ONLY scrollable area */
+  .modal .modal-box { max-height: 90vh; overflow-y: auto; overflow-x: hidden; }
   .modal .info-request-section {
     flex-direction: column;
     height: auto;
@@ -442,6 +447,9 @@ textarea.error {
     padding: 1rem 0.5rem;
     box-sizing: border-box;
   }
+  /* Prevent nested scrollbars; let .modal-box handle scrolling */
+  .modal .right-container { max-height: none; overflow: visible; }
+  .modal .left-container { max-height: 220px; overflow: hidden; }
   .left-container img {
     width: 20vw;
     height: 20vw;
@@ -489,7 +497,7 @@ textarea.error {
   }
   .close-modal {
     top: 0.3rem;
-    left: 0.3rem;
+    right: 0.3rem;
     font-size: 1.2rem;
     padding: 0.2rem;
   }
@@ -662,6 +670,8 @@ textarea.error {
   justify-content: center;
   width: 28px;
   height: 28px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .dropdown-toggle:hover {
   background: #0378ec;

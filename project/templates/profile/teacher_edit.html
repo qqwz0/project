@@ -6,7 +6,13 @@
 <div class="edit-profile-container">
     <div class="edit-profile-header">
         <div class="profile-image">
-            <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" id="profile-preview">
+            <form id="profile-pic-form" action="{% url 'update_profile_picture' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
+                <label for="profile-pic-input" id="avatar-label">
+                    <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" id="profile-preview">
+                </label>
+            </form>
         </div>
         <div class="profile-title">
             <h1>{{ user.get_full_name }}</h1>
@@ -14,7 +20,13 @@
         </div>
     </div>
 
-    <h2 class="edit-title">Редагувати профіль</h2>
+    <h2 class="edit-title" style="display:flex; align-items:center; gap:10px;">Редагувати профіль
+        <a href="#" id="start-tour-edit" class="help-button" title="Підказка" data-tour="edit" aria-label="Підказка" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px;">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+            <path fill="#2563eb" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.1 15.5a1.35 1.35 0 1 1 0 2.7 1.35 1.35 0 0 1 0-2.7zM12 6.6c2.02 0 3.4 1.2 3.4 2.95 0 1.1-.5 1.86-1.52 2.54l-.42.27c-.62.41-.86.7-.86 1.19v.43h-2v-.57c0-1.17.63-1.88 1.5-2.43l.46-.29c.7-.44.84-.73.84-1.17 0-.77-.6-1.26-1.44-1.26-.88 0-1.48.5-1.62 1.36H8.22C8.42 7.86 9.77 6.6 12 6.6z"/>
+          </svg>
+        </a>
+    </h2>
 
     {% if messages %}
     <div class="messages" id="django-messages">
@@ -31,7 +43,7 @@
             {% csrf_token %}
     
             <div class="form-sections teacher-sections">
-                <!-- LEFT COLUMN: Особиста інформація + Місця -->
+                <!-- LEFT COLUMN: Особиста інформація + Контакти -->
                 <div>
                   <div class="personal-info">
                     <h3>Особиста інформація</h3>
@@ -63,6 +75,30 @@
                       <div class="error-message" id="academic_level-error"></div>
                     </div>
                   </div>
+                  
+                  <!-- Контакти -->
+                  <div class="contacts">
+                    <h3>Контакти</h3>
+                    <div class="form-group">
+                      <label for="{{ form.additional_email.id_for_label }}">Додаткова електронна скринька</label>
+                      {{ form.additional_email }}
+                      <div class="error-message" id="additional_email-error"></div>
+                    </div>
+                    <div class="form-group phone-group">
+                      <label for="{{ form.phone_number.id_for_label }}">Робочий номер телефону</label>
+                      <div class="phone-input">
+                        <span class="country-code">+380</span>
+                        {{ form.phone_number }}
+                      </div>
+                      <div class="error-message" id="phone_number-error"></div>
+                    </div>
+                    <div class="form-group fac-link">
+                      <label for="{{ form.profile_link.id_for_label }}">Посилання на сторінку на сайті факультету</label>
+                      {{ form.profile_link }}
+                      <div class="error-message" id="profile_link-error"></div>
+                    </div>
+                  </div>
+                  
                   <!-- Місця -->
                   <!-- ЗАКОМЕНТОВАНО: функціонал зміни квот (буде відновлено пізніше)
                   <div class="quota-section">
@@ -117,29 +153,8 @@
                   -->
                 </div>
                 <!-- Модальне вікно для вибору потоку -->
-                <!-- RIGHT COLUMN: Контакти + Теми -->
+                <!-- RIGHT COLUMN: Теми -->
                 <div>
-                  <div class="contacts">
-                    <h3>Контакти</h3>
-                    <div class="form-group">
-                      <label for="{{ form.additional_email.id_for_label }}">Додаткова електронна скринька</label>
-                      {{ form.additional_email }}
-                      <div class="error-message" id="additional_email-error"></div>
-                    </div>
-                    <div class="form-group phone-group">
-                      <label for="{{ form.phone_number.id_for_label }}">Робочий номер телефону</label>
-                      <div class="phone-input">
-                        <span class="country-code">+380</span>
-                        {{ form.phone_number }}
-                      </div>
-                      <div class="error-message" id="phone_number-error"></div>
-                    </div>
-                    <div class="form-group fac-link">
-                      <label for="{{ form.profile_link.id_for_label }}">Посилання на сторінку на сайті факультету</label>
-                      {{ form.profile_link }}
-                      <div class="error-message" id="profile_link-error"></div>
-                    </div>
-                  </div>
                 <!-- ТЕМИ -->
                   <div class="themes-section">
                     <h3>Управління темами робіт</h3>
@@ -181,10 +196,21 @@
                             
                             <!-- Потоки -->
                             <div class="theme-streams-container">
-                                <label class="streams-label">Потоки:</label>
+                                <div class="streams-header">
+                                    <label class="streams-label">
+                                        Потоки:
+                                        {% if theme.streams.count > 3 or all_streams|length > 3 %}
+                                        <button type="button" class="toggle-streams-btn" data-theme-id="{{ theme.id }}" data-expanded="false">
+                                            <svg class="chevron-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                    </label>
+                                </div>
                                 <div class="streams-list" data-theme-id="{{ theme.id }}">
                                     {% for stream in theme.streams.all %}
-                                        <div class="stream-item">
+                                        <div class="stream-item {% if forloop.counter > 3 %}hidden-stream{% endif %}">
                                             <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
                                                    value="{{ stream.id }}" checked 
                                                    onchange="updateThemeStreams({{ theme.id }})">
@@ -193,7 +219,7 @@
                                     {% endfor %}
                                     {% for stream in all_streams %}
                                         {% if stream not in theme.streams.all %}
-                                        <div class="stream-item">
+                                        <div class="stream-item {% if forloop.counter0|add:theme.streams.count > 3 %}hidden-stream{% endif %}">
                                             <input type="checkbox" id="stream-{{ theme.id }}-{{ stream.id }}" 
                                                    value="{{ stream.id }}" 
                                                    onchange="updateThemeStreams({{ theme.id }})">
@@ -291,10 +317,120 @@
         </form>
     </div>
 </div>
+<!-- Crop Modal (moved from profile page) -->
+<div id="cropModal" class="modal">
+  <div class="modal-content" style="position: relative;">
+    <span class="close">&times;</span>
+    <h2 class='modal-h2'>Обріж своє фото!</h2>
+    <img src="" id="cropbox" alt="Profile Picture">
+    <form id="crop-form" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="x">
+      <input type="hidden" name="y">
+      <input type="hidden" name="width">
+      <input type="hidden" name="height">
+      <button type="submit" class='button'>Обрізати та зберегти</button>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
+// --- Avatar cropper moved from profile page ---
+let selectedFile = null;
+let cropper = null;
+const cropbox = document.getElementById('cropbox');
+
+document.addEventListener('DOMContentLoaded', function() {
+  const picInput = document.getElementById('profile-pic-input');
+  if (picInput) {
+    picInput.addEventListener('change', function(event) {
+      event.preventDefault();
+      const file = event.target.files[0];
+      if (!file) return;
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('cropbox').src = e.target.result;
+        openModal();
+        if (cropper) {
+          cropper.destroy();
+        }
+        cropper = new Cropper(document.getElementById('cropbox'), {
+          aspectRatio: 1,
+          viewMode: 2,
+          autoCropArea: 0.8,
+          movable: true,
+          zoomable: true,
+          scalable: true,
+          responsive: true,
+          minContainerWidth: 300,
+          minContainerHeight: 300,
+          crop(event) {
+            document.querySelector('input[name="x"]').value = event.detail.x;
+            document.querySelector('input[name="y"]').value = event.detail.y;
+            document.querySelector('input[name="width"]').value = event.detail.width;
+            document.querySelector('input[name="height"]').value = event.detail.height;
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+});
+
+function openModal() {
+  document.getElementById('cropModal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('cropModal').style.display = 'none';
+  if (cropper) {
+    cropper.destroy();
+    cropper = null;
+  }
+}
+document.addEventListener('DOMContentLoaded', function(){
+  const closeEl = document.querySelector('#cropModal .close');
+  if (closeEl) closeEl.addEventListener('click', closeModal);
+});
+
+document.addEventListener('DOMContentLoaded', function(){
+  const cropForm = document.getElementById('crop-form');
+  if (!cropForm) return;
+  cropForm.addEventListener('submit', function(event){
+    event.preventDefault();
+    if (!cropper) return;
+    const formData = new FormData(this);
+    if (selectedFile) {
+      formData.append('profile_picture', selectedFile);
+    }
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch('{% url 'crop_profile_picture' %}', {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-CSRFToken': csrfToken }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        const newUrl = data.new_profile_picture_url + '?t=' + new Date().getTime();
+        document.getElementById('profile-preview').src = newUrl;
+        closeModal();
+        if (typeof showMessage === 'function') {
+          showMessage('Фото профілю успішно оновлено', 'success');
+        }
+      } else {
+        console.error('Crop error:', data.error);
+        alert('Error cropping image: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(err => console.error('Fetch error:', err));
+  });
+});
+
 // --- Глобальні функції для розширеного управління темами ---
 
 // Функція для отримання CSRF токену
@@ -1263,6 +1399,31 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showMessage('Помилка при збереженні профілю. Будь ласка, спробуйте ще раз.', 'error');
         });
+    });
+
+    // Функціонал розгортання потоків на картках тем
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-streams-btn')) {
+            const button = e.target.closest('.toggle-streams-btn');
+            const themeId = button.getAttribute('data-theme-id');
+            const isExpanded = button.getAttribute('data-expanded') === 'true';
+            const themeCard = button.closest('.theme-card');
+            const hiddenStreams = themeCard.querySelectorAll('.hidden-stream');
+            
+            if (isExpanded) {
+                // Згортаємо - приховуємо додаткові потоки
+                hiddenStreams.forEach(stream => {
+                    stream.classList.remove('show');
+                });
+                button.setAttribute('data-expanded', 'false');
+            } else {
+                // Розгортаємо - показуємо всі потоки
+                hiddenStreams.forEach(stream => {
+                    stream.classList.add('show');
+                });
+                button.setAttribute('data-expanded', 'true');
+            }
+        }
     });
 });
 </script>

@@ -89,7 +89,7 @@ class CustomUserChangeForm(forms.ModelForm):
 
         # Якщо користувач - адміністратор кафедри
         if self.current_user and self.current_user.groups.filter(name='department_admin').exists() and not self.current_user.is_superuser:
-            department = self.current_user.department
+            department = self.current_user.get_department()
             if department:
                 # Обмежити список кафедр лише своєю
                 self.fields['department'].queryset = self.fields['department'].queryset.filter(pk=department.pk)
@@ -137,7 +137,7 @@ class CustomUserAdmin(UserAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            return qs.filter(department=request.user.department)
+            return qs.filter(department=request.user.get_department())
         return qs
 
     @admin.display(description='ПІБ')
@@ -176,12 +176,12 @@ class DepartmentFilter(admin.SimpleListFilter):
     parameter_name = 'department'
 
     def lookups(self, request, model_admin):
-        depts = OnlyTeacher.objects.values_list('teacher_id__department', flat=True).distinct()
+        depts = OnlyTeacher.objects.filter(department__isnull=False).values_list('department__department_name', flat=True).distinct()
         return [(dept, dept) for dept in depts if dept]
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(teacher_id__teacher_id__department=self.value())
+            return queryset.filter(teacher_id__department=self.value())
         return queryset
     
 class SlotForm(forms.ModelForm):
@@ -261,7 +261,7 @@ class SlotAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            qs = qs.filter(teacher_id__teacher_id__department=request.user.department)
+            qs = qs.filter(teacher_id__department=request.user.get_department())
         return qs
 
     @admin.display(description='Викладач', ordering='teacher_id__teacher_id__last_name')
@@ -272,9 +272,9 @@ class SlotAdmin(admin.ModelAdmin):
             parts.append(u.patronymic)
         return " ".join(parts)
 
-    @admin.display(description='Кафедра', ordering='teacher_id__teacher_id__department')
+    @admin.display(description='Кафедра', ordering='teacher_id__department__department_name')
     def get_department(self, obj):
-        return obj.teacher_id.teacher_id.department
+        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
 
     @admin.display(description='Потік', ordering='stream_id__stream_code')
     def get_stream_code(self, obj):
@@ -291,7 +291,7 @@ class SlotAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id" and request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
             kwargs['queryset'] = OnlyTeacher.objects.filter(
-                teacher_id__department=request.user.department
+                teacher_id__department=request.user.get_department()
             )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
@@ -332,7 +332,7 @@ class TeacherThemeAdmin(admin.ModelAdmin):
         'theme',
     )
 
-    list_filter = ('is_occupied', 'is_active', 'teacher_id__teacher_id__department', 'streams')
+    list_filter = ('is_occupied', 'is_active', 'teacher_id__department', 'streams')
     ordering = ('teacher_id__teacher_id__last_name', 'teacher_id__teacher_id__first_name')
 
     autocomplete_fields = ('teacher_id',)
@@ -343,7 +343,7 @@ class TeacherThemeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            return qs.filter(teacher_id__teacher_id__department=request.user.department)
+            return qs.filter(teacher_id__department=request.user.get_department())
         return qs
 
     @admin.display(
@@ -383,7 +383,7 @@ class TeacherThemeAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id":
             if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-                kwargs["queryset"] = OnlyTeacher.objects.filter(teacher_id__department=request.user.department)
+                kwargs["queryset"] = OnlyTeacher.objects.filter(teacher_id__department=request.user.get_department())
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def delete_model(self, request, obj):
@@ -687,7 +687,7 @@ class RequestAdmin(admin.ModelAdmin):
         'request_status',
         'work_type',
         StreamFilter,
-        'teacher_id__teacher_id__department',
+        'teacher_id__department',
         'academic_year',
     )
 
@@ -753,9 +753,9 @@ class RequestAdmin(admin.ModelAdmin):
         return f"{student_name} — {teacher_name}"
 
     @admin.display(description='Кафедра викладача',
-                   ordering='teacher_id__teacher_id__department')
+                   ordering='teacher_id__department__department_name')
     def get_teacher_department(self, obj):
-        return obj.teacher_id.teacher_id.department
+        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
 
     @admin.display(description='Група студента',
                    ordering='student_id__academic_group')
@@ -978,12 +978,23 @@ class SemestrAdmin(admin.ModelAdmin):
         return request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser
 
     def _get_user_department(self, request):
-        # strictly via OnlyTeacher record
-        try:
-            ot = OnlyTeacher.objects.select_related('department').get(teacher_id=request.user)
-            return ot.department
-        except OnlyTeacher.DoesNotExist:
-            return None
+        user = request.user  # <-- виправлено тут!
+        if hasattr(user, "role") and user.role == "Викладач":
+            try:
+                ot = OnlyTeacher.objects.select_related('department').get(teacher_id=user)
+                return ot.department
+            except OnlyTeacher.DoesNotExist:
+                return None
+        elif hasattr(user, "role") and user.role == "Студент":
+            try:
+                os = OnlyStudent.objects.select_related('group__stream').get(student_id=user)
+                if os.group and os.group.stream and hasattr(os.group.stream, "department"):
+                    return os.group.stream.department
+                if hasattr(os, "department"):
+                    return os.department
+            except OnlyStudent.DoesNotExist:
+                return None
+        return None
 
     def _allowed(self, request, obj):
         if request.user.is_superuser:

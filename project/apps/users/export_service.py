@@ -34,7 +34,7 @@ def export_requests_to_word(queryset):
 
     # Departments: якщо кілька кафедр — не вказуємо кафедру у заголовку
     depts = set(
-        (q.teacher_id.teacher_id.department if q.teacher_id and q.teacher_id.teacher_id else None)
+        (q.teacher_id.teacher_id.get_department_name() if q.teacher_id and q.teacher_id.teacher_id else None)
         for q in queryset
     )
     depts = set(d for d in depts if d is not None)

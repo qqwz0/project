@@ -1,5 +1,6 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
+{% load catalog_extras %}
 
 {% block title %}Профіль користувача{% endblock %}
 
@@ -25,29 +26,9 @@
         <!-- Profile Header -->
         <div class="profile-header">
             <div class="profile-info">
-                <!-- Profile Picture -->
+                <!-- Profile Picture (view-only; editing moved to Edit Profile pages) -->
                 <div class="profile-pic">
-                    {% if is_own_profile %}
-                        <form id="profile-pic-form" action="{% url 'update_profile_picture' %}" method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
-                            <label for="profile-pic-input" id="avatar-label">
-                                <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
-                            </label>
-                            {% if form %}
-                                {{ form.cropping }}
-                            {% endif %}
-                        </form>
-                    {% else %}
-                        {% if user_profile.profile_picture %}
-                            <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
-                        {% else %}
-                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
-                        {% endif %}
-                    {% endif %}
-                    {% if form %}
-                        {{ form.media }}
-                    {% endif %}
+                    <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                 </div>
 
                 <!-- Profile Text -->
@@ -61,12 +42,12 @@
 
                     {% if user_profile.role == "Викладач" %}
                         <h3>{{ teacher_profile.academic_level }}</h3>
-                        <p>Кафедра: {{ user_profile.department }}</p>
+                        <p>Кафедра: {{ user_profile.get_department_name }}</p>
                     {% elif user_profile.role == "Студент" %}
                         <h3>{{ user_profile.role }}</h3>
                         <p>Група: {{ user_profile.academic_group }}</p>
-                        {% if student_course and student_course >= 3 and user_profile.department %}
-                            <p>Кафедра: {{ user_profile.department }}</p>
+                        {% if student_course and student_course >= 3 and user_profile.get_department_name %}
+                            <p>Кафедра: {{ user_profile.get_department_name }}</p>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -75,6 +56,9 @@
             <!-- Profile Buttons -->
             {% if is_own_profile %}
                 <div class="profile-buttons">
+                    <a href="#" id="start-tour-profile" title="Підказка" data-tour="profile" aria-label="Підказка">
+                        <i class="fas fa-question-circle"></i>
+                    </a>
                     {% if request.user.is_staff or request.user.is_superuser %}
                         <a href="{% url 'admin:index' %}" class="admin-button" title="Адмін панель">
                             <i class="fas fa-lock"></i>
@@ -159,22 +143,7 @@
         </div>
     {% endif %}
 
-    <!-- Crop Modal -->
-    <div id="cropModal" class="modal">
-        <div class="modal-content" style="position: relative;">
-            <span class="close">&times;</span>
-            <h2 class='modal-h2'>Обріж своє фото!</h2>
-            <img src="" id="cropbox" alt="Profile Picture">
-            <form id="crop-form" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="x">
-                <input type="hidden" name="y">
-                <input type="hidden" name="width">
-                <input type="hidden" name="height">
-                <button type="submit" class='button'>Обрізати та зберегти</button>
-            </form>
-        </div>
-    </div>
+    
 
     {% if request.user.role == 'Викладач' %}
     <div id="completeModal" class="modal">
@@ -213,8 +182,6 @@
 {% endblock %}
 
 {% block scripts %}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script src="{% static 'js/request-filter.js' %}"></script>
     <script>
         function closePopup(element) {
@@ -262,111 +229,6 @@
                     }
                 });
             });
-        });
-
-        let selectedFile = null;
-        let cropper = null;
-        const cropbox = document.getElementById("cropbox");
-
-        document.getElementById("profile-pic-input").addEventListener("change", function (event) {
-            event.preventDefault();
-            let file = event.target.files[0];
-            if (file) {
-                selectedFile = file;
-                let reader = new FileReader();
-                reader.onload = function (e) {
-                    cropbox.src = e.target.result;
-                    openModal();
-
-                    if (cropper) {
-                        cropper.destroy();
-                    }
-
-                    cropper = new Cropper(cropbox, {
-                        aspectRatio: 1,
-                        viewMode: 2,
-                        autoCropArea: 0.8,
-                        movable: true,
-                        zoomable: true,
-                        scalable: true,
-                        responsive: true,
-                        minContainerWidth: 300,
-                        minContainerHeight: 300,
-                        crop(event) {
-                            document.querySelector('input[name="x"]').value = event.detail.x;
-                            document.querySelector('input[name="y"]').value = event.detail.y;
-                            document.querySelector('input[name="width"]').value = event.detail.width;
-                            document.querySelector('input[name="height"]').value = event.detail.height;
-                        }
-                    });
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function openModal() {
-            document.getElementById("cropModal").style.display = "flex";
-            document.body.classList.add('modal-open');
-        }
-
-        function closeModal() {
-            document.getElementById("cropModal").style.display = "none";
-            if (cropper) {
-                cropper.destroy();
-                cropper = null;
-            }
-            document.body.classList.remove('modal-open');
-        }
-
-        function closePopup() {
-            const popup = event.target.closest('.success-popup');
-            if (popup) {
-              popup.remove();
-            }
-          }
-
-        document.querySelector(".close").addEventListener("click", closeModal);
-
-        document.getElementById("crop-form").addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            if (!cropper) {
-                console.error("Cropper is not initialized.");
-                return;
-            }
-
-            let formData = new FormData(this);
-
-            if (selectedFile) {
-                formData.append("profile_picture", selectedFile);
-            } else {
-                console.error("No file selected.");
-                return;
-            }
-
-            let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-            fetch("{% url 'crop_profile_picture' %}", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRFToken": csrfToken
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Response data:", data);
-                if (data.success) {
-                    document.getElementById("profile-pic").src = data.new_profile_picture_url + '?t=' + new Date().getTime();
-                    closeModal();
-                    setTimeout(() => {
-                        window.location.href = "{% url 'profile' %}";
-                    }, 1000);
-                } else {
-                    alert("Error cropping image: " + (data.error || "Unknown error"));
-                }
-            })
-            .catch(error => console.error("Fetch error:", error));
         });
     </script>
 {% endblock %}
