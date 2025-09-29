@@ -161,35 +161,3 @@
     });
   });
 })();
-
-document.addEventListener("DOMContentLoaded", function () {
-  const burgerMenu = document.getElementById("burger-menu");
-  const mobileMenu = document.getElementById("mobile-menu");
-
-  if (burgerMenu && mobileMenu) {
-    burgerMenu.addEventListener("click", function () {
-      burgerMenu.classList.toggle("active");
-      mobileMenu.classList.toggle("active");
-    });
-
-    // Close menu when clicking outside
-    document.addEventListener("click", function (event) {
-      if (
-        !burgerMenu.contains(event.target) &&
-        !mobileMenu.contains(event.target)
-      ) {
-        burgerMenu.classList.remove("active");
-        mobileMenu.classList.remove("active");
-      }
-    });
-
-    // Close menu when clicking on nav links
-    const navLinks = mobileMenu.querySelectorAll(".nav-icon");
-    navLinks.forEach((link) => {
-      link.addEventListener("click", function () {
-        burgerMenu.classList.remove("active");
-        mobileMenu.classList.remove("active");
-      });
-    });
-  }
-});
