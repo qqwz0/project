@@ -284,7 +284,6 @@ When a user triggers the HX request (via button click), the modal is swapped in 
     window.catalogMainComponent = $data;
   "
   @update-search.window="
-    console.log('Received search event:', $event.detail);
     searchQuery = $event.detail.query;
     applyAutocompleteSearch()
   "

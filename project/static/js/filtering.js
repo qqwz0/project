@@ -44,7 +44,6 @@ window.handleShowOccupied = function(el) {
         const rangeInput = document.querySelector('input[type="range"]');
         rangeInput.value = rangeInput.min; // Reset to minimum value
     }
-    console.log(alpineData.show_occupied);
 };
 
 /**

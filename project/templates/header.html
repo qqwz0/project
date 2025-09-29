@@ -4,7 +4,7 @@
     {% load static %}
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quick Header</title>
+    <title>Advisor Finder</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
     <script
@@ -92,8 +92,6 @@
             </div>
           </div>
 
-          <!-- per-page help moved out of header -->
-
           <div class="profile-wrapper" id="nav-profile">
             <a href="{% url 'profile' %}" class="profile-link">
               <img
@@ -105,6 +103,53 @@
             </a>
           </div>
         </nav>
+
+        <button class="burger-menu" id="burger-menu" aria-label="Toggle navigation">
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+        </button>
+
+        <div class="mobile-menu" id="mobile-menu">
+          <nav class="nav-icons mobile-nav">
+            <a id="nav-home-mobile" href="{% url 'home' %}" title="Головна сторінка" class="nav-icon">
+              <i class="fas fa-home"></i>
+              <span class="nav-tooltip">Головна</span>
+            </a>
+            {% if user_profile.role == 'Студент' %}
+              <a id="nav-search-mobile" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
+                <i class="fas fa-search"></i>
+                <span class="nav-tooltip">Пошук</span>
+              </a>
+            {% endif %}
+            
+            <div class="nav-icon notification-wrapper" id="dropdownMenuButtonMobile">
+              <i class="fas fa-bell"></i>
+              <span class="nav-tooltip">Сповіщення</span>
+            </div>
+
+            <div class="nav-icon message-wrapper" id="messageDropdownButtonMobile">
+              <i class="fas fa-envelope"></i>
+              <span class="nav-tooltip">Повідомлення</span>
+              {%if unread%}
+              <span class="message-badge">
+                {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
+              </span>
+              {%endif%}
+            </div>
+
+            <div class="profile-wrapper" id="nav-profile-mobile">
+              <a href="{% url 'profile' %}" class="profile-link">
+                <img
+                  src="{{ profile_picture_url }}"
+                  alt="Фото профілю"
+                  class="profile-avatar"
+                />
+                <span class="nav-tooltip">Профіль</span>
+              </a>
+            </div>
+          </nav>
+        </div>
         {% else %}
         <div class="auth-section">
           <a

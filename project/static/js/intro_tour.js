@@ -292,7 +292,6 @@
       var script = document.createElement('script');
       script.src = '/static/js/custom_tour.js';
       script.onload = function() {
-        console.log('Custom tour system loaded');
       };
       document.head.appendChild(script);
     }

@@ -483,23 +483,16 @@ function updateFileName(input) {
 
 // Глобальна функція для оновлення назви файлу для коментаря
 function updateCommentFile(input) {
-    console.log('File selection changed:', input.id);
     // Отримуємо ID файлу з ID поля вводу
     var fileId = input.id.replace('comment-file-', '');
-    console.log('File ID:', fileId);
     
     // Знаходимо відповідний елемент для відображення імені файлу
     var fileLabel = document.getElementById('file-label-' + fileId);
     // Знаходимо елемент для відображення повідомлення про успішне додавання
     var feedback = document.getElementById('attachment-feedback-' + fileId);
     
-    console.log('File label element:', fileLabel);
-    console.log('Feedback element:', feedback);
-    console.log('Has files:', input.files.length > 0);
-    
     // Оновлюємо текст та стилі
     if (input.files.length > 0) {
-        console.log('Selected file name:', input.files[0].name);
         fileLabel.textContent = input.files[0].name;
         fileLabel.style.color = '#000000';
         if (feedback) {
@@ -602,9 +595,7 @@ $(document).ready(function() {
         var successStatus = commentStatus.find('.success-status');
         var fileInput = form.find('input[type="file"]');
         var hasAttachment = (fileInput.length && fileInput[0].files && fileInput[0].files.length > 0) ? true : false;
-        
-        console.log('Submitting comment for file ID:', fileId);
-        
+                
         // Перевіряємо наявність тексту або файлу
         if (!commentText && !hasAttachment) {
             alert('Будь ласка, введіть текст коментаря або прикріпіть файл');
@@ -834,7 +825,6 @@ function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
                         </div>
                     </label>
                 `;
-                console.log('Created checkbox for file:', file.id, file.file_name);
                 filesCheckboxes.appendChild(fileDiv);
             });
             filesSection.style.display = 'block';
@@ -907,17 +897,8 @@ function submitComplete() {
     const checkboxes = document.querySelectorAll('input[name="selected_files"]');
     const checkedBoxes = document.querySelectorAll('input[name="selected_files"]:checked');
     
-    console.log('All checkboxes:', checkboxes.length);
-    console.log('Checked checkboxes:', checkedBoxes.length);
-    
-    checkedBoxes.forEach(checkbox => {
-        console.log('Checked file ID:', checkbox.value, 'ID:', checkbox.id);
-    });
-    
     const selectedFiles = Array.from(checkedBoxes).map(checkbox => checkbox.value);
-    
-    console.log('Selected files:', selectedFiles);
-    
+        
     // Check if files are selected
     if (selectedFiles.length === 0) {
         showError('Будь ласка, оберіть хоча б один файл для збереження в архіві');
@@ -938,8 +919,6 @@ function submitComplete() {
     formData.append('grade', grade);
     formData.append('selected_files', JSON.stringify(selectedFiles));
     
-    console.log('FormData selected_files:', JSON.stringify(selectedFiles));
-
     // Send request to server
     fetch(`/users/complete_request/${requestId}/`, {
         method: 'POST',

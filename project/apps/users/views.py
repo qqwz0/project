@@ -463,7 +463,6 @@ def fake_login(request):
             last_name="Тестовий",
             patronymic="Петрович",
             role="Викладач",
-            department="Системного проектування",
             is_active=True,
             password=make_password("fake_password"),
         )
@@ -475,6 +474,7 @@ def fake_login(request):
                 "academic_level": "Доцент",
                 "additional_email": "teacher.test@lnu.edu.ua",
                 "phone_number": "+380991234567",
+                "department_id": 1,
             },
         )
     except Exception as e:

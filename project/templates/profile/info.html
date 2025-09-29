@@ -58,15 +58,12 @@
     <!-- JavaScript: Handle Slot Display -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            console.log("DOM fully loaded and parsed.");
         
             document.querySelectorAll(".slot-group").forEach(function (slotGroup, index) {
                 let availableSlots = parseInt(slotGroup.dataset.available);
                 let occupiedSlots = parseInt(slotGroup.dataset.occupied);
                 let slotDisplay = slotGroup.querySelector(".slots-display");
-        
-                console.log(`Slot Group ${index + 1}:`, { availableSlots, occupiedSlots });
-        
+                
                 if (isNaN(availableSlots) || isNaN(occupiedSlots)) {
                     console.warn(`Invalid slot value for slot group ${index + 1}`);
                     return;
