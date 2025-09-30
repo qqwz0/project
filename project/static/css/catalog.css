@@ -78,7 +78,6 @@ body {
   border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
-.filter-section:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
 
 /* Mobile filter close */
 .mobile-filter-close { display:none; border:none; background:transparent; color:#6b7280; border-radius:50%; padding:6px; font-weight:600; width:32px; height:32px; position:absolute; right:12px; top:8px; }
@@ -238,7 +237,7 @@ body {
 }
 
 .search-section {
-  padding: 20px 0 32px 0;
+  padding: 0 0 32px 0;
   display: flex;
   flex-direction: column;
 }
@@ -510,7 +509,7 @@ body {
   }
 
   .modal { width: 95%; max-height: 90vh; }
-  .modal-box { padding: 24px 20px; max-height: 85vh; overflow-y: auto; }
+  .modal-box { padding: 24px 20px; max-height: 98vh; overflow-y: auto; }
 
   
 
@@ -739,6 +738,25 @@ body {
   border-radius: var(--border-radius);
   padding: 24px;
   box-shadow: var(--shadow-sm);
+}
+
+.slot-bubble {
+  display: inline-block;
+  min-width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.2); /* light-blue з прозорістю */
+  color: var(--primary-blue);
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.slot-bubble:hover {
+  background-color: rgba(29, 78, 216, 0.2); /* primary-blue-hover з прозорістю */
+  cursor: default;
 }
 
 /* Стилі для двоколонкової структури результатів */
@@ -1610,9 +1628,8 @@ body {
   will-change: transform, box-shadow;
 }
 
-.search-button:hover,
 .toggle-topics-btn:hover,
-.teacher-card .modal-button:hover {
+.teacher-card {
   transform: translateY(-1px); /* smaller lift to keep inside parent */
 }
 
@@ -1702,16 +1719,6 @@ body {
   border-bottom: 1px solid var(--gray-200);
 }
 
-/* Teacher name link within card */
-.teacher-card .teacher-details h2 a {
-  color: var(--gray-900);
-  text-decoration: none;
-}
-.teacher-card .teacher-details h2 a:hover {
-  color: var(--gray-900);
-  text-decoration: underline; /* subtle hover if desired */
-  text-underline-offset: 3px;
-}
 
 /* Department text look (gray, no underline) */
 .teacher-card .teacher-details .department,
@@ -1722,8 +1729,8 @@ body {
 /* --- Mobile override for horizontal scroll of "Доступні теми" chips --- */
 @media (max-width: 780px) {
   .topics-container.attach .topics-toggle-bar .topics-inline { flex: 1 1 0; min-width: 0; overflow: hidden; }
-  .topics-container.attach .topics-chips { display:flex; flex:1 1 auto; min-width:0; max-width:100%; overflow-x:auto !important; overflow-y:hidden; gap:8px; padding-bottom:4px; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; }
-  .topics-container.attach .topics-chips .topic-chip { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; }
+  .topics-container.attach .topics-chips { display:flex; flex:1 1 auto; min-width:0; max-width:100%; overflow: hidden; gap:8px; padding-bottom:4px; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; }
+  .topics-container.attach .topics-chips .topic-chip { display: none; }
 }
 
 /* Enhanced card styles apply only where explicitly enabled */

@@ -310,8 +310,8 @@ body {
     padding: 30px 25px;
     max-width: none;
     width: calc(100% - 40px);
-    position: relative;
-    top: auto;
+    position: absolute;
+    top: 20%;
     left: auto;
     transform: none;
   }
