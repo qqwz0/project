@@ -287,53 +287,63 @@ p.single-slot {
 .tooltip-custom {
   position: relative;
   display: inline-block;
-  cursor: not-allowed;
 }
 
-.tooltip-custom .tooltiptext {
-  visibility: hidden;
-  width: auto;
-  min-width: 150px;
-  max-width: 220px;
-  background-color: #dc3545;
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 8px 10px;
+/* Бульбашка */
+.tooltiptext {
   position: absolute;
-  bottom: 105%;
-  left: 20%;
+  left: 50%;
+  bottom: calc(100% + 8px);    
   transform: translateX(-50%);
-  transition: opacity 0.2s ease;
-  font-size: 0.9rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  line-height: 1.4;
-  z-index: 1000;
+  max-width: clamp(280px, 60vw, 460px);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: linear-gradient(45deg, #fee2e2, #fecaca);
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .15s ease, visibility .15s step-end, transform .15s ease;
 }
 
-.tooltip-custom .tooltiptext::after {
+/* Стрілочка */
+.tooltiptext::after {
   content: "";
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: #dc3545 transparent transparent transparent;
+  border: 6px solid transparent;
+  border-top-color: linear-gradient(45deg, #ef4444, #b91c1c, #b91c1c);
 }
 
-.tooltip-custom:hover .tooltiptext {
-  visibility: visible;
+.tooltip-custom:hover .tooltiptext,
+.tooltip-custom:focus-within .tooltiptext {
   opacity: 1;
-  transform: translateX(-50%);
+  visibility: visible;
+  transform: translateX(-50%) translateY(-2px);
 }
 
-.tooltip-custom.tooltip-right .tooltiptext {
-  left: 102%;
-  bottom: auto;
-  top: 50%;
-  transform: translateY(-50%);
+.card-right-side > .tooltip-custom {
+  position: relative;      
+  display: flex;           
+  width: 100%;
+  height: 100%;
+  align-items: stretch;
+  justify-content: center;
 }
+
+
+.menu-card-inner,
+.teacher-card,
+.teacher-card .card-right-side {
+  overflow: visible !important;
+}
+
 
 @media (max-width: 768px) {
   .teacher-card {
@@ -379,6 +389,14 @@ p.single-slot {
   .modal-button .arrow-icon {
     font-size: 20px;
   }
+
+  .tooltiptext {
+    max-width: 200px;
+    padding: 7px 9px;
+    font-size: 12.5px;
+    line-height: 1.25;
+    bottom: calc(100% + 10px);
+  }
 }
 
 @media (max-width: 500px) {
@@ -417,10 +435,16 @@ p.single-slot {
   .modal-button .arrow-icon {
     font-size: 18px;
   }
-  
-  .tooltip-custom .tooltiptext {
-    min-width: 120px;
-    font-size: 0.8rem;
+
+  .tooltiptext {
+    max-width: min(72vw, 220px);
     padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    transform: translateX(-50%) translateY(-1px); 
   }
+  .tooltiptext::after {
+    border-width: 5px;
+  }
+  
 }

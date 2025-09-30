@@ -773,9 +773,20 @@
 </style>
 
 <script>
+    function lockPageScroll(lock) {
+        const html = document.documentElement;
+        const body = document.body;
+        if (lock) {
+            html.classList.add('modal-open');
+            body.classList.add('modal-open');
+        } else {
+            html.classList.remove('modal-open');
+            body.classList.remove('modal-open');
+        }
+        }
     // --- REJECT REQUEST MODAL (TEACHER) ---
     function showRejectModal(requestId) {
-        document.body.classList.add('modal-open');
+        lockPageScroll(true);
         document.getElementById('rejectModal').style.display = 'flex';
         document.getElementById('rejectRequestId').value = requestId;
         document.getElementById('rejectReason').value = '';
@@ -784,7 +795,7 @@
 
     function closeRejectModal() {
         document.getElementById('rejectModal').style.display = 'none';
-        document.body.classList.remove('modal-open');
+        lockPageScroll(false);
     }
 
     function handleRejectSubmit(event) {
@@ -814,7 +825,7 @@
     const approveDetails = document.getElementById('approveRequestDetails');
 
     function openApproveModal(requestId) {
-        document.body.classList.add('modal-open');
+        lockPageScroll(true);
         if (!approveDetails || !approveModal) return;
         approveDetails.innerHTML = '<div style="text-align:center;padding:2em;">Завантаження...</div>';
         approveModal.style.display = 'flex';
@@ -887,7 +898,7 @@
     function closeApproveModal() {
         if (approveModal) approveModal.style.display = 'none';
         if (approveDetails) approveDetails.innerHTML = '';
-        document.body.classList.remove('modal-open');
+        lockPageScroll(false);
     }
 
     function submitApprove(requestId) {
@@ -923,7 +934,7 @@
 
     // --- STUDENT REFUSE MODAL ---
     function showStudentRefuseModal(requestId) {
-        document.body.classList.add('modal-open');
+        lockPageScroll(true);
         document.getElementById('studentRefuseModal').style.display = 'flex';
         document.getElementById('studentRefuseRequestId').value = requestId;
         document.getElementById('studentRefuseReason').value = '';
@@ -932,7 +943,7 @@
 
     function closeStudentRefuseModal() {
         document.getElementById('studentRefuseModal').style.display = 'none';
-        document.body.classList.remove('modal-open');
+        lockPageScroll(false);
     }
 
     function handleStudentRefuseSubmit(event) {
@@ -962,7 +973,7 @@
 
     // --- STUDENT EDIT REQUEST MODAL ---
     function openStudentEditRequestModal(requestId) {
-        document.body.classList.add('modal-open');
+        lockPageScroll(true);
         const modal = document.getElementById('studentEditRequestModal');
         document.getElementById('studentEditRequestId').value = requestId;
 
@@ -1076,7 +1087,7 @@
     }
 
     function closeStudentEditRequestModal() {
-        document.body.classList.remove('modal-open');
+        lockPageScroll(false);
         const modal = document.getElementById('studentEditRequestModal');
         if (modal) modal.style.display = 'none';
     }

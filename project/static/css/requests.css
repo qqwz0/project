@@ -75,6 +75,7 @@
 #completeModal .modal-content {
     max-width: 500px;
     padding: 32px;
+    max-height: 82vh;
     border-radius: 12px;
     border: none; 
     box-shadow: 0 8px 32px rgba(60, 80, 140, 0.15);

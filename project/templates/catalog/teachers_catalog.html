@@ -320,9 +320,12 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         <img src="{% static 'images/filters.svg' %}" alt="Filters">
         </div>
         <div class="filter-content">
-        <hr class="devider">
-        <h3 class="option-label">{{ form.departments.label }}</h3>
-        {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+
+        {% if not user.get_department %}
+          <hr class="devider">
+          <h3 class="option-label">{{ form.departments.label }}</h3>
+          {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+        {% endif %}
         
         <hr class="devider">
         <h3 class="option-label">{{ form.slots.label }}</h3>

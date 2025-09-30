@@ -1161,7 +1161,6 @@ class SemestrAdmin(admin.ModelAdmin):
                 f"Оброблено {stats['processed']} семестрів. Змін не виявлено.",
                 level=messages.INFO
             )
-    
 # І нарешті реєструємо модель:
 admin.site.register(Stream, StreamAdmin)
 

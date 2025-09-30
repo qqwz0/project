@@ -44,10 +44,8 @@ from .models import (
 from .templatetags.catalog_extras import get_profile_picture_url
 from .utils import FileAccessMixin, HtmxModalFormAccessMixin
 from apps.catalog.semestr_rules import (
-    assert_can_cancel,
     assert_can_complete,
     assert_can_create,
-    assert_can_edit,
 )
 
 

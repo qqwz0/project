@@ -50,18 +50,28 @@
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
         {% if user.is_authenticated and user.role == 'Студент'%}
+
+          <!-- Вже відправлено запит -->
           <template x-if="item.teacher.already_requested">
-            <button class="modal-button tooltip-custom" disabled>
-              <span class="arrow-icon">›</span>
+            <span class="tooltip-custom" aria-label="Ви вже надіслали запит до цього викладача">
+              <button class="modal-button" disabled aria-disabled="true">
+                <span class="arrow-icon">›</span>
+              </button>
               <span class="tooltiptext">Ви вже надіслали запит до цього викладача</span>
-            </button>
+            </span>
           </template>
+
+          <!-- Є активна робота -->
           <template x-if="!item.teacher.already_requested && item.has_active">
-            <button class="modal-button tooltip-custom" disabled>
-              <span class="arrow-icon">›</span>
+            <span class="tooltip-custom" aria-label="У вас вже є активна робота">
+              <button class="modal-button" disabled aria-disabled="true">
+                <span class="arrow-icon">›</span>
+              </button>
               <span class="tooltiptext">У вас вже є активна робота</span>
-            </button>
+            </span>
           </template>
+
+          <!-- Можна відправити запит (кнопка активна, без тултіпа) -->
           <template x-if="!item.teacher.already_requested && !item.has_active">
             <button class="modal-button"
               :data-teacher-id="item.teacher.id"
@@ -71,11 +81,17 @@
               <span class="arrow-icon">›</span>
             </button>
           </template>
+
         {% else %}
-          <button class="modal-button tooltip-custom" disabled>
-            <span class="arrow-icon">›</span>
-            <span class="tooltiptext">У вас немає прав для надсилання запитів</span>
-          </button>
+
+          <!-- Неавторизований/не Студент -->
+          <span class="tooltip-custom" aria-label="Увійдіть, щоб надіслати запит">
+            <button class="modal-button" disabled aria-disabled="true">
+              <span class="arrow-icon">›</span>
+            </button>
+            <span class="tooltiptext">Увійдіть, щоб надіслати запит</span>
+          </span>
+
         {% endif %}
       </div>
     </div> 

@@ -2078,10 +2078,13 @@ textarea.form-control::placeholder {
    ======================================== */
 
 /* === Body lock when modal is open === */
-html.modal-open,
-body.modal-open {
-  overflow: hidden;       
+body.modal-open, html.modal-open {
+    overflow: hidden !important;
+    position: relative;
+    height: 100%;
+    width: 100vw;
 }
+
 
 /* === Base Modal Styles === */
 .modal,
@@ -2137,6 +2140,36 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  overflow-y: auto;
+  max-height: 80vh;
+  scrollbar-gutter: stable both-edges;     
+  background-clip: padding-box;            
+  padding-right: 2px;    
+}
+
+.modal-content::-webkit-scrollbar,
+#editThemeModal .edit-theme-modal-content::-webkit-scrollbar,
+.student-modal-content::-webkit-scrollbar,
+.rejection-modal-content::-webkit-scrollbar {
+  width: 12px; 
+}
+
+.modal-content::-webkit-scrollbar-thumb,
+#editThemeModal .edit-theme-modal-content::-webkit-scrollbar-thumb,
+.student-modal-content::-webkit-scrollbar-thumb,
+.rejection-modal-content::-webkit-scrollbar-thumb {
+  border-radius: 10px;               
+  background-color: rgba(0,0,0,.25); 
+  border: 3px solid transparent;      
+  background-clip: padding-box;      
+}
+
+.modal-content::-webkit-scrollbar-track,
+#editThemeModal .edit-theme-modal-content::-webkit-scrollbar-track,
+.student-modal-content::-webkit-scrollbar-track,
+.rejection-modal-content::-webkit-scrollbar-track {
+  border-radius: 10px;                
+  background: transparent;
 }
 
 .modal-content {
@@ -2987,6 +3020,7 @@ body.modal-open {
   #editThemeModal .edit-theme-modal-content {
     width: 98%;
     padding: 20px 16px;
+    max-height: 92vh;
   }
 
   #editThemeModal h3 {

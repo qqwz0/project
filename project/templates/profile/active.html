@@ -467,6 +467,18 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
+
+function lockPageScroll(lock) {
+  const html = document.documentElement;
+  const body = document.body;
+  if (lock) {
+    html.classList.add('modal-open');
+    body.classList.add('modal-open');
+  } else {
+    html.classList.remove('modal-open');
+    body.classList.remove('modal-open');
+  }
+}    
 // Глобальна функція для оновлення назви файлу
 function updateFileName(input) {
     const fileId = input.id.split('-').pop();
@@ -532,18 +544,21 @@ $(document).ready(function() {
         
         // Додаємо модальне вікно до body
         $('body').append(modal).addClass('modal-open');
+        $('html').append(modal).addClass('modal-open');
         modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
         modal.find('.delete-modal-close').click(function() {
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
         modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
@@ -570,6 +585,7 @@ $(document).ready(function() {
             });
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
@@ -577,6 +593,7 @@ $(document).ready(function() {
             if ($(e.target).is(modal)) {
                 modal.remove();
                 $('body').removeClass('modal-open');
+                $('html').removeClass('modal-open');
             }
         });
     });
@@ -682,18 +699,21 @@ $(document).ready(function() {
         
         // Додаємо модальне вікно до body
         $('body').append(modal).addClass('modal-open');
+        $('html').append(modal).addClass('modal-open');
         modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
         modal.find('.delete-modal-close').click(function() {
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
         modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
@@ -717,6 +737,7 @@ $(document).ready(function() {
             });
             modal.remove();
             $('body').removeClass('modal-open');
+            $('html').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
@@ -724,6 +745,7 @@ $(document).ready(function() {
             if ($(e.target).is(modal)) {
                 modal.remove();
                 $('body').removeClass('modal-open');
+                $('html').removeClass('modal-open');
             }
         });
     });
@@ -777,7 +799,7 @@ $(document).ready(function() {
 
 // Функції для роботи з модальним вікном завершення роботи
 function showCompleteModal(requestId) {
-    document.body.classList.add('modal-open');
+    lockPageScroll(true);
     const modal = document.getElementById('completeModal');
     const gradeInput = document.getElementById('grade');
     const filesSection = document.getElementById('filesSelectionSection');
@@ -842,7 +864,7 @@ function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
 function closeCompleteModal() {
     const modal = document.getElementById('completeModal');
     modal.style.display = "none";
-    document.body.classList.remove('modal-open');
+    lockPageScroll(false);
     
     // Clear form and errors
     document.getElementById('completeRequestId').value = '';
@@ -1054,14 +1076,14 @@ window.addEventListener('load', observeFilesContainers);
 <script>
 // Функції для редагування теми
 function showEditThemeModal(requestId, currentTheme) {
-    document.body.classList.add('modal-open');
+    lockPageScroll(true);
     document.getElementById('editThemeRequestId').value = requestId;
     document.getElementById('newTheme').value = currentTheme;
     document.getElementById('editThemeModal').style.display = 'flex';
 }
 
 function closeEditThemeModal() {
-    document.body.classList.remove('modal-open');
+    lockPageScroll(false);
     document.getElementById('editThemeModal').style.display = 'none';
     document.getElementById('editThemeForm').reset();
 }
@@ -1138,14 +1160,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function showCancelModal(requestId) {
-    document.body.classList.add('modal-open');
+    lockPageScroll(true);
     const modal = document.getElementById('cancelModal');
     document.getElementById('cancelRequestId').value = requestId;
     modal.style.display = 'flex';
 }
 
 function closeCancelModal() {
-    document.body.classList.remove('modal-open');
+    lockPageScroll(false);
     const modal = document.getElementById('cancelModal');
     modal.style.display = 'none';
     document.getElementById('cancelForm').reset();

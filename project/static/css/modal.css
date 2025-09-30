@@ -497,7 +497,6 @@ textarea.error {
   }
   .close-modal {
     top: 0.3rem;
-    right: 0.3rem;
     font-size: 1.2rem;
     padding: 0.2rem;
   }
@@ -890,3 +889,38 @@ textarea.error {
 #themes-container::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+.modal .modal-box,
+.modal .dropdown-menu {
+  scrollbar-gutter: stable both-edges;
+  background-clip: padding-box;
+  padding-right: 2px; 
+}
+
+.modal .modal-box::-webkit-scrollbar,
+.modal .dropdown-menu::-webkit-scrollbar {
+  width: 12px;                
+}
+
+.modal .modal-box::-webkit-scrollbar-thumb,
+.modal .dropdown-menu::-webkit-scrollbar-thumb {
+  border-radius: 10px;         
+  background-color: rgba(0,0,0,.25);
+  border: 3px solid transparent; 
+  background-clip: padding-box;
+}
+
+.modal .modal-box::-webkit-scrollbar-track,
+.modal .dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+/* Firefox */
+.modal .modal-box,
+.modal .dropdown-menu {
+  scrollbar-width: thin;                 
+  scrollbar-color: rgba(0,0,0,.35) transparent; 
+}
+
+.modal .modal-box { overscroll-behavior: contain; }

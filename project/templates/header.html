@@ -136,7 +136,7 @@
               <i class="fas fa-envelope"></i>
               <span class="nav-tooltip">Повідомлення</span>
               {%if unread%}
-              <span class="message-badge">
+              <span class="message-badge" id="message-indicator-mobile">
                 {%if unread_count < 10%} {{ unread_count }} {%else%} 9+ {%endif%}
               </span>
               {%endif%}
