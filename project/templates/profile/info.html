@@ -36,13 +36,11 @@
                 {% for theme in themes %}
                     <!-- Theme Item -->
                             <li class="theme-item mb-2" style="list-style-type: none; position: relative;">
-                                <div style="display: flex; align-items: flex-start;">
-                                    <div>
+                                <div class="theme-info" >
                                         <a href="#" style="color: #374151; text-decoration: none; font-weight: 500;">{{ theme.theme }}</a>
                                         {% if theme.theme_description %}
                                             <br><span class="theme-description" style="color: #6b7280; font-size: 0.9rem;">{{ theme.theme_description }}</span>
                                         {% endif %}
-                                    </div>
                                 </div>
                     </li>
                 {% endfor %}

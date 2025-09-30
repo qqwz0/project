@@ -36,8 +36,6 @@
                                 {% endfor %}
                             </ul>
                         {% endif %}
-                        <strong>Мотивація:</strong>
-                        <p class="motivation">{{ request_obj.motivation_text }}</p>
                     </div>
                 </div>
 
@@ -260,8 +258,6 @@
                                 </button>
                             {% endif %}
                         {% endif %}
-                        <strong>Мотивація:</strong>
-                        <p class="motivation">{{ request.motivation_text }}</p>
                     </div>
                 </div>
 
@@ -388,7 +384,7 @@
                                     <textarea id="file-description-{{ request.id }}" name="description" class="form-control file-description-textarea" placeholder="Введіть короткий опис файлу..." rows="2"></textarea>
                                 </div>
                                 <button type="submit" class="file-upload-btn">
-                                <i class="fas fa-upload"></i> Завантажити
+                                <i class="fas fa-upload"></i> Надіслати
                             </button>
                     </form>
                         {% endwith %}

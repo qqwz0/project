@@ -19,7 +19,7 @@
     <header class="header">
       <div class="header-content">
         <div class="header-logo">
-          <img src="{% static 'images/LOGOfaculty.PNG' %}" alt="Logo">
+          <img src="{% static 'images/LOGO.svg' %}" alt="Logo">
         </div>
 
         {% if user.is_authenticated %}
@@ -110,6 +110,10 @@
           <span class="burger-line"></span>
           <span class="burger-line"></span>
           <span class="burger-line"></span>
+
+          {% if unread or notifications %}
+            <span class="burger-notification-dot" id="burger-notification-dot"></span>
+          {% endif %}  
         </button>
 
         <!-- Mobile menu wrapper for collapsible navigation -->
@@ -244,7 +248,6 @@
     </div>
 
     <script src="{% static 'js/notification.js' %}"></script>
-    {% comment %} <script src="{% static 'js/main.js' %}"></script> {% endcomment %}
     <script>window.APP_ROLE = "{{ user_profile.role|default_if_none:'' }}";</script>
     <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
     <script src="{% static 'js/intro_tour.js' %}"></script>
@@ -269,8 +272,8 @@
           });
 
           mobileMenu.addEventListener('click', function(event) {
-  event.stopPropagation();
-});
+            event.stopPropagation();
+          });
 
           // Close menu when clicking outside
           document.addEventListener('click', function(event) {

@@ -3,9 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    {% comment %}
-    <title>Знайд</title>
-    {% endcomment %} {% load static %}
+    <title>Головна - Advisor Finder</title>
+    {% load static %}
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
@@ -30,111 +29,115 @@
       </div>
 
       <div class="content-grid">
-        <!-- Announcements Section -->
-        {% if user.is_authenticated %}
+        <!-- Ліва колонка: тут завжди буде знаходитися або блок оголошень, або картка для неавторизованих,
+             а ПЕРЕВАГИ платформи відображаються завжди в тому самому місці під цими блоками -->
         <div>
-          <!-- Faculty Announcements Section -->
-          {% if user.get_faculty %}
-          <div class="section-announcements">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">
+          <!-- Якщо користувач авторизований — показати оголошення -->
+          {% if user.is_authenticated %}
+            <!-- Faculty Announcements Section -->
+            {% if user.get_faculty %}
+            <div class="section-announcements">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <svg
+                      class="icon-lg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Факультетські оголошення
+                  </h3>
+                </div>
+                <div class="card-content">
+                  {% for ann in faculty_announcements %}
+                  <div class="announcement {{ ann.announcement_type }}">
+                    <h3 class="announcement-title">
+                      {{ ann.title }}
+                      <time datetime="{{ ann.created_at }}"
+                        >{{ ann.created_at }}</time
+                      >
+                    </h3>
+                    <p class="announcement-content">{{ ann.content }}</p>
+                  </div>
+                  {% empty %}
+                  <p>Немає актуальних оголошень факультету.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Department Announcements Section -->
+            {% with dept=user.get_department %} {% if dept %}
+            <div class="section-announcements">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    Оголошення кафедри
+                    <span class="department-name"
+                      >{{ dept.department_name }}</span
+                    >
+                  </h3>
+                </div>
+                <div class="card-content">
+                  {% for ann in department_announcements %}
+                  <div class="announcement {{ ann.announcement_type }}">
+                    <h3 class="announcement-title">
+                      {{ ann.title }}
+                      <time datetime="{{ ann.created_at }}"
+                        >{{ ann.created_at }}</time
+                      >
+                    </h3>
+                    <p class="announcement-content">{{ ann.content }}</p>
+                  </div>
+                  {% empty %}
+                  <p>Немає актуальних оголошень кафедри.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% endif %} {% endwith %}
+
+          {% else %}
+            <!-- Неавторизований користувач: показуємо картку-промпт -->
+            <div class="non-auth-content">
+              <div class="auth-prompt-card">
+                <div class="auth-prompt-icon">
                   <svg
-                    class="icon-lg"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                   >
-                    <rect
-                      x="3"
-                      y="4"
-                      width="18"
-                      height="18"
-                      rx="2"
-                      ry="2"
-                    ></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                   </svg>
-                  Факультетські оголошення
-                </h3>
-              </div>
-              <div class="card-content">
-                {% for ann in faculty_announcements %}
-                <div class="announcement {{ ann.announcement_type }}">
-                  <h3 class="announcement-title">
-                    {{ ann.title }}
-                    <time datetime="{{ ann.created_at }}"
-                      >{{ ann.created_at }}</time
-                    >
-                  </h3>
-                  <p class="announcement-content">{{ ann.content }}</p>
                 </div>
-                {% empty %}
-                <p>Немає актуальних оголошень факультету.</p>
-                {% endfor %}
+                <h2 class="auth-prompt-title">Знайди свого наукового керівника</h2>
+                <p class="auth-prompt-description">
+                  Переглядай актуальні оголошення факультету та кафедри, знаходь
+                  керівників для курсових робіт
+                </p>
+                <a href="/login/" class="auth-prompt-button">Увійти в систему</a>
               </div>
             </div>
-          </div>
           {% endif %}
 
-          <!-- Department Announcements Section -->
-          {% with dept=user.get_department %} {% if dept %}
-          <div class="section-announcements">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">
-                  Оголошення кафедри
-                  <span class="department-name"
-                    >{{ dept.department_name }}</span
-                  >
-                </h3>
-              </div>
-              <div class="card-content">
-                {% for ann in department_announcements %}
-                <div class="announcement {{ ann.announcement_type }}">
-                  <h3 class="announcement-title">
-                    {{ ann.title }}
-                    <time datetime="{{ ann.created_at }}"
-                      >{{ ann.created_at }}</time
-                    >
-                  </h3>
-                  <p class="announcement-content">{{ ann.content }}</p>
-                </div>
-                {% empty %}
-                <p>Немає актуальних оголошень кафедри.</p>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-          {% endif %} {% endwith %}
-        </div>
-        {% else %}
-        <div class="non-auth-content">
-          <!-- Hero Section for Non-Authenticated Users -->
-          <div class="auth-prompt-card">
-            <div class="auth-prompt-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <h2 class="auth-prompt-title">Знайди свого наукового керівника</h2>
-            <p class="auth-prompt-description">
-              Переглядай актуальні оголошення факультету та кафедри, знаходь
-              керівників для курсових робіт
-            </p>
-            <a href="/login/" class="auth-prompt-button">Увійти в систему</a>
-          </div>
-
-          <!-- Platform Features -->
+          <!-- PLATFORM FEATURES — ТЕПЕР ПОКАЗУЄТЬСЯ ЗАВЖДИ У ТІЙ Ж САМІЙ ЛІВІЙ КОЛОНЦІ -->
           <div class="features-section">
             <h3 class="features-title">Можливості платформи</h3>
             <div class="features-grid">
@@ -230,9 +233,8 @@
             </div>
           </div>
         </div>
-        {% endif %}
 
-        <!-- Sidebar -->
+        <!-- Sidebar (праворуч) -->
         <div>
           <!-- Files Section -->
           <div class="card">

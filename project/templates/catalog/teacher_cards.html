@@ -29,7 +29,7 @@
           <!-- Single slot -->
           <div class="slots-info single-slot" x-show="item.is_matched && item.free_slots.length === 1">
             <strong>Місць:</strong>
-            <span x-text="item.free_slots[0].get_available_slots"></span>
+            <span x-text="item.free_slots[0].get_available_slots" class="slot-bubble"></span>
           </div>
 
           <!-- Multiple slots -->

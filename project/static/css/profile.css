@@ -99,11 +99,20 @@ body {
   flex-wrap: wrap;
 }
 
-.profile-buttons a { text-decoration:none; color:#1d4ed8; transition: opacity 0.2s, transform 0.1s; }
+.profile-buttons a {
+  text-decoration: none;
+  color: #1d4ed8;
+  transition: opacity 0.2s, transform 0.1s;
+}
 /* Уніфіковані іконки кнопок в профілі */
-.profile-buttons a i { font-size: 28px; line-height: 1; display: inline-block; }
-.profile-buttons a:hover { transform: translateY(-1px); }
-
+.profile-buttons a i {
+  font-size: 28px;
+  line-height: 1;
+  display: inline-block;
+}
+.profile-buttons a:hover {
+  transform: translateY(-1px);
+}
 
 .profile-buttons a:hover {
   color: #2968ab;
@@ -374,12 +383,15 @@ body {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease;
-  /* Add mobile-first properties */
   margin-bottom: 0.5rem;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .theme-item:hover {
   transform: translateX(5px);
+  color: #f6ad55;
+  text-decoration: none;
 }
 
 .theme-item a {
@@ -389,11 +401,28 @@ body {
   text-decoration: none;
   display: block;
   margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 0.6rem;
+  text-align: left;
 }
 
-.theme-item a:hover {
-  color: #f6ad55;
-  text-decoration: none;
+.theme-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%; /* ensure it uses full available width */
+  word-wrap: break-word; /* older browsers */
+  overflow-wrap: break-word; /* modern browsers */
+  white-space: normal; /* allow wrapping */
+}
+
+.theme-info a,
+.theme-info .theme-description {
+  display: block; /* ensures each element starts on a new line */
+  white-space: normal; /* override any inline nowrap */
+  word-break: break-word; /* breaks long words if needed */
 }
 
 .no-info {
@@ -403,19 +432,6 @@ body {
   text-align: center;
   background: #f8fafc;
   border-radius: 8px;
-}
-
-.theme-item {
-  align-items: flex-start;
-  text-align: left;
-}
-
-.theme-item a {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 0.6rem;
-  text-align: left;
 }
 
 .theme-description {
@@ -540,27 +556,37 @@ body {
     margin-bottom: 1rem;
     margin-top: 1.5rem; /* Додаємо відступ від верхнього контейнера */
   }
-  
+
   /* Додаємо відступ для h2 заголовків (Активні роботи, Архів робіт) */
   h2 {
     margin-top: 1.5rem;
   }
   /* Files viewport on mobile: ensure one full block fits and actions align */
-  .files-scroll-container { max-height: var(--files-container-max, 70vh); overflow-y: auto; }
-  .file-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .file-actions { width: 100%; justify-content: flex-end; }
-  
+  .files-scroll-container {
+    max-height: var(--files-container-max, 70vh);
+    overflow-y: auto;
+  }
+  .file-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .file-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   /* Коментарі - зменшуємо шрифт для кращого вміщення */
   .comment-input-bar .comment-textarea {
     font-size: 12px;
     padding: 3px 5px;
   }
-  
+
   .comment-input-bar .add-comment-btn {
     font-size: 12px;
     padding: 5px 10px;
   }
-  
+
   /* Назви файлів - зменшуємо шрифт і додаємо обрізання */
   .file-name {
     font-size: 14px;
@@ -569,12 +595,12 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  
+
   .file-meta {
     font-size: 12px;
     flex-wrap: wrap;
   }
-  
+
   /* Кнопки скасувати/завершити роботу - менші на мобільних */
   .cancel-button,
   .complete-button {
@@ -582,9 +608,9 @@ body {
     font-size: 13px;
     border-radius: 6px;
     min-width: auto;
-    width: auto;
+    width: 100%;
   }
-  
+
   .cancel-button-icon,
   .complete-button-icon {
     font-size: 14px;
@@ -643,7 +669,7 @@ body {
     font-size: 1.25rem;
     margin-top: 1.2rem; /* Менший відступ для дуже маленьких екранів */
   }
-  
+
   /* Додаємо відступ для h2 заголовків на дуже маленьких екранах */
   h2 {
     margin-top: 1.2rem !important;
@@ -654,21 +680,21 @@ body {
     font-size: 11px !important;
     padding: 2px 4px !important;
   }
-  
+
   .comment-input-bar .add-comment-btn {
     font-size: 11px;
     padding: 4px 8px;
   }
-  
+
   /* Ще менший шрифт для назв файлів */
   .file-name {
     font-size: 13px;
   }
-  
+
   .file-meta {
     font-size: 11px;
   }
-  
+
   /* Кнопки скасувати/завершити роботу - ще менші на дуже маленьких екранах */
   .cancel-button,
   .complete-button {
@@ -676,7 +702,7 @@ body {
     font-size: 12px;
     border-radius: 4px;
   }
-  
+
   .cancel-button-icon,
   .complete-button-icon {
     font-size: 12px;
@@ -855,7 +881,15 @@ h2.mt-4 {
   max-width: 100%;
   overflow: hidden;
 }
-.files-header{font-weight:700;color:#111827;background:#f2f4f7;border:1px solid #eef2f7;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.files-header {
+  font-weight: 700;
+  color: #111827;
+  background: #f2f4f7;
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
 .file-block {
   width: 100%;
   display: flex;
@@ -879,11 +913,29 @@ h2.mt-4 {
 .file-header span {
   max-width: 90%;
 }
-.file-meta { color:#64748b; font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
-.file-owner { color:#111827; font-weight:600; }
-.file-role { color:#475569; }
-.file-date { color:#64748b; }
-.file-dot { color:#cbd5e1; }
+.file-meta {
+  color: #64748b;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  white-space: normal;
+}
+.file-owner {
+  color: #111827;
+  font-weight: 600;
+}
+.file-role {
+  color: #475569;
+}
+.file-date {
+  color: #64748b;
+}
+.file-dot {
+  color: #cbd5e1;
+}
 .file-description {
   background-color: #e6f0ff;
   padding: 15px;
@@ -950,6 +1002,7 @@ h2.mt-4 {
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
+  width: auto;
 }
 .complete-button:hover {
   background-color: #0e6659;
@@ -974,6 +1027,7 @@ h2.mt-4 {
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
+  width: auto;
 }
 
 .cancel-button:hover {
@@ -1081,9 +1135,25 @@ h2.mt-4 {
   position: relative;
   gap: 16px;
 }
-.file-title-block{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;overflow:hidden}
-.file-name{font-weight:700;color:#111827}
-.file-name-ellipsis{max-width:100%;min-width:0;flex:1;}
+.file-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
+  white-space: nowrap;
+}
+.file-name {
+  font-weight: 700;
+  color: #111827;
+}
+.file-name-ellipsis {
+  max-width: 100%;
+  min-width: 0;
+  flex: 1;
+}
 
 .file-actions {
   display: flex;
@@ -1100,7 +1170,9 @@ h2.mt-4 {
   text-decoration: none;
   transition: background-color 0.2s;
 }
-.download-button span{white-space:nowrap;}
+.download-button span {
+  white-space: nowrap;
+}
 .download-button:hover {
   background-color: #dbeafe;
 }
@@ -1138,8 +1210,14 @@ h2.mt-4 {
   border-radius: 0 0 12px 12px;
   margin-top: 1px;
 }
-.file-description-text { margin: 0; font-size: 14px; color:#334155; }
-.file-description-text.subtle { color:#6b7280; }
+.file-description-text {
+  margin: 0;
+  font-size: 14px;
+  color: #334155;
+}
+.file-description-text.subtle {
+  color: #6b7280;
+}
 .file-description-empty {
   height: 1px;
   background-color: #e6f0ff;
@@ -1155,60 +1233,73 @@ h2.mt-4 {
   margin-bottom: 10px;
   color: #2563eb;
 }
-.comments-header { display:flex; align-items:center; gap:8px; margin: 6px 0 12px; color:#2563eb; font-weight:600; }
-.comments-list { display:flex; flex-direction: column; gap: 12px; }
-.comment-block { margin-bottom: 0; }
+.comments-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 12px;
+  color: #2563eb;
+  font-weight: 600;
+}
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.comment-block {
+  margin-bottom: 0;
+}
 /* Quoted comment (reply to another comment) */
 .quoted-comment {
-    background: #f8f9fa;
-    border-left: 4px solid #6c757d;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    font-size: 13px;
+  background: #f8f9fa;
+  border-left: 4px solid #6c757d;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
 }
 
 .quoted-comment-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
 .quoted-author {
-    font-weight: 600;
-    color: #495057;
-    font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  font-size: 12px;
 }
 
 .quoted-date {
-    color: #6c757d;
-    font-size: 11px;
+  color: #6c757d;
+  font-size: 11px;
 }
 
 .quoted-text {
-    color: #6c757d;
-    margin: 0;
-    font-style: italic;
-    line-height: 1.3;
+  color: #6c757d;
+  margin: 0;
+  font-style: italic;
+  line-height: 1.3;
 }
 
-.comment-actions { 
-  display:flex; 
-  gap:10px; 
-  margin-top:8px; 
+.comment-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
   visibility: visible;
   opacity: 1;
   align-items: center;
 }
-.reply-btn { 
-  background:none; 
-  border:none; 
-  color:#2563eb; 
-  cursor:pointer; 
-  padding:4px 8px; 
-  font-size:12px; 
-  border-radius:4px;
+.reply-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
   transition: all 0.2s ease;
   position: relative;
   z-index: 10;
@@ -1222,14 +1313,59 @@ h2.mt-4 {
   background: #f0f8ff;
   color: #0056b3;
 }
-.replying-pill { display:none; align-items:center; gap:8px; background:#eef2ff; color:#1f3a8a; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; margin:6px 0; font-size:12px; }
-.replying-clear { background:none; border:none; color:#ef4444; cursor:pointer; padding:0; font-size:12px; }
-.comments-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:#2563eb;font-weight:600}
-.comments-icon{font-size:16px}
-.comment-input-bar{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px}
-.comment-input-bar .comment-avatar{font-size:18px}
-.comment-input-bar .comment-textarea{border:none!important;box-shadow:none!important;background:transparent;padding:6px 8px;margin:0}
-.comment-input-bar .add-comment-btn{margin-left:auto}
+.replying-pill {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: #eef2ff;
+  color: #1f3a8a;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.replying-clear {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+}
+.comments-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #2563eb;
+  font-weight: 600;
+}
+.comments-icon {
+  font-size: 16px;
+}
+.comment-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+}
+.comment-input-bar .comment-avatar {
+  font-size: 18px;
+}
+.comment-input-bar .comment-textarea {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  padding: 6px 8px;
+  margin: 0;
+}
+.comment-input-bar .add-comment-btn {
+  margin-left: auto;
+}
 .comment-block {
   padding: 12px 14px;
   border-radius: 10px;
@@ -1237,13 +1373,35 @@ h2.mt-4 {
   border: 1px solid #eef2f7;
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05);
 }
-.teacher-bg { background-color: #eff6ff; }
-.student-bg { background-color: #f8fafc; }
-.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.comment-author { font-weight: 600; color: #1f3a8a; }
-.comment-date { color: #64748b; font-size: 12px; }
-.comment-text { margin: 0; font-size: 14px; color: #111827; }
-.comment-text{word-wrap:break-word;overflow-wrap:anywhere;}
+.teacher-bg {
+  background-color: #eff6ff;
+}
+.student-bg {
+  background-color: #f8fafc;
+}
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.comment-author {
+  font-weight: 600;
+  color: #1f3a8a;
+}
+.comment-date {
+  color: #64748b;
+  font-size: 12px;
+}
+.comment-text {
+  margin: 0;
+  font-size: 14px;
+  color: #111827;
+}
+.comment-text {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
 .attachment-block {
   margin-top: 8px;
   padding: 8px;
@@ -1548,7 +1706,10 @@ button.student-refuse-badge-btn:hover {
 /* Responsive Grid для карток тем */
 .themes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Зменшую мінімальну ширину */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(320px, 1fr)
+  ); /* Зменшую мінімальну ширину */
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -1562,7 +1723,10 @@ button.student-refuse-badge-btn:hover {
 
 @media (min-width: 1400px) {
   .themes-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* На великих екранах більші картки */
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(350px, 1fr)
+    ); /* На великих екранах більші картки */
     gap: 24px;
   }
 }
@@ -1948,7 +2112,7 @@ body {
   border-left: none;
   padding: 0;
   margin-top: 4px;
-  color: #DC2626;
+  color: #dc2626;
   font-size: 12px;
 }
 
@@ -1972,7 +2136,10 @@ body {
 .streams-checkboxes,
 .stream-checkbox,
 .no-themes,
-.new-theme { /* Скидуємо всі старі стилі */ all: unset; }
+.new-theme {
+  /* Скидуємо всі старі стилі */
+  all: unset;
+}
 
 .fac-profile-link {
   font-size: inherit;
@@ -2079,7 +2246,7 @@ textarea.form-control::placeholder {
 
 /* === Body lock when modal is open === */
 body.modal-open, html.modal-open {
-    overflow: hidden !important;
+    overflow: hidden;
     position: relative;
     height: 100%;
     width: 100vw;
@@ -2114,7 +2281,7 @@ body.modal-open, html.modal-open {
 
 #cropModal,
 #editThemeModal {
-   background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .modal h3 {
@@ -2178,7 +2345,7 @@ body.modal-open, html.modal-open {
 }
 
 #approveRequestModal .modal-content {
-  border: none !important; 
+  border: none !important;
 }
 
 #editThemeModal .edit-theme-modal-content,
@@ -2218,8 +2385,6 @@ body.modal-open, html.modal-open {
   width: 400px;
   max-width: 90%;
 }
-
-
 
 #cropModal .modal-content {
   width: 100%;
@@ -2266,8 +2431,8 @@ body.modal-open, html.modal-open {
 }
 
 .rejection-modal-close {
-    color: #9ca3af;
-    font-weight: bold;
+  color: #9ca3af;
+  font-weight: bold;
 }
 
 .close-modal:hover,
@@ -2284,7 +2449,7 @@ body.modal-open, html.modal-open {
 }
 
 .rejection-modal-close:hover {
-    color: #1f2937;
+  color: #1f2937;
 }
 
 /* === Modal Headers === */
@@ -2394,9 +2559,9 @@ body.modal-open, html.modal-open {
 }
 
 #editThemeModal .edit-theme-modal-buttons {
-    gap: 12px;
-    justify-content: space-between;
-    margin-top: 32px;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 32px;
 }
 
 /* --- Confirm/Submit Buttons (Green/Blue) --- */
@@ -2516,7 +2681,7 @@ body.modal-open, html.modal-open {
 }
 
 .rejection-modal-submit:disabled {
-    background: #9ca3af;
+  background: #9ca3af;
 }
 
 /* === Other Modal Specific Styles === */

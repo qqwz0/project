@@ -67,7 +67,8 @@
 }
 
 .teacher-info:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
 }
 
@@ -113,11 +114,16 @@
   font-family: var(--default-font);
 }
 
-.teacher-details h2 {
+.teacher-details h2 a {
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--primary-blue);
   line-height: 1.4;
+  text-decoration: none;
+}
+
+.teacher-details h2 a:hover {
+  color: var(--supervisor-places-badge-color);
 }
 
 .teacher-details h3 {
@@ -267,7 +273,6 @@ p.single-slot {
 
 .modal-button:hover {
   background-color: var(--primary-blue-hover);
-  transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
 }
 
@@ -385,7 +390,7 @@ p.single-slot {
     min-width: 50px;
     margin: -14px -14px -14px 0;
   }
-  
+
   .modal-button .arrow-icon {
     font-size: 20px;
   }
@@ -431,7 +436,7 @@ p.single-slot {
     min-width: 40px;
     margin: -14px -14px -14px 0;
   }
-  
+
   .modal-button .arrow-icon {
     font-size: 18px;
   }

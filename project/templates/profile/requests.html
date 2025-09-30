@@ -182,14 +182,6 @@
                                     <strong>Тема:</strong>
                                     <p class="theme">{{ request.teacher_theme.theme }}</p>
                                 {% endif %}
-                                {% if request.student_themes.all %}
-                                    <strong>Тематика студента:</strong>
-                                    <ul class="student-themes-list">
-                                        {% for theme in request.student_themes.all %}
-                                            <li>{{ theme.theme }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                {% endif %}
                                 {% if request.motivation_text %}
                                     <strong>Мотивація:</strong>
                                     <p class="motivation">{{ request.motivation_text }}</p>
