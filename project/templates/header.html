@@ -248,7 +248,6 @@
     </div>
 
     <script src="{% static 'js/notification.js' %}"></script>
-    {% comment %} <script src="{% static 'js/main.js' %}"></script> {% endcomment %}
     <script>window.APP_ROLE = "{{ user_profile.role|default_if_none:'' }}";</script>
     <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
     <script src="{% static 'js/intro_tour.js' %}"></script>
@@ -273,8 +272,8 @@
           });
 
           mobileMenu.addEventListener('click', function(event) {
-  event.stopPropagation();
-});
+            event.stopPropagation();
+          });
 
           // Close menu when clicking outside
           document.addEventListener('click', function(event) {
