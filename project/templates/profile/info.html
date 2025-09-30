@@ -11,7 +11,7 @@
                     <div class="slot-group" 
                          data-available="{{ slot.available|default:0 }}" 
                          data-occupied="{{ slot.occupied|default:0 }}">
-                        <p class="stream-title">{{ slot.stream_id }}</p>
+                        <p class="stream-title">{{ slot.stream_id.stream_code|cut:" (Бакалаври)" }}</p>
                         <div class="slots-display"></div>
                     </div>
                 {% endfor %}
@@ -25,16 +25,30 @@
     <!-- Section: Course Themes -->
     <div class="themes-section">
         <h2 class="section-title mt-4">Теми курсових робіт</h2>
-        {% if themes and themes|length > 0 %}
-            <ul class="themes-list">
+        {% if themes_by_stream %}
+            {% for stream_name, themes in themes_by_stream.items %}
+                <!-- Stream Group -->
+                <div class="stream-group" style="background: #f8fafc; border-radius: 8px; padding: 1rem; border-left: 4px solid #2563eb; margin-bottom: 2.5rem;">
+                    <h3 class="stream-title" style="color: #2563eb; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 0;">
+                        {{ stream_name }}
+                    </h3>
+                    <ul class="themes-list" style="margin: 0; padding-left: 1rem;">
                 {% for theme in themes %}
                     <!-- Theme Item -->
-                    <li class="theme-item mb-1">
-                        <a href="#">{{ theme.theme }}</a><br>
-                        <span class="theme-description">&emsp;{{ theme.theme_description }}</span>
+                            <li class="theme-item mb-2" style="list-style-type: none; position: relative;">
+                                <div style="display: flex; align-items: flex-start;">
+                                    <div>
+                                        <a href="#" style="color: #374151; text-decoration: none; font-weight: 500;">{{ theme.theme }}</a>
+                                        {% if theme.theme_description %}
+                                            <br><span class="theme-description" style="color: #6b7280; font-size: 0.9rem;">{{ theme.theme_description }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                     </li>
                 {% endfor %}
             </ul>
+                </div>
+            {% endfor %}
         {% else %}
             <!-- No Themes Information -->
             <div class="no-info" style="color: #888; font-style: italic;">Немає інформації.</div>
@@ -44,15 +58,12 @@
     <!-- JavaScript: Handle Slot Display -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            console.log("DOM fully loaded and parsed.");
         
             document.querySelectorAll(".slot-group").forEach(function (slotGroup, index) {
                 let availableSlots = parseInt(slotGroup.dataset.available);
                 let occupiedSlots = parseInt(slotGroup.dataset.occupied);
                 let slotDisplay = slotGroup.querySelector(".slots-display");
-        
-                console.log(`Slot Group ${index + 1}:`, { availableSlots, occupiedSlots });
-        
+                
                 if (isNaN(availableSlots) || isNaN(occupiedSlots)) {
                     console.warn(`Invalid slot value for slot group ${index + 1}`);
                     return;

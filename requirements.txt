@@ -16,5 +16,6 @@ dj-database-url
 whitenoise>=6.0
 django-cloudinary-storage
 cloudinary
+django-storages[azure]
 mysqlclient>=2.2
 docxtpl

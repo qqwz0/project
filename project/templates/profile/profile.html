@@ -1,11 +1,24 @@
 {% extends "profile/profile-page.html" %}
 {% load static %}
+{% load catalog_extras %}
 
 {% block title %}Профіль користувача{% endblock %}
 
 {% block head %}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <style>
+        /* Стилі для неактивних вкладок для студентів */
+        .tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .tab.disabled:hover {
+            background-color: inherit;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -13,38 +26,28 @@
         <!-- Profile Header -->
         <div class="profile-header">
             <div class="profile-info">
-                <!-- Profile Picture -->
+                <!-- Profile Picture (view-only; editing moved to Edit Profile pages) -->
                 <div class="profile-pic">
-                    {% if is_own_profile %}
-                        <form id="profile-pic-form" action="{% url 'update_profile_picture' %}" method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <input type="file" name="profile_picture" id="profile-pic-input" accept="image/*" style="display: none;">
-                            <label for="profile-pic-input" id="avatar-label">
-                                <img src="{{ profile_picture_url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
-                            </label>
-                            {{ form.cropping }}
-                        </form>
-                    {% else %}
-                        {% if user_profile.profile_picture %}
-                            <img src="{{ user_profile.profile_picture.url }}" alt="Фото профілю" class="default-avatar" id="profile-pic">
-                        {% else %}
-                            <img src="{% static 'images/default-avatar.jpg' %}" alt="Фото профілю за замовчуванням" class="default-avatar" id="profile-pic">
-                        {% endif %}
-                    {% endif %}
-                    {{ form.media }}
+                    <img src="{% get_profile_picture_url user_profile %}" alt="Фото профілю" class="default-avatar" id="profile-pic">
                 </div>
 
                 <!-- Profile Text -->
                 <div class="profile-text">
-                    <h2>{{ user_profile.get_full_name_with_patronymic }}</h2>
+                    <h2>
+                        {{ user_profile.get_full_name_with_patronymic }}
+                        {% if user_profile.role == "Викладач" and teacher_profile.profile_link %}
+                            <a href="{{ teacher_profile.profile_link }}" target="_blank" title="Профіль на сайті факультету" class="fac-profile-link">🔗</a>
+                        {% endif %}
+                    </h2>
+
                     {% if user_profile.role == "Викладач" %}
                         <h3>{{ teacher_profile.academic_level }}</h3>
-                        <p>Кафедра: {{ user_profile.department }}</p>
+                        <p>Кафедра: {{ user_profile.get_department_name }}</p>
                     {% elif user_profile.role == "Студент" %}
                         <h3>{{ user_profile.role }}</h3>
                         <p>Група: {{ user_profile.academic_group }}</p>
-                        {% if student_course and student_course >= 3 and user_profile.department %}
-                            <p>Кафедра: {{ user_profile.department }}</p>
+                        {% if student_course and student_course >= 3 and user_profile.get_department_name %}
+                            <p>Кафедра: {{ user_profile.get_department_name }}</p>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -53,6 +56,9 @@
             <!-- Profile Buttons -->
             {% if is_own_profile %}
                 <div class="profile-buttons">
+                    <a href="#" id="start-tour-profile" title="Підказка" data-tour="profile" aria-label="Підказка">
+                        <i class="fas fa-question-circle"></i>
+                    </a>
                     {% if request.user.is_staff or request.user.is_superuser %}
                         <a href="{% url 'admin:index' %}" class="admin-button" title="Адмін панель">
                             <i class="fas fa-lock"></i>
@@ -85,15 +91,17 @@
             {% if is_own_profile %}
                 <div class="tab{% if user_profile.role != 'Викладач' %} active{% endif %}" data-tab="requests" onclick="loadTab('requests')">Запити</div>
             {% endif %}
+            {% if is_own_profile or request.user.role == 'Викладач' %}
             <div class="tab" data-tab="active" onclick="loadTab('active')">Активні</div>
             <div class="tab" data-tab="archive" onclick="loadTab('archive')">Архів</div>
+            {% endif %}
         </div>
     </div>
 
     <!-- Tab Contents -->
     {% if user_profile.role == 'Викладач' %}
     <div id="info-section" class="tab-content">
-        {% include 'profile/info.html' with themes=themes slots=slots %}
+        {% include 'profile/info.html' with themes_by_stream=themes_by_stream slots=slots %}
     </div>
     {% endif %}
 
@@ -101,6 +109,7 @@
         {% include 'profile/requests.html' with requests=pending_requests %}
     </div>
 
+    {% if is_own_profile or request.user.role == 'Викладач' %}
     <div id="active-section" class="tab-content" style="display: none;">
         {% include 'profile/active.html' with active_requests=active_requests %}
     </div>
@@ -108,6 +117,7 @@
     <div id="archive-section" class="tab-content" style="display: none;">
         {% include 'profile/archive.html' with archived_requests=archived_requests %}
     </div>
+    {% endif %}
 
     <!-- Messages -->
     {% if messages %}
@@ -133,33 +143,34 @@
         </div>
     {% endif %}
 
-    <!-- Crop Modal -->
-    <div id="cropModal" class="modal">
-        <div class="modal-content" style="position: relative;">
-            <span class="close">&times;</span>
-            <h2 class='modal-h2'>Обріж своє фото!</h2>
-            <img src="" id="cropbox" alt="Profile Picture">
-            <form id="crop-form" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="x">
-                <input type="hidden" name="y">
-                <input type="hidden" name="width">
-                <input type="hidden" name="height">
-                <button type="submit" class='button'>Обрізати та зберегти</button>
-            </form>
-        </div>
-    </div>
+    
 
+    {% if request.user.role == 'Викладач' %}
     <div id="completeModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeCompleteModal()">&times;</span>
             <h3>Завершити роботу студента</h3>
             <form id="completeForm">
                 <input type="hidden" id="completeRequestId" name="requestId">
+                
+                <!-- Секція оцінки -->
                 <div class="form-group">
                     <label for="grade">Оцінка (0-100):</label>
                     <input type="number" id="grade" name="grade" min="0" max="100" class="form-control" required>
                 </div>
+                
+                <!-- Секція вибору файлів для архіву -->
+                <div class="form-group" id="filesSelectionSection" style="display: none;">
+                    <label>Оберіть файли для збереження в архіві:</label>
+                    <div id="filesCheckboxes" class="files-checkboxes">
+                        <!-- Чекбокси будуть додані динамічно -->
+                    </div>
+                    <small class="form-text text-muted">
+                        Тільки обрані файли будуть збережені в архіві після завершення роботи.
+                        <strong>Якщо файлів немає, запит не може бути завершений.</strong>
+                    </small>
+                </div>
+                
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="closeCompleteModal()">Скасувати</button>
                     <button type="button" class="btn-submit" onclick="submitComplete()">Завершити</button>
@@ -167,11 +178,10 @@
             </form>
         </div>
     </div>
+    {% endif %}
 {% endblock %}
 
 {% block scripts %}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script src="{% static 'js/request-filter.js' %}"></script>
     <script>
         function closePopup(element) {
@@ -186,115 +196,39 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             const tabs = document.querySelectorAll(".tab");
+            const currentUserRole = "{{ request.user.role }}";
+            const isOwnProfile = {{ is_own_profile|yesno:"true,false" }};
+            
+            // Додаємо клас disabled для заборонених вкладок студентам, які дивляться на чужі профілі
+            if (currentUserRole === 'Студент' && !isOwnProfile) {
+                tabs.forEach(tab => {
+                    const tabName = tab.getAttribute('data-tab');
+                    if (tabName === 'active' || tabName === 'archive') {
+                        tab.classList.add('disabled');
+                    }
+                });
+            }
+            
             tabs.forEach(tab => {
                 tab.addEventListener("click", function () {
+                    const tabName = this.getAttribute('data-tab');
+                    
+                    // Блокуємо доступ студентам до вкладок "Активні" та "Архів" на чужих профілях
+                    if (currentUserRole === 'Студент' && !isOwnProfile && (tabName === 'active' || tabName === 'archive')) {
+                        return; // Не дозволяємо переключитися
+                    }
+                    
                     tabs.forEach(t => t.classList.remove("active"));
                     this.classList.add("active");
+                    
+                    // Показуємо відповідний контент
+                    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+                    const targetSection = document.getElementById(tabName + '-section');
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                    }
                 });
             });
-        });
-
-        let selectedFile = null;
-        let cropper = null;
-        const cropbox = document.getElementById("cropbox");
-
-        document.getElementById("profile-pic-input").addEventListener("change", function (event) {
-            event.preventDefault();
-            let file = event.target.files[0];
-            if (file) {
-                selectedFile = file;
-                let reader = new FileReader();
-                reader.onload = function (e) {
-                    cropbox.src = e.target.result;
-                    openModal();
-
-                    if (cropper) {
-                        cropper.destroy();
-                    }
-
-                    cropper = new Cropper(cropbox, {
-                        aspectRatio: 1,
-                        viewMode: 2,
-                        autoCropArea: 0.8,
-                        movable: true,
-                        zoomable: true,
-                        scalable: true,
-                        responsive: true,
-                        minContainerWidth: 300,
-                        minContainerHeight: 300,
-                        crop(event) {
-                            document.querySelector('input[name="x"]').value = event.detail.x;
-                            document.querySelector('input[name="y"]').value = event.detail.y;
-                            document.querySelector('input[name="width"]').value = event.detail.width;
-                            document.querySelector('input[name="height"]').value = event.detail.height;
-                        }
-                    });
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function openModal() {
-            document.getElementById("cropModal").style.display = "flex";
-        }
-
-        function closeModal() {
-            document.getElementById("cropModal").style.display = "none";
-            if (cropper) {
-                cropper.destroy();
-                cropper = null;
-            }
-        }
-
-        function closePopup() {
-            const popup = event.target.closest('.success-popup');
-            if (popup) {
-              popup.remove();
-            }
-          }
-
-        document.querySelector(".close").addEventListener("click", closeModal);
-
-        document.getElementById("crop-form").addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            if (!cropper) {
-                console.error("Cropper is not initialized.");
-                return;
-            }
-
-            let formData = new FormData(this);
-
-            if (selectedFile) {
-                formData.append("profile_picture", selectedFile);
-            } else {
-                console.error("No file selected.");
-                return;
-            }
-
-            let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-            fetch("{% url 'crop_profile_picture' %}", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRFToken": csrfToken
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Response data:", data);
-                if (data.success) {
-                    document.getElementById("profile-pic").src = data.new_profile_picture_url + '?t=' + new Date().getTime();
-                    closeModal();
-                    setTimeout(() => {
-                        window.location.href = "{% url 'profile' %}";
-                    }, 1000);
-                } else {
-                    alert("Error cropping image: " + (data.error || "Unknown error"));
-                }
-            })
-            .catch(error => console.error("Fetch error:", error));
         });
     </script>
 {% endblock %}

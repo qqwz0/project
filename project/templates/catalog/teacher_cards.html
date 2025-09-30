@@ -1,64 +1,52 @@
 {% load static %}
 {% load catalog_extras %}
 <section class="teacher-info">
-    <div class="teacher-card" >
+    <div class="teacher-card">
       <div class="photo-container">
         <div class="teacher-photo">
-          <!-- If a teacher photo is available, display it; otherwise use a default image. -->
-            <img x-bind:src="item.teacher.photo" alt="Teacher photo" onerror="this.src='{% static 'images/default-avatar.jpg' %}'">
+          <img :src="item.teacher.photo || '{% static 'images/default-avatar.jpg' %}'" alt="Teacher photo">
         </div>
       </div>
       <div class="teacher-details">
-        <!-- Display teacher credentials such as name, position, and department. -->
         <h2>
-          <a 
-            :href="`{% url 'profile_detail' 0 %}`.replace('0', item.teacher.id)"
-            x-text="`${item.teacher.teacher_id.full_name}`"
-            style="color: inherit; text-decoration: none;"
-          ></a>
+          <a :href="(() => { const tid = item?.teacher?.teacher_id?.id || item?.teacher?.id || item?.teacher?.pk; return `/users/profile/${tid}/`; })()" x-text="`${item.teacher.teacher_id.full_name}`"></a>
         </h2>
         <template x-if="item.teacher.academic_level">
-          <p x-text="`${item.teacher.academic_level}`"></p>
+          <h3 x-text="`${item.teacher.academic_level}`"></h3>
         </template>
         <template x-if="item.teacher.academic_level === null">
-          <p>Викладач</p>
+          <h3>Викладач</h3>
         </template>  
-        <h3 x-html="`<strong>Кафедра </strong>${item.teacher.teacher_id.department}`"></h3>
+        <p class="department" x-text="`Кафедра ${item.teacher.teacher_id.department || 'Не вказано'}`"></p>
 
         <!-- Conditional logic for displaying the number of free slots. -->
-        <template x-if="item.is_matched">
-          <div>
-            <template x-if="item.free_slots.length < 1">
-              <div class="slots-info no-slots">
-                <p><strong>Місць немає</strong></p>
-              </div>
-            </template>
-            <template x-if="item.free_slots.length === 1">
-              <p x-html="`<strong>Місця:</strong> ${item.free_slots[0].get_available_slots}`" class="single-slot"></p>
-            </template>  
+        <div class="slots-container" x-show="item.is_matched || !item.is_matched">
+          <!-- No slots -->
+          <div class="slots-info no-slots" x-show="item.free_slots.length < 1">
+            <p><strong>Місць немає</strong></p>
           </div>
-        </template>
-        <template x-if="!item.is_matched">
-          <div>
-          <template x-if="item.free_slots.length < 1">
-            <div class="slots-info no-slots">
-              <p><strong>Місць немає</strong></p>
-            </div>
-          </template>
-            <div x-show="item.free_slots.length >=1" class="slots-info multiple-slots">
-              <p><strong>Загальна кількість місць:</strong></p>
-              <ul>
-                <template x-for="slot in item.free_slots">
-                  <li>
-                    <strong x-text="`${slot.stream_id.stream_code}`"></strong>:
-                    <span x-text="`${slot.get_available_slots}`"></span>
-                  </li>
-                </template>
-              </ul>
-            </div>
+
+          <!-- Single slot -->
+          <div class="slots-info single-slot" x-show="item.is_matched && item.free_slots.length === 1">
+            <strong>Місць:</strong>
+            <span x-text="item.free_slots[0].get_available_slots"></span>
           </div>
-        </template>
+
+          <!-- Multiple slots -->
+          <div class="slots-info multiple-slots" x-show="!item.is_matched && item.free_slots.length >= 1">
+            <ul>
+              <template x-for="slot in item.free_slots" :key="slot.id">
+                <li>
+                  <strong x-text="slot.stream_id.stream_code"></strong>:
+                  <span x-text="slot.get_available_slots"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </div>
+
       </div>
+      
       <!-- Button on the card's right side that triggers HTMX to load the modal content. -->
       <div class="card-right-side">
         {% if user.is_authenticated and user.role == 'Студент'%}
@@ -76,10 +64,10 @@
           </template>
           <template x-if="!item.teacher.already_requested && !item.has_active">
             <button class="modal-button"
-              :hx-get='item.teacher.url'
-              hx-target="#inner_modal"
-              hx-trigger="click"
-              x-init="htmx.process($el)">
+              :data-teacher-id="item.teacher.id"
+              :data-teacher-name="item.teacher.teacher_id.full_name"
+              :data-teacher-url="item.teacher.url"
+              @click="htmx.ajax('GET', item.teacher.url, { target: '#inner_modal' })">
               <span class="arrow-icon">›</span>
             </button>
           </template>

@@ -5,18 +5,14 @@
 
 <section class="info-request-section">
     <!-- Close modal button -->
-    <a class="close-modal fas fa-times" href="#" onclick="document.getElementById('details_request_modal').close();"></a>
+    <a class="close-modal fas fa-times"></a>
        
     <div class="left-container">
         <!-- Display teacher's photo or a default image -->
         <img src="{{photo}}" alt="Teacher">
         <!-- Display teacher's name -->
         <h2>
-            {%if teacher.teacher_id.patronymic%}
-                 {{ teacher.teacher_id.first_name | capfirst }} {{teacher.teacher_id.patronymic| capfirst}} {{ teacher.teacher_id.last_name | capfirst }}
-            {% else %}
-                {{ teacher.teacher_id.first_name | capfirst }} {{ teacher.teacher_id.last_name | capfirst }}
-            {% endif %}
+            {{ teacher.teacher_id.get_full_name_with_patronymic | capfirst }}
         </h2>
         <!-- Display teacher's position or a default value -->
         {% if teacher.academic_level%}
@@ -26,7 +22,7 @@
         {% endif %}
         
         <!-- Display teacher's department -->
-        <h3>Кафедра {{ teacher.teacher_id.department | capfirst }}</h3>
+        <h3>Кафедра {{ teacher.teacher_id.get_department_name | capfirst }}</h3>
 
         <!-- Display slot availability -->
         {% if is_matched %}
@@ -58,220 +54,87 @@
 
     <div class="right-container">
         <!-- Form for submitting a request -->
-        <form hx-post="{% url 'modal' teacher.pk %}" class="teacher-modal" id="request-form">
+        <form data-action-url="{% url 'modal' teacher.pk %}" class="teacher-modal" id="request-form">
             <div id="form-errors" class="error-container"></div>
-            <h1 style="margin-top: 0;">Подай заявку!</h1>
+            <h1 style="margin-top: 0; align-self: center;">Подай заявку!</h1>
             <input type="hidden" name="csrfmiddlewaretoken" id="csrf_token" value="{{ csrf_token }}">
         
-            <!-- Dropdown for selecting teacher themes -->
+            <!-- Enhanced dropdown for selecting teacher themes -->
             <div class="dropdown">
                 {{ form.teacher_themes.label_tag|cut:":" }}
                 <div class="dropdown-input">
                     {{ form.teacher_themes }}
+                    <!-- Enhanced dropdown chevron icon -->
                     <button type="button" id="dropdown-toggle" class="dropdown-toggle">
-                        <img src={% static "images/arrow-up.svg" %} alt="Dropdown Icon" class="dropdown-icon">
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                 </div>
-                <div class="error-message"></div>
                 <div id="dropdown-menu" class="dropdown-menu">
+                    <li class="dropdown-item" data-value="">
+                        <span class="theme-text">-</span>
+                    </li>
                     {% if form.themes_list %}
                         {% for theme_id, theme_name in form.themes_list %}
-                            <div class="dropdown-item" data-value="{{ theme_name }}">{{ theme_name }}</div>
+                            <li class="dropdown-item" data-value="{{ theme_name }}">
+                                <span class="theme-text">{{ theme_name }}</span>
+                            </li>
                         {% endfor %}
                     {% else %}
-                        <div class="dropdown-item"><p>Вільні теми відсутні!</p></div>
+                        <div class="dropdown-item no-themes">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Вільні теми відсутні!</span>
+                        </div>
                     {% endif %}
                 </div>
             </div>
-        
-            <p>та/або</p>
-        
-            <!-- Section for adding custom themes -->
-            <div id="student-themes-container" class="add-theme-container">
+
+            <p style="text-align: center; margin: 0; color: #a3a3a3; font-style: italic; align-self: center;">та/або</p>
+
+            <!-- Restructured theme addition section to use existing CSS classes -->
+            <div class="add-theme-container">
                 {{ form.student_themes.label_tag|cut:":" }}
+                
                 <div class="input-add">
                     {{ form.student_themes }}
-                    <button type="button" id="add-theme" class="add-theme">
-                        <img src="{% static 'images/plus.svg' %}" alt="Add Icon" class="add-icon">
+                    <button type="button" id="add-theme" class="add-theme" title="Додати тему">
+                        +
                     </button>
                 </div>
-                {% comment %} <div class="error-message"></div> {% endcomment %}
+                
+                <!-- Added theme counter with existing styling -->
+                <div style="text-align: right; margin-bottom: 0.5rem;">
+                    <small style="color: #a3a3a3; font-size: 0.75rem;">
+                        <span id="theme-count">0</span>/3 тем
+                    </small>
+                </div>
+                
+                <!-- Hidden inputs container -->
                 <div id="hidden-themes"></div>
-                <ul id="theme-list" class="theme-list"></ul>
+                
+                <!-- Made themes container scrollable with fixed height -->
+                <div id="themes-container" style="max-height: 200px; overflow-y: auto; border-radius: 8px; margin-top: 0.5rem;">
+                    <!-- Theme list using existing CSS classes -->
+                    <ul id="theme-list" class="theme-list" style="display: none; margin: 0; padding: 8px;"></ul>
+                    
+                    <!-- Placeholder with existing styling -->
+                    <div id="theme-placeholder" style="text-align: center; padding: 0.75rem; color: #a3a3a3; border: 2px dashed #e0e0e0; border-radius: 0.5rem;">
+                        <i class="fas fa-lightbulb" style="font-size: 1.25rem; margin-bottom: 0.25rem; display: block;"></i>
+                        <p style="margin: 0.25rem 0 0.125rem 0; font-weight: 500; font-size: 0.875rem;">Додайте свої власні теми для дослідження</p>
+                        <small style="font-size: 0.6875rem;">Ви можете додати до 3 тем</small>
+                    </div>
+                </div>
             </div>
         
             <!-- Motivation text input -->
-            <div class = 'textera-container'>
-
+            <div class="textera-container">
                 {{ form.motivation_text }}
-                <div class="error-message"></div>
-            
-            
-                {% comment %} <div class="textera-capacity">
-                    <p>Max. 2000 characters</p>
-                </div> {% endcomment %}
-             </div>   
+            </div>   
         
             <!-- Submit button -->
-            {% if free_slots %}
-                <button type='submit' class="submit-btn" id="submit-btn">Надіслати</button>
-            {% else %}
-                <button type='submit' class="submit-btn" id="submit-btn" disabled>Надіслати</button>
-            {% endif %}
+            <button type='submit' class="submit-btn" id="submit-btn" {% if not free_slots %}disabled{% endif %}>
+                Надіслати
+            </button>
         </form>
     </div>
 </section>
-
-<script>
-    // Handle form submission via AJAX
-    document.getElementById('submit-btn').addEventListener('click', function(event) {
-        event.preventDefault();
-        var form = document.getElementById('request-form');
-        
-        // Get the main student_themes input field
-        var inputField = document.querySelector('input[name="student_themes"]:not([type="hidden"])');
-        var pendingTheme = '';
-        
-        if (inputField && inputField.value.trim()) {
-            // Save the value in case we need it for validation errors
-            pendingTheme = inputField.value.trim();
-            
-            // Temporarily clear the input field so it doesn't get submitted
-            inputField.value = '';
-        }
-        
-        var formData = new FormData(form);
-        var errorContainer = document.getElementById('form-errors');
-        errorContainer.innerHTML = '';
-
-        fetch("{% url 'modal' teacher.pk %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': document.getElementById('csrf_token').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // If there were errors and we had a pending theme, restore it
-            if (!data.success && pendingTheme) {
-                inputField.value = pendingTheme;
-            }
-            
-            if (data.success) {
-                document.getElementById('details_request_modal').close();
-                location.reload();
-            } else {
-                const errorElements = [];
-                for (var field in data.errors) {
-                    var fieldElement = document.querySelector(`[name="${field}"]:not([type="hidden"])`);
-                    var errorDiv = document.createElement('div');
-                    errorDiv.className = 'error-message';
-                    errorDiv.innerHTML = data.errors[field].join('<br>');
-
-                    if (fieldElement) {
-                        // Look for an existing error message to replace first
-                        var existingError = fieldElement.parentNode.querySelector('.error-message');
-                        if (existingError) {
-                            existingError.innerHTML = errorDiv.innerHTML;
-                            errorElements.push(existingError);
-                        } else {
-                            fieldElement.insertAdjacentElement('afterend', errorDiv);
-                            errorElements.push(errorDiv);
-                        }
-                    } else {
-                        errorContainer.appendChild(errorDiv);
-                        errorElements.push(errorDiv);
-                    }
-                }
-
-                setTimeout(() => {
-                    errorElements.forEach(element => {
-                        element.remove();
-                    });
-                }, 5000);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Restore the input value on any error
-            if (pendingTheme) {
-                inputField.value = pendingTheme;
-            }
-        });
-    });
-
-    // Toggle dropdown menu visibility
-    document.getElementById('dropdown-toggle').addEventListener('click', function() {
-        var dropdownMenu = document.getElementById('dropdown-menu');
-        dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-    });
-
-    // Handle dropdown item selection
-    document.querySelectorAll('.dropdown-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-            document.querySelector('input[name="teacher_themes"]').value = this.getAttribute('data-value');
-            document.getElementById('dropdown-menu').style.display = 'none';
-        });
-    });
-
-    // Close dropdown menu when clicking outside
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('.dropdown')) {
-            document.getElementById('dropdown-menu').style.display = 'none';
-        }
-    });
-
-    // Add custom themes to the list
-    document.getElementById('add-theme').addEventListener('click', function() {
-        var input = document.querySelector('input[name="student_themes"]');
-        var theme = input.value.trim();
-        if (theme) {
-            var hiddenThemes = document.getElementById('hidden-themes');
-            var themeList = document.getElementById('theme-list');
-
-            var hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'student_themes';
-            hiddenInput.value = theme;
-            hiddenThemes.appendChild(hiddenInput);
-
-            var listItem = document.createElement('li');
-            listItem.className = 'theme-item';
-            listItem.textContent = theme.length > 30 ? theme.substring(0, 30) + '...' : theme;
-
-            var removeButton = document.createElement('button');
-            removeButton.innerHTML = '&times;';
-            removeButton.className = 'remove-theme';
-            removeButton.addEventListener('click', function() {
-                hiddenThemes.removeChild(hiddenInput);
-                themeList.removeChild(listItem);
-                updateThemeCount();
-            });
-            listItem.appendChild(removeButton);
-            themeList.appendChild(listItem);
-
-            input.value = '';
-            updateThemeCount();
-        }
-    });
-
-    // Update theme count and disable input if limit is reached
-    function updateThemeCount() {
-        var hiddenThemes = document.getElementById('hidden-themes');
-        var themeCount = hiddenThemes.querySelectorAll('input[name="student_themes"]').length;
-        var themeInput = document.getElementById('id_student_themes');
-        var addButton = document.getElementById('add-theme');
-
-        if (themeCount >= 3) {
-            addButton.disabled = true;
-            themeInput.disabled = true;
-            themeInput.placeholder = 'Досягнуто ліміт тем';
-        } else {
-            addButton.disabled = false;
-            themeInput.disabled = false;
-            themeInput.placeholder = 'Введи';
-        }
-    }
-</script>
+<script src="{% static 'js/teacher_modal.js'%}" defer></script>

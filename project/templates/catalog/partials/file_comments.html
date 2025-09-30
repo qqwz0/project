@@ -56,7 +56,7 @@ $(document).ready(function() {
         spinner.removeClass('d-none');
         
         $.ajax({
-            url: '/catalog/file/' + fileId + '/comment/',
+            url: '/file/' + fileId + '/comment/',
             type: 'POST',
             data: {
                 'text': commentText,

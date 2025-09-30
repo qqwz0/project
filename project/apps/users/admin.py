@@ -6,6 +6,7 @@ from django.http import FileResponse, HttpResponse
 from django.urls import reverse
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
+import re
 
 from docxtpl import DocxTemplate
 
@@ -14,12 +15,36 @@ from apps.catalog.models import (
     Stream,
     Slot,
     OnlyTeacher,
-    TeacherTheme,
     OnlyStudent,
+    TeacherTheme,
     Request,
     StudentTheme,
 )
 from .export_service import export_requests_to_word
+
+from django.contrib.admin import SimpleListFilter
+
+class StreamFilter(SimpleListFilter):
+    title = 'Потік'
+    parameter_name = 'stream'
+
+    def lookups(self, request, model_admin):
+        streams = (
+            model_admin.model.objects
+            .select_related('slot__stream_id')
+            .values_list('slot__stream_id__id', 'slot__stream_id__stream_code')
+            .distinct()
+        )
+        return [
+            (stream_id, stream_code)
+            for stream_id, stream_code in streams
+            if stream_id is not None
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(slot__stream_id__id=self.value())
+        return queryset
 
 class StudentAutocompleteField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
@@ -59,7 +84,7 @@ class CustomUserChangeForm(forms.ModelForm):
 
         # Якщо користувач - адміністратор кафедри
         if self.current_user and self.current_user.groups.filter(name='department_admin').exists() and not self.current_user.is_superuser:
-            department = self.current_user.department
+            department = self.current_user.get_department()
             if department:
                 # Обмежити список кафедр лише своєю
                 self.fields['department'].queryset = self.fields['department'].queryset.filter(pk=department.pk)
@@ -107,7 +132,7 @@ class CustomUserAdmin(UserAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            return qs.filter(department=request.user.department)
+            return qs.filter(department=request.user.get_department())
         return qs
 
     @admin.display(description='ПІБ')
@@ -146,14 +171,14 @@ class DepartmentFilter(admin.SimpleListFilter):
     parameter_name = 'department'
 
     def lookups(self, request, model_admin):
-        depts = OnlyTeacher.objects.values_list('teacher_id__department', flat=True).distinct()
+        depts = OnlyTeacher.objects.filter(department__isnull=False).values_list('department__department_name', flat=True).distinct()
         return [(dept, dept) for dept in depts if dept]
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(teacher_id__teacher_id__department=self.value())
+            return queryset.filter(teacher_id__department=self.value())
         return queryset
-
+    
 class SlotForm(forms.ModelForm):
     """
     Форма для Slot з українськими підписами.
@@ -199,7 +224,6 @@ class SlotAdmin(admin.ModelAdmin):
         'get_teacher_name',
         'get_department',
         'get_stream_code',
-        'get_edu_degree',
         'get_quota',
         'available_slots',
     )
@@ -219,7 +243,6 @@ class SlotAdmin(admin.ModelAdmin):
 
     list_filter = (
         DepartmentFilter,
-        'stream_id__edu_degree',
         'stream_id',
         HasSlotsFilter,
     )
@@ -233,7 +256,7 @@ class SlotAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            qs = qs.filter(teacher_id__teacher_id__department=request.user.department)
+            qs = qs.filter(teacher_id__department=request.user.get_department())
         return qs
 
     @admin.display(description='Викладач', ordering='teacher_id__teacher_id__last_name')
@@ -244,18 +267,14 @@ class SlotAdmin(admin.ModelAdmin):
             parts.append(u.patronymic)
         return " ".join(parts)
 
-    @admin.display(description='Кафедра', ordering='teacher_id__teacher_id__department')
+    @admin.display(description='Кафедра', ordering='teacher_id__department__department_name')
     def get_department(self, obj):
-        return obj.teacher_id.teacher_id.department
+        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
 
     @admin.display(description='Потік', ordering='stream_id__stream_code')
     def get_stream_code(self, obj):
         return obj.stream_id.stream_code
     
-    @admin.display(description='Освітній ступінь', ordering='stream_id__edu_degree')
-    def get_edu_degree(self, obj):
-        return obj.stream_id.edu_degree
-
     @admin.display(description='Квота', ordering='quota')
     def get_quota(self, obj):
         return obj.quota
@@ -267,7 +286,7 @@ class SlotAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id" and request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
             kwargs['queryset'] = OnlyTeacher.objects.filter(
-                teacher_id__department=request.user.department
+                teacher_id__department=request.user.get_department()
             )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
@@ -279,39 +298,47 @@ class SlotAdmin(admin.ModelAdmin):
 class TeacherThemeForm(forms.ModelForm):
     class Meta:
         model = TeacherTheme
-        fields = ['teacher_id', 'theme', 'theme_description', 'is_occupied']
+        fields = ['teacher_id', 'theme', 'theme_description', 'is_occupied', 'is_active', 'streams']
         labels = {
             'teacher_id': 'Викладач',
             'theme': 'Тема',
             'theme_description': 'Опис',
             'is_occupied': 'Зайнята',
+            'is_active': 'Активна',
+            'streams': 'Потоки',
         }
         help_texts = {
             'theme': 'Формулювання теми, доступне для вибору студентом',
             'theme_description': 'Додаткові деталі або специфікація теми (необовʼязково)',
+            'is_active': 'Деактивовані теми не відображаються в списках для вибору',
+            'streams': 'Потоки, до яких прикріплена тема',
         }
 
 class TeacherThemeAdmin(admin.ModelAdmin):
     form = TeacherThemeForm
 
-    list_display = ('get_teacher_full_name', 'get_teacher_theme', 'is_occupied')
+    list_display = ('get_teacher_full_name', 'get_teacher_theme', 'is_occupied', 'is_active', 'get_streams_display')
     readonly_fields = ('is_occupied',)
 
     search_fields = (
         'teacher_id__teacher_id__last_name',
         'teacher_id__teacher_id__first_name',
         'teacher_id__teacher_id__patronymic',
+        'theme',
     )
 
-    list_filter = ('is_occupied', 'teacher_id__teacher_id__department')
+    list_filter = ('is_occupied', 'is_active', 'teacher_id__department', 'streams')
     ordering = ('teacher_id__teacher_id__last_name', 'teacher_id__teacher_id__first_name')
 
     autocomplete_fields = ('teacher_id',)
+    filter_horizontal = ('streams',)  # Для зручного вибору потоків
+    
+    actions = ['activate_themes', 'deactivate_themes']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            return qs.filter(teacher_id__teacher_id__department=request.user.department)
+            return qs.filter(teacher_id__department=request.user.get_department())
         return qs
 
     @admin.display(
@@ -324,25 +351,69 @@ class TeacherThemeAdmin(admin.ModelAdmin):
 
     @admin.display(
         description="Тема",
-        ordering='theme'  # This is a direct model field, so sortable as-is
+        ordering='theme'
     )
-
     def get_teacher_theme(self, obj):
         return obj.theme
+
+    @admin.display(
+        description="Потоки"
+    )
+    def get_streams_display(self, obj):
+        streams = obj.streams.all()
+        if streams:
+            return ', '.join([stream.stream_code for stream in streams])
+        return '-'
+
+    @admin.action(description='Активувати вибрані теми')
+    def activate_themes(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'Активовано {updated} тем.')
+
+    @admin.action(description='Деактивувати вибрані теми')
+    def deactivate_themes(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'Деактивовано {updated} тем.')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "teacher_id":
             if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-                kwargs["queryset"] = OnlyTeacher.objects.filter(teacher_id__department=request.user.department)
+                kwargs["queryset"] = OnlyTeacher.objects.filter(teacher_id__department=request.user.get_department())
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def delete_model(self, request, obj):
+        if Request.objects.filter(teacher_theme=obj, request_status__in=['Активний', 'Очікує']).exists():
+            self.message_user(
+                request,
+                f"Неможливо видалити тему «{obj.theme}», оскільки вона прив'язана до активного або очікуючого запиту.",
+                messages.ERROR
+            )
+        else:
+            super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        linked_themes = []
+        for theme in queryset:
+            if Request.objects.filter(teacher_theme=theme, request_status__in=['Активний', 'Очікує']).exists():
+                linked_themes.append(theme.theme)
+
+        if linked_themes:
+            themes_str = ", ".join(f"«{t}»" for t in linked_themes)
+            self.message_user(
+                request,
+                f"Неможливо виконати видалення. Наступні теми прив'язані до активних запитів або запитів в очікуванні: {themes_str}.",
+                messages.ERROR
+            )
+        else:
+            super().delete_queryset(request, queryset)
 
 # Мапа префіксів до назв спеціальностей
 PREFIX_MAP = {
-    'ФЕС': 'Інформаційні системи та технології',
-    'ФЕП': 'Інженерія програмного забезпечення',
-    'ФЕІ': 'Комп’ютерні науки',
-    'ФЕМ': 'Електроніка та комп’ютерні системи',
-    'ФЕЛ': 'Сенсорні та діагностичні електронні системи',
+    "ФЕС": '126 "Інформаційні системи та технології"',
+    "ФЕП": '121 "Інженерія програмного забезпечення"',
+    "ФЕІ": '122 "Комп\'ютерні науки"',
+    "ФЕМ": '171 "Електроніка та комп\'ютерні системи"',
+    "ФЕЛ": '176 "Сенсорні та діагностичні електронні системи"',
 }
 
 class StreamForm(forms.ModelForm):
@@ -352,21 +423,20 @@ class StreamForm(forms.ModelForm):
     - specialty_name не є обов'язковим на формі
     """
     # Явно визначаємо поле, щоб вимкнути required на рівні форми
-    specialty_name = forms.CharField(required=False, label='Назва спеціальності(-)')
-
     class Meta:
         model = Stream
-        fields = ('stream_code', 'specialty_name', 'edu_degree')
-
+        fields = ('stream_code',)
+        help_texts = {
+            'stream_code': 'Введіть код потоку, який повинен починатися з абревіатури спеціальності (ФЕС, ФЕП, ФЕІ, ФЕМ, ФЕЛ) та номеру потоку. Для магістрів додайте букву "м" після номеру потоку (наприклад, ФЕІ-2м).'
+        }
     def clean_specialty_name(self):
-        name = self.cleaned_data.get('specialty_name')
         code = self.cleaned_data.get('stream_code', '') or ''
-        # Якщо адміністратор не ввів назву, спробуємо автозаповнити
-        if not name and code:
+        # Автозаповнюємо спеціальність на основі префіксу
+        if code:
             for prefix, title in PREFIX_MAP.items():
                 if code.startswith(prefix):
                     return title
-        return name
+        return ''
 
     def clean(self):
         # Інші валідації залишаються стандартними
@@ -388,14 +458,9 @@ class StreamAdmin(admin.ModelAdmin):
     def code(self, obj):
         return obj.stream_code
     
-    @admin.display(ordering='edu_degree', description='Освітній ступінь')
-    def degree(self, obj):
-        return obj.edu_degree
-
-    list_display       = ('specialty', 'code', 'degree')
+    list_display       = ('specialty', 'code')
     list_display_links = ('code',)
     search_fields      = ('specialty_name', 'stream_code')
-    list_filter        = ('edu_degree',)
     ordering           = ('stream_code', 'specialty_name')
 
     def _is_super(self, request, obj=None):
@@ -461,28 +526,19 @@ class OnlyTeacherAdmin(admin.ModelAdmin):
     @admin.display(description='Академічний рівень')
     def get_academic_level(self, obj):
         return obj.academic_level
-    
-class OnlyStudentForm(forms.ModelForm):
-    class Meta:
-        model = OnlyStudent
-        fields = ['course']  # редагується тільки курс
-        labels = {
-            'course': 'Курс',
-        }
 
+@admin.register(OnlyStudent)
 class OnlyStudentAdmin(admin.ModelAdmin):
-    form = OnlyStudentForm
-
-    list_display = ('get_full_name', 'get_course')
+    list_display = ('get_full_name', 'get_group', 'get_course', 'get_specialty')
+    list_filter = ('group__stream__specialty__faculty', 'group__stream')
     search_fields = (
         'student_id__last_name',
-        'student_id__first_name',
+        'student_id__first_name', 
         'student_id__patronymic',
+        'group__group_code'
     )
-
-
     readonly_fields = ('student_id',)
-    fields = ('student_id', 'course')  # лише ці два поля видно
+    fields = ('student_id', 'group', 'additional_email', 'phone_number')
 
     def has_add_permission(self, request):
         return False
@@ -490,19 +546,25 @@ class OnlyStudentAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-    def has_change_permission(self, request, obj=None):
-        return True
-
     @admin.display(description='ПІБ студента')
     def get_full_name(self, obj):
         return obj.student_id.get_full_name_with_patronymic()
+
+    @admin.display(description='Група')
+    def get_group(self, obj):
+        return obj.group.group_code
 
     @admin.display(description='Курс')
     def get_course(self, obj):
         return obj.course
 
+    @admin.display(description='Спеціальність')
+    def get_specialty(self, obj):
+        return obj.specialty.name
+
     def view_on_site(self, obj):
         return reverse('profile_detail', args=[obj.student_id.pk])
+
     
 @admin.register(StudentTheme)
 class StudentThemeAdmin(admin.ModelAdmin):
@@ -537,6 +599,62 @@ class RequestForm(forms.ModelForm):
             'request_status': 'Статус',
             
         }
+    def clean(self):
+        """
+        Додає комплексну валідацію для запиту:
+        1. Перевіряє, чи є у викладача вільні місця для потоку студента.
+        2. Перевіряє, чи обрана тема викладача не є зайнятою або видаленою.
+        """
+        cleaned_data = super().clean()
+        teacher_theme = cleaned_data.get('teacher_theme')
+        teacher_profile = cleaned_data.get('teacher_id')
+        student = cleaned_data.get('student_id')
+
+        # Перевіряємо лише при створенні нового запиту або зміні ключових полів
+        is_new_request = not self.instance.pk
+
+        # 1. Валідація слота (наявності вільних місць)
+        if is_new_request and student and teacher_profile:
+            try:
+                # Визначаємо потік студента за його групою
+                is_master = student.academic_group.endswith('м')
+                match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', student.academic_group)
+                if match:
+                    student_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                stream = Stream.objects.get(stream_code__iexact=student_stream)
+
+                # Шукаємо відповідний слот
+                slot = Slot.objects.get(teacher_id=teacher_profile, stream_id=stream)
+
+                if (slot.quota - slot.occupied) < 1:
+                    raise forms.ValidationError(
+                        "У цього викладача немає вільних місць для потоку, до якого належить студент."
+                    )
+            except Stream.DoesNotExist:
+                raise forms.ValidationError(
+                    f"Не вдалося знайти потік для групи студента «{student.academic_group}»."
+                )
+            except Slot.DoesNotExist:
+                raise forms.ValidationError(
+                    "Викладач не має відкритих слотів для потоку, до якого належить студент."
+                )
+
+        # 2. Валідація теми викладача
+        if teacher_theme:
+            # Перевіряємо, чи тема нова для цього запиту
+            is_new_or_changed_theme = is_new_request or self.instance.teacher_theme != teacher_theme
+            
+            if is_new_or_changed_theme:
+                if teacher_theme.is_occupied:
+                    raise forms.ValidationError({
+                        'teacher_theme': "Ця тема вже зайнята іншим студентом і не може бути обрана."
+                    })
+                if getattr(teacher_theme, 'is_deleted', False):
+                    raise forms.ValidationError({
+                        'teacher_theme': "Ця тема була видалена і не може бути обрана."
+                    })
+
+        return cleaned_data   
 
 class RequestAdmin(admin.ModelAdmin):
     form = RequestForm
@@ -563,8 +681,8 @@ class RequestAdmin(admin.ModelAdmin):
     list_filter = (
         'request_status',
         'work_type',
-        'slot__stream_id',
-        'teacher_id__teacher_id__department',
+        StreamFilter,
+        'teacher_id__department',
         'academic_year',
     )
 
@@ -575,7 +693,8 @@ class RequestAdmin(admin.ModelAdmin):
         'teacher_id__teacher_id__last_name',
         'teacher_id__teacher_id__first_name',
         'teacher_id__teacher_id__patronymic',
-        'work_type', 
+        'work_type',
+        'topic_name',  # Додали пошук по темі
     )
 
     export_fields = [
@@ -618,6 +737,7 @@ class RequestAdmin(admin.ModelAdmin):
                 'custom_student_theme',
                 'request_status',
                 'work_type',
+                'topic_name',  # Додали можливість вручну встановлювати тему
             ]
         return super().get_fields(request, obj)
 
@@ -628,9 +748,9 @@ class RequestAdmin(admin.ModelAdmin):
         return f"{student_name} — {teacher_name}"
 
     @admin.display(description='Кафедра викладача',
-                   ordering='teacher_id__teacher_id__department')
+                   ordering='teacher_id__department__department_name')
     def get_teacher_department(self, obj):
-        return obj.teacher_id.teacher_id.department
+        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
 
     @admin.display(description='Група студента',
                    ordering='student_id__academic_group')
@@ -643,8 +763,10 @@ class RequestAdmin(admin.ModelAdmin):
 
     @admin.display(description='Тема')
     def get_theme_display(self, obj):
-        # Пріоритет: довільна тема студента > затверджена тема студента > тема викладача
-        if obj.custom_student_theme:
+        # Пріоритет: topic_name (після підтвердження) > довільна тема студента > затверджена тема студента > тема викладача
+        if obj.topic_name:
+            text = obj.topic_name
+        elif obj.custom_student_theme:
             text = obj.custom_student_theme
         elif obj.approved_student_theme:
             text = obj.approved_student_theme.theme
@@ -802,7 +924,7 @@ class RequestAdmin(admin.ModelAdmin):
 admin.site.register(Stream, StreamAdmin)
 
 admin.site.register(OnlyTeacher, OnlyTeacherAdmin)
-admin.site.register(OnlyStudent, OnlyStudentAdmin)
+
 admin.site.register(Request, RequestAdmin)
 
 # Реєструємо модель TeacherTheme в адмінці з новою конфігурацією

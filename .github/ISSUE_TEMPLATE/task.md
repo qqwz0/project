@@ -1,10 +1,8 @@
----
 name: Task
 about: Загал. таск
-title: "[TASK] "
-labels: ["task"]
+title: '[TASK] '
+labels: ['task']
 assignees: []
----
 
 ### Task
 

@@ -1,3 +1,4 @@
+from itertools import count
 from django.db import models
 from django.urls import reverse  
 from django.db.models import F
@@ -11,23 +12,27 @@ import re
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from apps.users.models import CustomUser
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
         
 class OnlyTeacher(models.Model):
-    ACADEMIC_LEVELS = [
-        ('Асистент', 'Асистент'),
-        ('Доцент', 'Доцент'),
-        ('Професор', 'Професор'),
-    ]
     teacher_id = models.OneToOneField('users.CustomUser', 
                                       on_delete=models.CASCADE, 
                                       primary_key=True, 
-                                      limit_choices_to={'role': 'teacher'},
+                                      limit_choices_to={'role': 'Викладач'},
                                       related_name='catalog_teacher_profile')
-    academic_level = models.CharField(max_length=50, choices=ACADEMIC_LEVELS, default='Асистент')
+    academic_level = models.CharField(max_length=50, default='Викладач')
     additional_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    profile_link = models.URLField(blank=True, null=True, verbose_name="Посилання на профіль",
+                                  help_text="Посилання на профіль на сторінці факультету")
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Кафедра")
+    
+    class Meta:
+        verbose_name = "Викладач"
+        verbose_name_plural = "Викладачі"
     
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
@@ -37,23 +42,68 @@ class OnlyTeacher(models.Model):
 
 @receiver(post_save, sender=CustomUser)
 def create_only_teacher(sender, instance, created, **kwargs):
-    if instance.role == "Викладач":
+    if created and instance.role == "Викладач":
         OnlyTeacher.objects.get_or_create(teacher_id=instance)
 
 class Stream(models.Model):
-    specialty_name = models.CharField(max_length=100)
     stream_code = models.CharField(max_length=100, unique=True)
-    edu_degree = models.CharField(max_length=50, choices=[
-        ('Бакалавр', 'Бакалавр'),
-        ('Магістр', 'Магістр'),
-    ], null=True, blank=False)
+    specialty = models.ForeignKey('Specialty', on_delete=models.CASCADE,
+                                 related_name='streams',
+                                 verbose_name="Спеціальність",
+                                 null=True, blank=True)  # Тимчасово nullable для міграції
+    work_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Назва роботи")
+    specialty_name = models.CharField(max_length=100, blank=True, null=True,
+                                     help_text="Застаріле поле, буде видалено після міграції")
     
-    def __str__(self):
-        edu_degree_display = self.get_edu_degree_display() if self.edu_degree else "Не вказано"
-        return f"{self.stream_code} ({edu_degree_display})"
+    class Meta:
+        verbose_name = "Потік"
+        verbose_name_plural = "Потоки"
+    
+    def bachelors_or_masters(self):
+        if self.stream_code.endswith('м'):
+            return 'Магістри'
+        return 'Бакалаври'
+    
+    def clean(self):
+        """Validate stream codes with proper faculty prefix and course number"""
+        super().clean()
+        
+        # Регулярний вираз для перевірки формату коду потоку
+        # Допустимі коди: ФЕС-1, ФЕП-2, ФЕЛ-3, ФЕІ-4, ФЕМ-2, ФЕІ-2м, ФЕМ-1м
+        pattern = r'^(ФЕ[СПЛІМ])-([1-4])(?:м)?$'
+        
+        match = re.match(pattern, self.stream_code)
+        if not match:
+            raise ValidationError({
+                'stream_code': "Код потоку має бути у форматі 'ФЕС-1', 'ФЕП-2', 'ФЕЛ-3', 'ФЕІ-4', 'ФЕМ-2', 'ФЕІ-2м' або 'ФЕМ-1м'."
+            })
+        
+        faculty = match.group(1)
+        course_number = int(match.group(2))
+        
+        # Перевірка обмежень для магістерських програм
+        if self.stream_code.endswith('м'):
+            if faculty not in ['ФЕІ', 'ФЕМ']:
+                raise ValidationError({
+                    'stream_code': "Магістерські програми (з кодом, що закінчується на 'м') можуть бути лише для ФЕІ та ФЕМ."
+                })
+            if course_number > 2:
+                raise ValidationError({
+                    'stream_code': "Магістерські програми можуть бути лише для курсів 1 або 2."
+                })
+        else:
+            if course_number > 4:
+                raise ValidationError({
+                    'stream_code': "Код потоку для бакалаврів не може бути більшим за 4 (наприклад, ФЕІ-4)."
+                })
 
-  
-    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.stream_code} ({self.bachelors_or_masters()})"
+
 class Slot(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
     stream_id = models.ForeignKey(Stream, on_delete=models.CASCADE)
@@ -63,6 +113,8 @@ class Slot(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['teacher_id', 'stream_id'], name='unique_teacher_stream')
         ]
+        verbose_name = "Місце"
+        verbose_name_plural = "Місця"
 
     def __str__(self):
         available = self.quota - self.occupied
@@ -118,6 +170,35 @@ class Slot(models.Model):
         super().save(*args, **kwargs)
 
 class Request(models.Model):
+    # Додаємо нові поля
+    topic_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Назва теми")
+    topic_description = models.TextField(blank=True, null=True, verbose_name="Опис теми")
+    is_topic_locked = models.BooleanField(default=False, verbose_name="Тема затверджена і заблокована")
+
+    # Існуючі поля залишаються без змін
+    teacher_theme = models.ForeignKey(
+        'TeacherTheme',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='requests',
+        verbose_name="Тема викладача",
+    )
+    approved_student_theme = models.ForeignKey(
+        'StudentTheme',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_requests',
+        verbose_name="Затверджена тема студента",
+    )
+    custom_student_theme = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Довільна тема студента"
+    )
+
     STATUS = [
         ('Очікує', 'Очікує'),
         ('Активний', 'Активний'),
@@ -125,18 +206,13 @@ class Request(models.Model):
         ('Завершено', 'Завершено'),
     ]
     student_id = models.ForeignKey('users.CustomUser', 
-                                   on_delete=models.CASCADE, 
+                                   on_delete=models.SET_NULL, 
+                                   null=True,
                                    limit_choices_to={'role': 'Студент'}, 
                                    unique=False,
                                    related_name='users_student_requests')
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.SET_NULL, null=True)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, null=True, blank=True)
-    teacher_theme = models.ForeignKey('TeacherTheme', on_delete=models.CASCADE, 
-                                    null=True, blank=True)
-    # Якщо затверджено студентську тему, зберігаємо її тут
-    approved_student_theme = models.ForeignKey('StudentTheme', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_requests', help_text='Затверджена студентська тема для цього запиту (якщо обрано тему студента)')
-    # Довільна тема студента для введення в адмінці
-    custom_student_theme = models.CharField(max_length=200, blank=True, null=True, help_text='Довільна тема студента (для введення в адмінці)')
     motivation_text = models.TextField(
         blank=True,
         max_length=500,
@@ -155,6 +231,10 @@ class Request(models.Model):
         ('Дипломна', 'Дипломна'),
         ('Магістерська', 'Магістерська'),
     ], default='Курсова', help_text='Тип роботи, яку студент планує виконувати', blank=False)
+
+    class Meta:
+        verbose_name = "Запит"
+        verbose_name_plural = "Запити"
 
     @property
     def is_active(self):
@@ -184,54 +264,82 @@ class Request(models.Model):
         return None
     
     def save(self, *args, **kwargs):
-        """
-        Assigns the correct Slot before saving.
-        """
-        if not self.slot:  # Only assign slot if not manually set
+        # Перевіряємо чи змінюється статус і чи потрібно заблокувати тему
+        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
+            self.is_topic_locked = True
+            
+            # Зберігаємо тему в текстове поле при затвердженні
+            if self.teacher_theme:
+                self.topic_name = self.teacher_theme.theme
+                self.topic_description = self.teacher_theme.theme_description
+            elif self.approved_student_theme:
+                self.topic_name = self.approved_student_theme.theme
+            elif self.custom_student_theme:
+                self.topic_name = self.custom_student_theme
+
+        # Захист від зміни заблокованої теми - перевіряємо ТІЛЬКИ якщо тема вже заблокована
+        if self.is_topic_locked and self.pk:  # Перевіряємо тільки для існуючих об'єктів
+            try:
+                original = Request.objects.get(pk=self.pk)
+                if original.is_topic_locked and original.topic_name != self.topic_name:  # Додаємо перевірку is_topic_locked
+                    raise ValidationError("Неможливо змінити затверджену тему")
+            except Request.DoesNotExist:
+                pass
+
+        # Існуюча логіка для слотів
+        if not self.slot:
             student_stream_code = self.extract_stream_from_academic_group()
-            print(f"Extracted stream code: {student_stream_code}")
             if not student_stream_code:
                 raise ValidationError("Student academic group is missing or invalid.")
 
-            # Find the corresponding Stream object
             try:
                 stream = Stream.objects.get(stream_code=student_stream_code)
-                print(f"Found stream: {stream}")
             except Stream.DoesNotExist:
                 raise ValidationError(f"No stream found with code: {student_stream_code}")
 
-            # Find an available slot for this teacher in this stream
             available_slot = Slot.objects.filter(
                 teacher_id=self.teacher_id,
                 stream_id=stream
             ).filter(occupied__lt=models.F('quota')).first()
-            
-            print(f"Available slot found: {available_slot}")
 
             if not available_slot:
                 raise ValidationError(f"Немає вільних місць у викладача {self.teacher_id} для потоку {stream.stream_code}")
 
-            # Assign the found slot
             self.slot = available_slot
 
-        # Handle slot availability when request status changes
-        if self.pk:  # Check if the request already exists
-            old_request = Request.objects.get(pk=self.pk)
-            if old_request.request_status != self.request_status:
-                if self.request_status == 'Активний':
-                    self.slot.update_occupied_slots(+1)
-                elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
-                    self.slot.update_occupied_slots(-1)
-
+        # Встановлення навчального року
         if not self.academic_year:
             current_year = timezone.now().year
             month = timezone.now().month
-            if month >= 9:  # Якщо після вересня
+            if month >= 9:
                 self.academic_year = f"{current_year}/{str(current_year + 1)[-2:]}"
             else:
                 self.academic_year = f"{current_year - 1}/{str(current_year)[-2:]}"
 
+        # Обробка зміни статусу для слотів (переносимо після встановлення academic_year)
+        status_changed = False
+        if self.pk:
+            try:
+                old_request = Request.objects.get(pk=self.pk)
+                if old_request.request_status != self.request_status:
+                    status_changed = True
+            except Request.DoesNotExist:
+                pass
+
+        # Завжди викликаємо super().save() в кінці
         super().save(*args, **kwargs)
+        
+        # Після збереження обробляємо зміни статусу
+        if status_changed:
+            if self.request_status == 'Активний':
+                self.slot.update_occupied_slots(+1)
+            elif old_request.request_status == 'Активний' and self.request_status != 'Активний':
+                self.slot.update_occupied_slots(-1)
+                
+            # Free teacher theme when request is completed or rejected
+            if self.request_status in ['Завершено', 'Відхилено'] and self.teacher_theme:
+                self.teacher_theme.is_occupied = False
+                self.teacher_theme.save()
     
     def get_themes_display(self):
         """
@@ -240,40 +348,259 @@ class Request(models.Model):
         student_themes_list = ", ".join([theme.theme for theme in self.student_themes.all()])
         teacher_theme_name = self.teacher_theme.theme if self.teacher_theme else "No teacher theme"
         return teacher_theme_name, student_themes_list
+    
+    def get_theme_display(self):
+        # Якщо є topic_name (після підтвердження), показуємо його
+        if self.topic_name:
+            return self.topic_name
+        
+        # Інакше показуємо тему з ForeignKey
+        if self.custom_student_theme:
+            return f"{self.custom_student_theme} (довільна тема студента)"
+        elif self.approved_student_theme:
+            return f"{self.approved_student_theme.theme} (запропоновано студентом)"
+        elif self.teacher_theme:
+            return self.teacher_theme.theme
+        
+        return "Тема не вказана"
+    
+    @property
+    def theme_display(self):
+        return self.get_theme_display()
 
     def __str__(self):
-        return self.student_id.first_name + ' ' + self.student_id.last_name + ' - ' + self.teacher_id.teacher_id.first_name + ' ' + self.teacher_id.teacher_id.last_name    
+        student_name = f"{self.student_id.first_name} {self.student_id.last_name}" if self.student_id else "Видалений студент"
+        teacher_name = f"{self.teacher_id.teacher_id.first_name} {self.teacher_id.teacher_id.last_name}" if self.teacher_id and self.teacher_id.teacher_id else "Видалений викладач"
+        return f"{student_name} - {teacher_name}"    
     
 class TeacherTheme(models.Model):
-    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.CASCADE)
+    teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.SET_NULL, null=True, related_name='themes')
     theme = models.CharField(max_length=100)
-    theme_description = models.TextField()
+    theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
-    
+    is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False, help_text='Позначає, чи тема була видалена (неактивна)')
+    streams = models.ManyToManyField(Stream, blank=True, related_name='teacher_themes')
+
+    class Meta:
+        verbose_name = "Тема викладача"
+        verbose_name_plural = "Теми викладачів"
+        ordering = ['teacher_id__teacher_id__last_name', 'theme']
+
     def __str__(self):
-        return self.theme
+        status = "🟢" if self.is_active else "🔴"
+        return f"{status} {self.theme}"
+    
+    def can_be_deleted(self):
+        """Перевіряє чи можна фізично видалити тему"""
+        # Перевіряємо чи тема використовується тільки в завершених запитах
+        active_requests = Request.objects.filter(
+            teacher_theme=self,
+            request_status__in=['Очікує', 'Активний']
+        ).exists()
+        
+        # Можна видалити якщо немає активних запитів
+        return not active_requests
+    
+    def force_delete(self):
+        """Фізично видаляє тему незалежно від статусу"""
+        super().delete()
+
+    def delete(self, force=False, *args, **kwargs):
+        """
+        Видаляє тему з перевіркою можливості видалення
+        Args:
+            force (bool): Якщо True, видаляє тему незалежно від статусу
+        """
+        if force or self.can_be_deleted():
+            return super().delete(*args, **kwargs)
+        self.soft_delete()
+        return False
+
+    def soft_delete(self):
+        """Логічне видалення теми"""
+        self.is_deleted = True
+        self.is_active = False
+        self.save()
+
+    def activate(self):
+        """Активація теми"""
+        self.is_active = True
+        self.is_deleted = False
+        self.save()
+
+    def deactivate(self):
+        """Деактивація теми"""
+        print(f"Before deactivate: is_active={self.is_active}, is_deleted={self.is_deleted}")
+        self.is_active = False
+        self.is_deleted = False
+        print(f"After setting values: is_active={self.is_active}, is_deleted={self.is_deleted}")
+        self.save()
+        self.refresh_from_db()  # Перечитуємо з бази
+        print(f"After save: is_active={self.is_active}, is_deleted={self.is_deleted}")
+    
+    def get_active_requests_count(self):
+        """Повертає кількість активних запитів для цієї теми"""
+        return Request.objects.filter(
+            teacher_theme=self,
+            request_status__in=['Очікує', 'Активний']
+        ).count()
+    
+    def get_streams_display(self):
+        """Повертає список потоків у вигляді рядка"""
+        streams = self.streams.all()
+        if streams:
+            return ', '.join([stream.stream_code for stream in streams])
+        return 'Без потоку'
+    
+    @classmethod
+    def get_active_themes(cls):
+        """Повертає лише активні теми"""
+        return cls.objects.filter(is_active=True)
+
 
 class StudentTheme(models.Model):
-    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='users_student_themes')
+    student_id = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, limit_choices_to={'role': 'Студент'}, related_name='users_student_themes')
     request = models.ForeignKey('Request', on_delete=models.CASCADE, related_name='student_themes')
     theme = models.CharField(max_length=100)
     
     def __str__(self):
         return self.theme 
 
+ 
+
 class OnlyStudent(models.Model):
+    """
+    Нова модель студента з нормалізованою структурою
+    Студент належить до групи, а група - до потоку
+    """
     student_id = models.OneToOneField('users.CustomUser', 
                                     on_delete=models.CASCADE, 
                                     primary_key=True,
-                                    limit_choices_to={'role': 'student'},
-                                    related_name='catalog_student_profile')
-    speciality = models.CharField(max_length=100)
-    course = models.IntegerField()
-    additional_email = models.EmailField(blank=True, null=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
+                                    limit_choices_to={'role': 'Студент'},
+                                    related_name='catalog_student_profile_new')
+    group = models.ForeignKey('Group', on_delete=models.CASCADE,
+                             related_name='students',
+                             verbose_name="Група")
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="Кафедра")
+    additional_email = models.EmailField(blank=True, null=True, verbose_name="Додатковий email")
+    phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Телефон")
+    
+    class Meta:
+        verbose_name = "Студент"
+        verbose_name_plural = "Студенти"
+    
+    @property
+    def specialty(self):
+        """Повертає спеціальність через групу -> потік -> спеціальність"""
+        return self.group.stream.specialty
+    
+    @property
+    def faculty(self):
+        """Повертає факультет через групу -> потік -> спеціальність -> факультет"""
+        return self.group.stream.specialty.faculty
+    
+    @property
+    def education_level(self):
+        """Повертає рівень освіти зі спеціальності"""
+        return self.group.stream.specialty.education_level
+    
+    @property
+    def course(self):
+        """Вираховує курс з коду потоку (наприклад, ФЕС-2 -> курс 2)"""
+        import re
+        match = re.match(r'^[А-ЯІЇЄҐ]+-(\d)', self.group.stream.stream_code)
+        if match:
+            return int(match.group(1))
+        return None
+    
+    def __str__(self):
+        return f"Student: {self.student_id.get_full_name()} ({self.group.group_code})"
+
+# Нові моделі для нормалізації структури
+class Faculty(models.Model):
+    """
+    Факультети - найвищий рівень в ієрархії
+    """
+    name = models.CharField(max_length=150, unique=True, verbose_name="Назва факультету")
+    short_name = models.CharField(max_length=50, unique=True, verbose_name="Коротка назва англійською",
+                                 help_text="Наприклад: electronics, philosophy, mechanics")
+    
+    class Meta:
+        verbose_name = "Факультет"
+        verbose_name_plural = "Факультети"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+class Specialty(models.Model):
+    """
+    Спеціальності - належать факультету
+    """
+    EDUCATION_LEVELS = [
+        ('bachelor', 'Бакалавр'),
+        ('master', 'Магістр'),
+        ('phd', 'Доктор філософії'),
+    ]
+    
+    name = models.CharField(max_length=150, verbose_name="Назва спеціальності")
+    code = models.CharField(max_length=20, verbose_name="Код спеціальності",
+                           help_text="Наприклад: 121, 122, 123")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, 
+                               related_name='specialties',
+                               verbose_name="Факультет")
+    education_level = models.CharField(max_length=50, choices=EDUCATION_LEVELS,
+                                     verbose_name="Рівень освіти")
+    
+    class Meta:
+        verbose_name = "Спеціальність"
+        verbose_name_plural = "Спеціальності"
+        unique_together = ['code', 'faculty', 'education_level']
+        ordering = ['faculty', 'name']
+    
+    def __str__(self):
+        return f"{self.code} - {self.name} ({self.get_education_level_display()})"
+
+class Group(models.Model):
+    """
+    Групи - належать потоку
+    """
+    group_code = models.CharField(max_length=50, unique=True, 
+                                 verbose_name="Код групи",
+                                 help_text="Наприклад: ІМ-21, ПМ-31")
+    stream = models.ForeignKey('Stream', on_delete=models.CASCADE,
+                              related_name='groups',
+                              verbose_name="Потік")
+    
+    class Meta:
+        verbose_name = "Група"
+        verbose_name_plural = "Групи"
+        ordering = ['group_code']
 
     def __str__(self):
-        return f"Student: {self.student_id.get_full_name()}" 
+        return self.group_code
+    
+class Department(models.Model):
+    """
+    Кафедри - належать факультету
+    """
+    department_name = models.CharField(max_length=200, unique=True, 
+                                 verbose_name="Назва кафедри",
+                                 help_text="Наприклад: Кафедра комп'ютерних наук")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, 
+                               related_name='departments',
+                               verbose_name="Факультет")
+    
+    
+    class Meta:
+        verbose_name = "Кафедра"
+        verbose_name_plural = "Кафедри"
+        ordering = ['department_name']
+
+    def __str__(self):
+        return self.department_name
 
 class RequestFile(models.Model):
     """
@@ -281,10 +608,11 @@ class RequestFile(models.Model):
     """
     request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to='request_files/%Y/%m/%d/')
-    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     version = models.IntegerField(default=1)  
     description = models.TextField(blank=True)  
+    is_archived = models.BooleanField(default=False, verbose_name="Збережено в архіві")
 
     class Meta:
         ordering = ['-uploaded_at']
@@ -303,9 +631,10 @@ class FileComment(models.Model):
     Model for storing comments on request files.
     """
     file = models.ForeignKey(RequestFile, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    author = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True)
     text = models.TextField()
     attachment = models.FileField(upload_to='comment_attachments/%Y/%m/%d/', blank=True, null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -328,3 +657,75 @@ class FileComment(models.Model):
         if self.attachment:
             return self.attachment.name.split('/')[-1]
         return None
+
+class Announcement(models.Model):
+    AUTHOR_TYPES = [
+        ('faculty', 'Факультет'),
+        ('department', 'Кафедра'),
+    ]
+
+    ANNOUNCEMENT_TYPES = [
+        ('primary', 'Основне'),
+        ('warning', 'Попередження'),
+        ('success', 'Успішне'),
+    ]
+
+    title = models.CharField(max_length=255, verbose_name="Назва оголошення")
+    content = models.TextField(verbose_name="Текст оголошення")
+    author_type = models.CharField(max_length=20, choices=AUTHOR_TYPES, verbose_name="Тип автора")
+    author_faculty = models.ForeignKey(
+        'Faculty',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="announcements",
+        verbose_name="Факультет"
+    )
+    author_department = models.ForeignKey(
+        'Department',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="announcements",
+        verbose_name="Кафедра"
+    )
+    announcement_type = models.CharField(
+        max_length=20,
+        choices=ANNOUNCEMENT_TYPES,
+        default='primary',
+        verbose_name="Тип оголошення"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Активне")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Оголошення"
+        verbose_name_plural = "Оголошення"
+
+    def clean(self):
+        """Валідація відповідності author_type"""
+        # Якщо тип = faculty, але не вказаний факультет
+        if self.author_type == 'faculty' and not self.author_faculty:
+            raise ValidationError("Оберіть факультет для оголошення типу 'факультет'.")
+        
+        # Якщо тип = faculty, але хтось вибрав кафедру (не можна)
+        if self.author_type == 'faculty' and self.author_department:
+            raise ValidationError("Не можна обирати кафедру для оголошення типу 'факультет'.")
+
+        # Якщо тип = department, але не вказана кафедра
+        if self.author_type == 'department' and not self.author_department:
+            raise ValidationError("Оберіть кафедру для оголошення типу 'кафедра'.")
+
+        # Якщо тип = department і вже є 4 активних оголошення
+        if self.author_type == 'department' and self.author_department:
+            count = Announcement.objects.filter(
+                author_department=self.author_department,
+                is_active=True
+            ).exclude(pk=self.pk).count()
+            if count >= 4:
+                raise ValidationError("Максимум 4 активних оголошення для кафедри.")
+
+
+    def __str__(self):
+        return f"[{self.get_announcement_type_display()}] {self.title}"
+

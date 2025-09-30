@@ -19,11 +19,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.catalog import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('apps.catalog.urls')),
+    path('', views.home, name='home'),  # Home page
     path('users/', include('apps.users.urls')),
+    path('catalog/', include('apps.catalog.urls')),
     path('notifications/', include('apps.notifications.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

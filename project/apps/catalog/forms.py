@@ -46,12 +46,6 @@ class FilteringSearchingForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
         required=False
     )
-    academic_levels = forms.MultipleChoiceField(
-        label='Науковий ступінь',
-        choices=[],
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-checkbox'}),
-        required=False
-    )
     slots = forms.IntegerField(
         label='Кількість місць',
         widget=forms.NumberInput(attrs={
@@ -73,14 +67,12 @@ class FilteringSearchingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        departments = CustomUser.objects.values_list('department', flat=True).distinct()
+        # Беремо кафедри з Department моделі
+        from .models import Department
+        departments = Department.objects.values_list('department_name', flat=True).distinct()
         self.fields['departments'].choices = [
-            (department, (department[:25] + '...' if len(department) > 25 else department))
-            for department in departments if department
-        ]
-        academic_levels = OnlyTeacher.objects.values_list('academic_level', flat=True).distinct()
-        self.fields['academic_levels'].choices = [
-            (level, level) for level in academic_levels if level
+            (dept, (dept[:25] + '...' if len(dept) > 25 else dept))
+            for dept in departments
         ]
         slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
         min_slots = min(slot_values) if slot_values else 1
@@ -129,15 +121,34 @@ class RequestForm(forms.ModelForm):
         label=''              # якщо хочеш забрати лейбл
     )
 
-    def __init__(self, teacher_id, *args, **kwargs):
+    def __init__(self, teacher_id, user=None, *args, **kwargs):
         """
         Initializes the form. 
-        Fetches themes that are not occupied for the current teacher.
+        Fetches themes that are not occupied for the current teacher and match student's stream.
         Sets 'teacher_themes' and 'student_themes' as optional fields.
         """
         super(RequestForm, self).__init__(*args, **kwargs)
         # Query all unoccupied themes for this teacher
-        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False)
+        themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False, is_deleted=False, is_active=True)
+        
+        # Filter themes by student's stream if user is provided
+        if user and hasattr(user, 'academic_group') and user.academic_group:
+            import re
+            from .models import Stream
+            
+            # Extract stream code from academic group (e.g., ФЕС-22 -> ФЕС-2)
+            is_master = "М" in user.academic_group.upper()
+            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
+            if match:
+                user_stream_code = match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
+                try:
+                    user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
+                    # Filter themes that are available for this stream
+                    themes = themes.filter(streams=user_stream)
+                except Stream.DoesNotExist:
+                    # If stream not found, show no themes
+                    themes = themes.none()
+
         self.themes_list = [(theme.theme, theme.theme) for theme in themes]
         
         # Mark these fields as optional
@@ -171,7 +182,7 @@ class RequestForm(forms.ModelForm):
         
         # Check if either teacher theme or student theme is provided
         if not teacher_theme and not student_themes:
-            raise forms.ValidationError('Ви повинні вибрати запропоновану тему або ввести власну.')
+            raise forms.ValidationError('Ви повинні обрати запропоновану тему або ввести власну.')
         
         # Limit the number of student themes to three
         if len(student_themes) > 3:

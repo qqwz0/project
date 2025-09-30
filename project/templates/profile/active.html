@@ -43,16 +43,25 @@
 
                 <!-- Секція файлів -->
                 <div class="files-section mt-4">
-                        <h4 class="d-flex align-items-center">
-                            <span class="paperclip-icon">📎</span> Файли
-                        </h4>
                         {% with files=active_request_files|get_item:request_obj.id %}
-                            <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" class="files-scroll-container">
+                            <!-- Контейнер для файлів з заголовком усередині -->
+                            <div class="files-scroll-container">
+                                <div class="files-header">Файли</div>
                                 {% for file in files %}
                                     <div class="file-block">
                                         <div class="file-header">
-                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-title-block">
+                                                <div class="file-name file-name-ellipsis">{{ file.get_filename }}</div>
+                                                <div class="file-meta">
+                                                    <span class="file-owner">{{ file.uploaded_by.get_full_name }}</span>
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-role">{{ file.uploaded_by.role }}</span>
+                                                    {% if file.uploaded_at %}
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-date">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                             <div class="file-actions">
                                                 <a href="{% url 'download_file' file.pk %}" class="download-button">
                                                     <i class="fas fa-download download-icon"></i>
@@ -66,22 +75,30 @@
                                                 {% endif %}
                                             </div>
                                         </div>
-                                        
-                                        <!-- Секція опису файлу -->
                                         <div class="file-description-block">
-                                            <p class="file-description-text">
-                                                <strong>Опис:</strong><br>
-                                                {{ file.description }}
-                                            </p>
+                                            {% if file.description %}
+                                                <p class="file-description-text subtle">{{ file.description }}</p>
+                                            {% endif %}
                                         </div>
 
-                                        <!-- Показуємо коментарі викладача для студента -->
-                                        {% if file.comments.all %}
-                                        <div class="teacher-comments-block">
-                                            <h6 class="teacher-comments-title">Коментарі викладача:</h6>
+                                        <!-- Коментарі (обидві ролі) -->
+                                        <div class="file-comments">
+                                            <div class="comments-header">
+                                                <span>Коментарі ({{ file.comments.count }})</span>
+                                            </div>
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}" data-comment-id="{{ comment.id }}">
+                                                        {% if comment.parent %}
+                                                        <!-- Цитування батьківського коментаря -->
+                                                        <div class="quoted-comment">
+                                                            <div class="quoted-comment-header">
+                                                                <span class="quoted-author">{{ comment.parent.author.get_full_name }}</span>
+                                                                <span class="quoted-date">{{ comment.parent.created_at|date:"d.m.y H:i" }}</span>
+                                                            </div>
+                                                            <p class="quoted-text">{{ comment.parent.text|truncatechars:100 }}</p>
+                                                        </div>
+                                                        {% endif %}
                                                         <div class="comment-header">
                                                             <span class="comment-author">{{ comment.author.get_full_name }}</span>
                                                             <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
@@ -95,14 +112,29 @@
                                                             </a>
                                                         </div>
                                                         {% endif %}
-                                                        {% if user == comment.author %}
+                                                        <div class="comment-actions">
+                                                            <button class="reply-btn" type="button" data-parent-id="{{ comment.id }}" data-author="{{ comment.author.get_full_name }}">Відповісти</button>
+                                                            {% if user == comment.author %}
                                                             <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
-                                                        {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
+                                                {% empty %}
+                                                    <p class="no-files" style="margin: 8px 0 0;">Коментарів ще немає</p>
                                                 {% endfor %}
                                             </div>
+
+                                            <!-- Інпут під списком -->
+                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mt-2 reply-form" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="replying-pill"><span class="replying-to"></span><button type="button" class="replying-clear">Скасувати</button></div>
+                                                <input type="hidden" name="parent_id" value="" class="reply-parent-input">
+                                                <div class="comment-input-bar">
+                                                    <textarea name="text" class="form-control comment-textarea" rows="1" placeholder="Додайте коментар..."></textarea>
+                                                    <button type="submit" class="add-comment-btn">Відправити</button>
+                                                </div>
+                                            </form>
                                         </div>
-                                        {% endif %}
                                     </div>
                                 {% empty %}
                                     <p class="no-files">Немає завантажених файлів</p>
@@ -151,9 +183,32 @@
                         {% endwith %}
                 </div>
             </div>
+            {% if user.role == "Студент" and request_obj.send_contacts %}
+                <div class="teacher-contacts" style="margin-top: 15px; padding: 12px; background-color: #f0f4fd; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin-top: 0; margin-bottom: 8px; color: #2563eb; font-size: 16px; font-weight: 600;">
+                        <i class="fas fa-address-card" style="margin-right: 5px;"></i> Контакти викладача
+                    </h4>
+                    {% if request_obj.teacher_id.additional_email %}
+                        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                            <i class="fas fa-envelope" style="color: #2563eb; margin-right: 8px;"></i>
+                            <a href="mailto:{{ request_obj.teacher_id.additional_email }}" style="color: #2563eb; text-decoration: none;">
+                                {{ request_obj.teacher_id.additional_email }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if request_obj.teacher_id.phone_number %}
+                        <div style="display: flex; align-items: center;">
+                            <i class="fas fa-phone" style="color: #2563eb; margin-right: 8px;"></i>
+                            <a href="tel:{{ request_obj.teacher_id.phone_number }}" style="color: #2563eb; text-decoration: none;">
+                                {{ request_obj.teacher_id.phone_number }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає активних робіт.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
@@ -212,16 +267,25 @@
 
                 <!-- Секція файлів -->
                 <div class="files-section mt-4">
-                        <h4 class="d-flex align-items-center">
-                            <span class="paperclip-icon">📎</span> Файли
-                        </h4>
                     {% with files=active_request_files|get_item:request.id %}
-                            <!-- Контейнер для файлів з прокруткою -->
-                            <div id="files-container" class="files-scroll-container">
+                            <!-- Контейнер для файлів з заголовком усередині (як у студента) -->
+                            <div class="files-scroll-container">
+                                <div class="files-header">Файли</div>
                                 {% for file in files %}
                                     <div class="file-block">
                                         <div class="file-header">
-                                            <span class="file-name-ellipsis">{{ file.get_filename }}</span>
+                                            <div class="file-title-block">
+                                                <div class="file-name file-name-ellipsis">{{ file.get_filename }}</div>
+                                                <div class="file-meta">
+                                                    <span class="file-owner">{{ file.uploaded_by.get_full_name }}</span>
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-role">{{ file.uploaded_by.role }}</span>
+                                                    {% if file.uploaded_at %}
+                                                    <span class="file-dot">·</span>
+                                                    <span class="file-date">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                             <div class="file-actions">
                                                 <a href="{% url 'download_file' file.pk %}" class="download-button">
                                                     <i class="fas fa-download download-icon"></i>
@@ -235,64 +299,32 @@
                                                 {% endif %}
                                             </div>
                                         </div>
-                                        
+
                                         <!-- Секція опису файлу -->
                                         <div class="file-description-block">
-                                            <p class="file-description-text">
-                                                <strong>Опис:</strong><br>
-                                                {{ file.description }}
-                                            </p>
+                                            {% if file.description %}
+                                                <p class="file-description-text subtle">{{ file.description }}</p>
+                                            {% endif %}
                                         </div>
 
-                                        <!-- Секція коментарів -->
+                                        <!-- Коментарі (обидві ролі) -->
                                         <div class="file-comments">
-                                            <h6 class="file-comments-title">Коментарі:</h6>
-                                            
-                                            <!-- Форма додавання коментаря -->
-                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mb-3" enctype="multipart/form-data">
-                                                {% csrf_token %}
-                                                <div class="form-group">
-                                                    <textarea name="text" class="form-control comment-textarea" rows="2" placeholder="Додайте коментар..." style="width: 100%; padding: 8px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px;"></textarea>
-                                                    {% if user.role == "Викладач" %}
-                                                    <div class="file-attachment-wrapper">
-                                                        <div class="custom-file" style="margin-bottom: 8px;">
-                                                            <input type="file" 
-                                                                   name="attachment" 
-                                                                   class="custom-file-input" 
-                                                                   id="comment-file-{{ file.pk }}" 
-                                                                   style="display: none;"
-                                                                   onchange="updateCommentFile(this)">
-                                                            <label for="comment-file-{{ file.pk }}" class="comment-file-label">
-                                                                <i class="fas fa-paperclip"></i> Вибрати файл
-                                                            </label>
-                                                            <span id="file-label-{{ file.pk }}" class="file-label">Файл не вибрано</span>
-                                                        </div>
-                                                        <div id="attachment-feedback-{{ file.pk }}" class="attachment-feedback">
-                                                            <span class="attachment-message">
-                                                                <i class="fas fa-check-circle attachment-check"></i> 
-                                                                <span>Файл додано і буде завантажено при відправці коментаря</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                                <button type="submit" class="add-comment-btn">Додати коментар</button>
-                                                <div class="comment-status">
-                                                    <div class="sending-status">
-                                                        <i class="fas fa-spinner fa-spin"></i>
-                                                        <span>Відправляємо коментар...</span>
-                                                    </div>
-                                                    <div class="success-status">
-                                                        <i class="fas fa-check-circle"></i>
-                                                        <span>Коментар успішно додано</span>
-                                                    </div>
-                                                </div>
-                                            </form>
-
-                                            <!-- Список коментарів -->
+                                            <div class="comments-header">
+                                                <span>Коментарі ({{ file.comments.count }})</span>
+                                            </div>
                                             <div class="comments-list">
                                                 {% for comment in file.comments.all %}
-                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}">
+                                                    <div class="comment-block {% if comment.author.role == 'Викладач' %}teacher-bg{% else %}student-bg{% endif %}" data-comment-id="{{ comment.id }}">
+                                                        {% if comment.parent %}
+                                                        <!-- Цитування батьківського коментаря -->
+                                                        <div class="quoted-comment">
+                                                            <div class="quoted-comment-header">
+                                                                <span class="quoted-author">{{ comment.parent.author.get_full_name }}</span>
+                                                                <span class="quoted-date">{{ comment.parent.created_at|date:"d.m.y H:i" }}</span>
+                                                            </div>
+                                                            <p class="quoted-text">{{ comment.parent.text|truncatechars:100 }}</p>
+                                                        </div>
+                                                        {% endif %}
                                                         <div class="comment-header">
                                                             <span class="comment-author">{{ comment.author.get_full_name }}</span>
                                                             <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
@@ -306,12 +338,28 @@
                                                             </a>
                                                         </div>
                                                         {% endif %}
-                                                        {% if user == comment.author %}
+                                                        <div class="comment-actions">
+                                                            <button class="reply-btn" type="button" data-parent-id="{{ comment.id }}" data-author="{{ comment.author.get_full_name }}">Відповісти</button>
+                                                            {% if user == comment.author %}
                                                             <button class="delete-comment-btn" data-comment-id="{{ comment.id }}">Видалити</button>
-                                                        {% endif %}
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
+                                                {% empty %}
+                                                    <p class="no-files" style="margin: 8px 0 0;">Коментарів ще немає</p>
                                                 {% endfor %}
                                             </div>
+
+                                            <!-- Інпут під списком -->
+                                            <form method="post" action="/catalog/file/{{ file.pk }}/comment/" class="mt-2 reply-form" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="replying-pill"><span class="replying-to"></span><button type="button" class="replying-clear">Скасувати</button></div>
+                                                <input type="hidden" name="parent_id" value="" class="reply-parent-input">
+                                                <div class="comment-input-bar">
+                                                    <textarea name="text" class="form-control comment-textarea" rows="1" placeholder="Додайте коментар..."></textarea>
+                                                    <button type="submit" class="add-comment-btn">Відправити</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 {% empty %}
@@ -347,18 +395,27 @@
                 </div>
 
                 <!-- Complete button -->
-                <div class="complete-section">
-                    <div class="section-header" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: flex-end;">
+                <div class="actions-container">
+                    <div class="action-block">
+                        <p>Ця дія скасує роботу та буде незворотною.
+
+                        </p>
+                        <button onclick="showCancelModal('{{ request.id }}')" class="cancel-button">
+                            <i class="fas fa-times-circle" style="margin-right: 8px; font-size: 18px;"></i> Скасувати роботу
+                        </button>
                     </div>
-                    <p style="margin-bottom: 15px; color: #4B5563; font-size: 14px;">Після натискання на кнопку "Завершити роботу" ви зможете виставити фінальну оцінку та перенести роботу до архіву.</p>
-                    <button onclick="showCompleteModal('{{ request.id }}')" class="complete-button">
-                        <i class="fas fa-check-circle" style="margin-right: 8px; font-size: 18px;"></i> Завершити роботу
-                    </button>
+
+                    <div class="action-block align-right">
+                        <p>Після натискання на кнопку "Завершити роботу" ви зможете виставити фінальну оцінку та перенести роботу до архіву.</p>
+                        <button onclick="showCompleteModal('{{ request.id }}')" class="complete-button">
+                            <i class="fas fa-check-circle" style="margin-right: 8px; font-size: 18px;"></i> Завершити роботу
+                        </button>
+                    </div>
                 </div>
             </div>
         {% endfor %}
     {% else %}
-        {% if request.user == profile_user %}
+        {% if is_own_profile %}
             <p class="no-active-works">У вас немає активних робіт.</p>
         {% else %}
             <p class="no-active-works">Тут пусто.</p>
@@ -373,24 +430,37 @@
 
 <!-- Модальне вікно для редагування теми -->
 <div id="editThemeModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Редагувати тему роботи</h3>
-            <span class="close" onclick="closeEditThemeModal()">&times;</span>
-        </div>
-        <div class="modal-body">
+    <div class="edit-theme-modal-content">
+        <!-- Updated close button to match completion modal style -->
+        <span class="edit-theme-close-modal" onclick="closeEditThemeModal()">&times;</span>
+        <h3>Редагувати тему роботи</h3>
+        <div class="edit-theme-modal-body">
             <form id="editThemeForm">
-                <div class="form-group">
-                    <label for="newTheme">Нова тема:</label>
-                    <textarea id="newTheme" name="newTheme" rows="3" class="form-control" placeholder="Введіть нову тему роботи..." required></textarea>
+                <div class="edit-theme-form-group">
+                    <textarea id="newTheme" name="newTheme" rows="4" class="edit-theme-form-control" placeholder="Введіть нову тему роботи..." required></textarea>
                 </div>
                 <input type="hidden" id="editThemeRequestId" name="requestId">
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeEditThemeModal()">Скасувати</button>
-                    <button type="submit" class="btn-submit">Зберегти зміни</button>
+                <!-- Updated button container and classes to match completion modal -->
+                <div class="edit-theme-modal-buttons">
+                    <button type="button" class="edit-theme-btn-cancel" onclick="closeEditThemeModal()">Скасувати</button>
+                    <button type="submit" class="edit-theme-btn-submit">Зберегти зміни</button>
                 </div>
             </form>
         </div>
+    </div>
+</div>
+<!-- Cancel modal -->
+<div id="cancelModal" class="rejection-modal">
+    <div class="rejection-modal-content">
+        <button class="rejection-modal-close" onclick="closeCancelModal()">&times;</button>
+        <h3 class="rejection-modal-header">Скасувати активну роботу</h3>
+        <form id="cancelForm" class="rejection-modal-form" onsubmit="handleCancelSubmit(event)">
+            <input type="hidden" id="cancelRequestId" name="requestId">
+            <div class="rejection-modal-form-group">
+                <textarea id="cancelReason" name="cancelReason" rows="4" class="rejection-modal-textarea" placeholder="Вкажіть причину скасування..."></textarea>
+            </div>
+            <button type="submit" class="rejection-modal-submit">Скасувати роботу</button>
+        </form>
     </div>
 </div>
 
@@ -413,23 +483,16 @@ function updateFileName(input) {
 
 // Глобальна функція для оновлення назви файлу для коментаря
 function updateCommentFile(input) {
-    console.log('File selection changed:', input.id);
     // Отримуємо ID файлу з ID поля вводу
     var fileId = input.id.replace('comment-file-', '');
-    console.log('File ID:', fileId);
     
     // Знаходимо відповідний елемент для відображення імені файлу
     var fileLabel = document.getElementById('file-label-' + fileId);
     // Знаходимо елемент для відображення повідомлення про успішне додавання
     var feedback = document.getElementById('attachment-feedback-' + fileId);
     
-    console.log('File label element:', fileLabel);
-    console.log('Feedback element:', feedback);
-    console.log('Has files:', input.files.length > 0);
-    
     // Оновлюємо текст та стилі
     if (input.files.length > 0) {
-        console.log('Selected file name:', input.files[0].name);
         fileLabel.textContent = input.files[0].name;
         fileLabel.style.color = '#000000';
         if (feedback) {
@@ -445,7 +508,6 @@ function updateCommentFile(input) {
 }
 
 $(document).ready(function() {
-    // Додаємо обробник на всі кнопки видалення
     $(document).on('click', '.delete-file-btn', function(e) {
         e.preventDefault();
         var button = $(this);
@@ -453,42 +515,39 @@ $(document).ready(function() {
         
         // Створюємо власне модальне вікно
         var modal = $(`
-            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding-top: 5%;">
-                <div style="background: white; border-radius: 0.75rem; border: 2px solid #6FCF97; padding: 1.25rem; position: relative; width: 400px; max-width: 90%;">
-                    <button type="button" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #333;">×</button>
-                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                        <div style="width: 44px; height: 44px; margin-right: 15px;">
-                            <svg viewBox="0 0 44 44" style="width: 100%; height: 100%;">
-                                <circle cx="22" cy="22" r="22" fill="#6FCF97"/>
-                                <path d="M18 24.5L14 20.5L12 22.5L18 28.5L32 14.5L30 12.5L18 24.5Z" fill="white"/>
-                            </svg>
-                        </div>
-                        <h3 style="margin: 0; font-size: 1.25rem;">Підтвердження</h3>
+            <div class="delete-modal">
+                <div class="delete-modal-content">
+                    <span class="delete-modal-close">&times;</span>
+                    <div class="delete-modal-header">
+                        <h3 class="delete-modal-title">Підтвердження</h3>
                     </div>
-                    <p style="margin-bottom: 1.5rem;">Ви впевнені, що хочете видалити цей файл?</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="cancel-button" style="padding: 8px 16px; background: #FF4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Скасувати</button>
-                        <button type="button" class="confirm-button" style="padding: 8px 16px; background: #6FCF97; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+                    <p class="delete-modal-message">Ви впевнені, що хочете видалити цей файл?</p>
+                    <div class="delete-modal-buttons">
+                        <button type="button" class="delete-modal-cancel">Скасувати</button>
+                        <button type="button" class="delete-modal-confirm">OK</button>
                     </div>
                 </div>
             </div>
         `);
         
         // Додаємо модальне вікно до body
-        $('body').append(modal);
+        $('body').append(modal).addClass('modal-open');
+        modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
-        modal.find('button:first').click(function() {
+        modal.find('.delete-modal-close').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
-        modal.find('.cancel-button').click(function() {
+        modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
-        modal.find('.confirm-button').click(function() {
+        modal.find('.delete-modal-confirm').click(function() {
             $.ajax({
                 url: url,
                 type: 'POST',
@@ -497,7 +556,9 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (response.success) {
-                        window.location.reload();
+                        button.closest('.file-block').fadeOut(300, function() {
+                            $(this).remove();
+                        });
                     } else {
                         alert('Помилка: ' + (response.error || 'Не вдалося видалити файл'));
                     }
@@ -508,18 +569,20 @@ $(document).ready(function() {
                 }
             });
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
         modal.click(function(e) {
             if ($(e.target).is(modal)) {
                 modal.remove();
+                $('body').removeClass('modal-open');
             }
         });
     });
 
-    // Обробник для форм відправки коментарів
-    $('form[action^="/catalog/file/"][action$="/comment/"]').on('submit', function(e) {
+    // Обробник для форм відправки коментарів (тільки для старих форм без reply-form)
+    $('form[action^="/catalog/file/"][action$="/comment/"]:not(.reply-form)').on('submit', function(e) {
         e.preventDefault();
         
         var form = $(this);
@@ -530,10 +593,9 @@ $(document).ready(function() {
         var commentStatus = form.find('.comment-status');
         var sendingStatus = commentStatus.find('.sending-status');
         var successStatus = commentStatus.find('.success-status');
-        var hasAttachment = form.find('input[type="file"]').prop('files').length > 0;
-        
-        console.log('Submitting comment for file ID:', fileId);
-        
+        var fileInput = form.find('input[type="file"]');
+        var hasAttachment = (fileInput.length && fileInput[0].files && fileInput[0].files.length > 0) ? true : false;
+                
         // Перевіряємо наявність тексту або файлу
         if (!commentText && !hasAttachment) {
             alert('Будь ласка, введіть текст коментаря або прикріпіть файл');
@@ -602,43 +664,40 @@ $(document).ready(function() {
         var commentId = button.data('comment-id');
         
         // Створюємо власне модальне вікно (аналогічно до видалення файлу)
-        var modal = $(
-            `<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding-top: 5%;">
-                <div style="background: white; border-radius: 0.75rem; border: 2px solid #EF4444; padding: 1.25rem; position: relative; width: 400px; max-width: 90%;">
-                    <button type="button" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #333;">×</button>
-                    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                        <div style="width: 44px; height: 44px; margin-right: 15px;">
-                            <svg viewBox="0 0 44 44" style="width: 100%; height: 100%;">
-                                <circle cx="22" cy="22" r="22" fill="#EF4444"/>
-                                <path d="M18 24.5L14 20.5L12 22.5L18 28.5L32 14.5L30 12.5L18 24.5Z" fill="white"/>
-                            </svg>
-                        </div>
-                        <h3 style="margin: 0; font-size: 1.25rem; color: #EF4444;">Підтвердження</h3>
+        var modal = $(`
+            <div class="delete-modal">
+                <div class="delete-modal-content">
+                    <span class="delete-modal-close">&times;</span>
+                    <div class="delete-modal-header">
+                        <h3 class="delete-modal-title">Підтвердження</h3>
                     </div>
-                    <p style="margin-bottom: 1.5rem;">Ви впевнені, що хочете видалити цей коментар?</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="cancel-button" style="padding: 8px 16px; background: #FF4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Скасувати</button>
-                        <button type="button" class="confirm-button" style="padding: 8px 16px; background: #6FCF97; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+                    <p class="delete-modal-message">Ви впевнені, що хочете видалити цей коментар?</p>
+                    <div class="delete-modal-buttons">
+                        <button type="button" class="delete-modal-cancel">Скасувати</button>
+                        <button type="button" class="delete-modal-confirm">OK</button>
                     </div>
                 </div>
-            </div>`
-        );
+            </div>
+        `);
         
         // Додаємо модальне вікно до body
-        $('body').append(modal);
+        $('body').append(modal).addClass('modal-open');
+        modal.css('display', 'flex');
         
         // Обробник закриття по кнопці X
-        modal.find('button:first').click(function() {
+        modal.find('.delete-modal-close').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "Скасувати"
-        modal.find('.cancel-button').click(function() {
+        modal.find('.delete-modal-cancel').click(function() {
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Обробник кнопки "OK"
-        modal.find('.confirm-button').click(function() {
+        modal.find('.delete-modal-confirm').click(function() {
             $.ajax({
                 url: '/catalog/comment/' + commentId + '/delete/',
                 type: 'POST',
@@ -657,12 +716,14 @@ $(document).ready(function() {
                 }
             });
             modal.remove();
+            $('body').removeClass('modal-open');
         });
         
         // Закриття по кліку на фон
         modal.click(function(e) {
             if ($(e.target).is(modal)) {
                 modal.remove();
+                $('body').removeClass('modal-open');
             }
         });
     });
@@ -716,8 +777,11 @@ $(document).ready(function() {
 
 // Функції для роботи з модальним вікном завершення роботи
 function showCompleteModal(requestId) {
+    document.body.classList.add('modal-open');
     const modal = document.getElementById('completeModal');
     const gradeInput = document.getElementById('grade');
+    const filesSection = document.getElementById('filesSelectionSection');
+    const filesCheckboxes = document.getElementById('filesCheckboxes');
     
     // Reset form
     document.getElementById('completeRequestId').value = requestId;
@@ -729,13 +793,56 @@ function showCompleteModal(requestId) {
         errorDiv.remove();
     }
     
+    // Завантажуємо файли для цього запиту
+    loadRequestFiles(requestId, filesCheckboxes, filesSection);
+    
     modal.style.display = "flex";
     gradeInput.focus();
+}
+
+function loadRequestFiles(requestId, filesCheckboxes, filesSection) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/users/request-files/${requestId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.files && data.files.length > 0) {
+            filesCheckboxes.innerHTML = '';
+            data.files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-checkbox-item';
+                fileDiv.innerHTML = `
+                    <label class="file-checkbox-label">
+                        <input type="checkbox" name="selected_files" value="${file.id}" checked id="file_${file.id}">
+                        <div class="file-info">
+                            <span class="file-name">${file.file_name}</span>
+                            <small class="file-meta">(${file.uploaded_at} - ${file.uploaded_by})</small>
+                        </div>
+                    </label>
+                `;
+                filesCheckboxes.appendChild(fileDiv);
+            });
+            filesSection.style.display = 'block';
+        } else {
+            filesSection.style.display = 'block';
+            filesCheckboxes.innerHTML = '<p class="text-muted">У цьому запиті немає файлів для архівування.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading files:', error);
+        filesSection.style.display = 'none';
+    });
 }
 
 function closeCompleteModal() {
     const modal = document.getElementById('completeModal');
     modal.style.display = "none";
+    document.body.classList.remove('modal-open');
     
     // Clear form and errors
     document.getElementById('completeRequestId').value = '';
@@ -786,6 +893,18 @@ function submitComplete() {
         return;
     }
 
+    // Get selected files
+    const checkboxes = document.querySelectorAll('input[name="selected_files"]');
+    const checkedBoxes = document.querySelectorAll('input[name="selected_files"]:checked');
+    
+    const selectedFiles = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+        
+    // Check if files are selected
+    if (selectedFiles.length === 0) {
+        showError('Будь ласка, оберіть хоча б один файл для збереження в архіві');
+        return;
+    }
+
     // Get CSRF token
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
@@ -795,15 +914,19 @@ function submitComplete() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Збереження...';
 
+    // Prepare data
+    const formData = new FormData();
+    formData.append('grade', grade);
+    formData.append('selected_files', JSON.stringify(selectedFiles));
+    
     // Send request to server
     fetch(`/users/complete_request/${requestId}/`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: `grade=${encodeURIComponent(grade)}`
+        body: formData
     })
     .then(response => {
         if (!response.ok) {
@@ -869,14 +992,73 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Динамічна висота контейнера файлів: показує рівно один файл (з описом і коментарями)
+function setFilesContainersHeight() {
+    const containers = document.querySelectorAll('.files-scroll-container');
+    containers.forEach(container => {
+        const firstBlock = container.querySelector('.file-block');
+        if (!firstBlock) {
+            container.style.removeProperty('--files-container-max');
+            return;
+        }
+        const header = container.querySelector('.files-header');
+        const containerStyles = getComputedStyle(container);
+        const paddingTop = parseFloat(containerStyles.paddingTop) || 0;
+        const paddingBottom = parseFloat(containerStyles.paddingBottom) || 0;
+
+        const blockStyles = getComputedStyle(firstBlock);
+        const marginTop = parseFloat(blockStyles.marginTop) || 0;
+        const marginBottom = parseFloat(blockStyles.marginBottom) || 0;
+        const blockOuter = firstBlock.offsetHeight + marginTop + marginBottom;
+        const headerHeight = header ? header.offsetHeight : 0;
+        const total = blockOuter + headerHeight + paddingTop + paddingBottom;
+        container.style.setProperty('--files-container-max', `${Math.ceil(total)}px`);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setFilesContainersHeight();
+});
+
+window.addEventListener('load', setFilesContainersHeight);
+window.addEventListener('resize', setFilesContainersHeight);
+
+// Додатково: спостерігаємо за змінами розміру першого блоку (зображення, коментарі)
+const filesResizeObservers = [];
+function observeFilesContainers() {
+    const containers = document.querySelectorAll('.files-scroll-container');
+    containers.forEach(container => {
+        const firstBlock = container.querySelector('.file-block');
+        if (!firstBlock || firstBlock._resizeObserved) return;
+
+        const ro = new ResizeObserver(() => setFilesContainersHeight());
+        ro.observe(firstBlock);
+        filesResizeObservers.push(ro);
+
+        // На випадок додавання нових елементів усередині (MutationObserver)
+        const mo = new MutationObserver(() => setFilesContainersHeight());
+        mo.observe(firstBlock, { childList: true, subtree: true });
+        filesResizeObservers.push(mo);
+
+        firstBlock._resizeObserved = true;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', observeFilesContainers);
+window.addEventListener('load', observeFilesContainers);
+</script>
+
+<script>
 // Функції для редагування теми
 function showEditThemeModal(requestId, currentTheme) {
+    document.body.classList.add('modal-open');
     document.getElementById('editThemeRequestId').value = requestId;
     document.getElementById('newTheme').value = currentTheme;
-    document.getElementById('editThemeModal').style.display = 'block';
+    document.getElementById('editThemeModal').style.display = 'flex';
 }
 
 function closeEditThemeModal() {
+    document.body.classList.remove('modal-open');
     document.getElementById('editThemeModal').style.display = 'none';
     document.getElementById('editThemeForm').reset();
 }
@@ -940,5 +1122,60 @@ document.addEventListener('keydown', function(event) {
         closeEditThemeModal();
     }
 });
-</script>
 
+function showCancelModal(requestId) {
+    document.body.classList.add('modal-open');
+    const modal = document.getElementById('cancelModal');
+    document.getElementById('cancelRequestId').value = requestId;
+    modal.style.display = 'flex';
+}
+
+function closeCancelModal() {
+    document.body.classList.remove('modal-open');
+    const modal = document.getElementById('cancelModal');
+    modal.style.display = 'none';
+    document.getElementById('cancelForm').reset();
+}
+
+function handleCancelSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const requestId = form.querySelector('#cancelRequestId').value;
+    const reason = form.querySelector('#cancelReason').value.trim();
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Скасування...';
+
+    fetch(`/users/cancel-request/${requestId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `rejected_reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeCancelModal();
+            window.location.reload();
+        } else {
+            alert('Помилка: ' + (data.error || 'Не вдалося скасувати роботу.'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Сталася помилка. Спробуйте ще раз.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
+</script>

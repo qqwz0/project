@@ -1,10 +1,8 @@
----
 name: Bug report
 about: Повідомлення про баг
-title: "[BUG] "
-labels: ["bug", "P0-Blocker"]
+title: '[BUG] '
+labels: ['bug', 'P0-Blocker']
 assignees: []
----
 
 ### Опис
 

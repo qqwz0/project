@@ -3,7 +3,7 @@ from django.db.models import Model
 from django.utils.safestring import mark_safe
 import json
 from django.templatetags.static import static
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from django.core.files.storage import default_storage
 
 register = template.Library()
 
@@ -71,9 +71,8 @@ def get_profile_picture_url(user):
     """
     if user and hasattr(user, 'profile_picture') and user.profile_picture:
         try:
-            storage = MediaCloudinaryStorage()
-            if storage.exists(user.profile_picture.name):
-                return storage.url(user.profile_picture.name)
+            if default_storage.exists(user.profile_picture.name):
+                return default_storage.url(user.profile_picture.name)
         except Exception as e:
             print(f"Error getting profile picture URL for user {user.id}: {str(e)}")
     return static('images/default-avatar.jpg')

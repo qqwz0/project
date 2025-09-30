@@ -5,7 +5,8 @@ import re  # Regular expressions
 from apps.catalog.models import (
     OnlyTeacher, 
     OnlyStudent,
-    TeacherTheme
+    TeacherTheme,
+    Specialty  # Додано для EDUCATION_LEVELS
 )
 from .models import CustomUser
 
@@ -31,14 +32,6 @@ class RegistrationForm(forms.Form):
         ('Викладач', 'Викладач'),
     ]
 
-    DEPARTMENT_CHOICES = [
-        ('Оптоелектроніки та інформаційних технологій', 'Оптоелектроніки та інформаційних технологій'),
-        ('Радіоелектроніки і комп\'ютерних систем', 'Радіоелектроніки і комп\'ютерних систем'),
-        ('Радіофізики та комп\'ютерних технологій', 'Радіофізики та комп\'ютерних технологій'),
-        ('Сенсорної та напівпровідникової електроніки', 'Сенсорної та напівпровідникової електроніки'),
-        ('Системного проектування', 'Системного проектування'),
-        ('Фізичної та біомедичної електроніки', 'Фізичної та біомедичної електроніки'),
-    ]
 
     role = forms.ChoiceField(
         choices=ROLE_CHOICES,
@@ -53,15 +46,20 @@ class RegistrationForm(forms.Form):
         widget=forms.TextInput(attrs={'placeholder': 'Академічна група', 'class': 'form-input'})
     )
 
-    department = forms.ChoiceField(
+    department = forms.ModelChoiceField(
         label='Кафедра',
-        choices=DEPARTMENT_CHOICES,
+        queryset=None,  # Буде встановлено в __init__
         required=False,
+        empty_label="Оберіть кафедру",
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Встановлюємо queryset для кафедр
+        from apps.catalog.models import Department
+        self.fields['department'].queryset = Department.objects.all()
         
         # Check if self.data is empty
         if not self.data:
@@ -98,14 +96,14 @@ class RegistrationForm(forms.Form):
             if not group:
                 raise ValidationError("Це поле обов'язкове для студентів.")
             
-            # Convert group to uppercase
+            # Convert group to uppercase first
             group = group.upper()
             self.cleaned_data['group'] = group  # Save the updated value back into cleaned_data
             
-            # Regular expression to match the correct format
-            pattern = r'^(?:ФЕ[СЛ](?:-[1-4][1-9])?|ФЕ[ІМ](?:-(?:[1-4][1-9]|[1-2][1-9]М))?|ФЕП-[1-4][1-9](?:ВПК)?)$'
+            # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
+            pattern = r'^ФЕ[СЛІПМ]-[1-4][1-9](ВПК|М)?$'
             if not re.match(pattern, group):
-                raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
+                raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
         
         # Debugging log after successful group validation
         logger.debug(f"Group cleaned successfully: {group}")
@@ -115,6 +113,7 @@ class RegistrationForm(forms.Form):
     def clean_department(self):
         department = self.cleaned_data.get('department')
         role = self.cleaned_data.get('role')
+        group = self.cleaned_data.get('group')
 
         # Debugging log for department validation
         logger.debug(f"Cleaning 'department' field with value: {department} for role: {role}")
@@ -122,6 +121,9 @@ class RegistrationForm(forms.Form):
         if role == 'Викладач':
             if not department:
                 raise ValidationError("Це поле обов'язкове.")
+        elif role == 'Студент' and group:
+            # Для студентів 3-4 курсу кафедра не потрібна - буде визначена адміністратором
+            pass
         
         return department
 
@@ -165,20 +167,39 @@ class TeacherProfileForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    department = forms.ChoiceField(
+    department = forms.ModelChoiceField(
         label="Кафедра",
-        choices=CustomUser.DEPARTMENT_CHOICES,
+        queryset=None,  # Буде встановлено в __init__
+        empty_label="Оберіть кафедру",
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
     )
     themes = forms.CharField(required=False, widget=forms.HiddenInput())
     
+    profile_link = forms.URLField(
+        label="Посилання на сторінку на сайті факультету",
+        required=False,
+        widget=forms.URLInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'https://example.com'
+        })
+    )
+
+    academic_level = forms.CharField(
+        label="Посада",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Наприклад: доцент'
+        })
+    )
+
     class Meta:
         model = OnlyTeacher
-        fields = ['academic_level', 'additional_email', 'phone_number', 'themes']
+        fields = ['academic_level', 'additional_email', 'phone_number', 'themes', 'profile_link']
         widgets = {
-            'academic_level': forms.Select(attrs={'class': 'form-select'}),
             'additional_email': forms.EmailInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'пп.ivan.franko@lnu.edu.ua'
@@ -186,17 +207,35 @@ class TeacherProfileForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': '123456789'
-            })
+            }),
+            'profile_link': forms.URLInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'https://example.com'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Зберігаємо user для використання в save()
+        self.user = user
+        
+        # Встановлюємо queryset для кафедр
+        from apps.catalog.models import Department
+        self.fields['department'].queryset = Department.objects.all()
+        
         if user:
             self.fields['first_name'].initial = user.first_name
             self.fields['last_name'].initial = user.last_name
-            self.fields['department'].initial = user.department
+            self.fields['department'].initial = user.get_department()
             self.fields['patronymic'].initial = getattr(user, 'patronymic', '')
+
+            instance = kwargs.get('instance')
+            if instance and instance.academic_level:
+                self.fields['academic_level'].initial = instance.academic_level
+            if instance and instance.profile_link:
+                self.fields['profile_link'].initial = instance.profile_link
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get('phone_number', '')
@@ -208,6 +247,33 @@ class TeacherProfileForm(forms.ModelForm):
         if phone.startswith('380'):
             phone = phone[3:]
         return phone
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Оновлюємо поля CustomUser
+        if hasattr(self, 'user') and self.user:
+            self.user.first_name = self.cleaned_data['first_name']
+            self.user.last_name = self.cleaned_data['last_name']
+            self.user.patronymic = self.cleaned_data['patronymic']
+            
+            # Оновлюємо кафедру в OnlyTeacher
+            department = self.cleaned_data.get('department')
+            if department:
+                instance.department = department
+            
+            if commit:
+                self.user.save()
+                instance.save()
+        else:
+            # Якщо user не передано, все одно оновлюємо кафедру
+            department = self.cleaned_data.get('department')
+            if department:
+                instance.department = department
+            if commit:
+                instance.save()
+        
+        return instance
 
 class StudentProfileForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -231,16 +297,7 @@ class StudentProfileForm(forms.ModelForm):
         max_length=10,
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    course = forms.IntegerField(
-        label="Курс",
-        min_value=1,
-        max_value=4,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-input',
-            'min': 1,
-            'max': 4
-        })
-    )
+    # Поля course та education_level видалені - тепер автоматично визначаються через групу
     additional_email = forms.EmailField(
         label="Додаткова електронна скринька",
         required=False,
@@ -260,7 +317,7 @@ class StudentProfileForm(forms.ModelForm):
 
     class Meta:
         model = OnlyStudent
-        fields = ['course', 'additional_email', 'phone_number']
+        fields = ['additional_email', 'phone_number']  # Видалено course та education_level
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -272,30 +329,13 @@ class StudentProfileForm(forms.ModelForm):
             
         instance = kwargs.get('instance')
         if instance:
-            self.fields['course'].initial = instance.course
+            # Видалено course та education_level - вони тепер автоматично визначаються
             self.fields['additional_email'].initial = instance.additional_email
             self.fields['phone_number'].initial = instance.phone_number
 
     def clean(self):
         cleaned_data = super().clean()
-        course = cleaned_data.get('course')
-        academic_group = cleaned_data.get('academic_group')
-
-        if course and academic_group:
-            # Перевіряємо, чи співпадає курс з першою цифрою в номері групи
-            match = re.match(r'^ФЕ[ЇСМЛП]-(\d)', academic_group)
-            if match:
-                group_course = int(match.group(1))
-                if group_course != course:
-                    raise ValidationError({
-                        'academic_group': 'Перша цифра в номері групи повинна відповідати вашому курсу',
-                        'course': 'Курс повинен відповідати першій цифрі в номері групи'
-                    })
-            else:
-                raise ValidationError({
-                    'academic_group': 'Неправильний формат групи. Приклад: ФЕС-21'
-                })
-
+        # Видалено валідацію course vs academic_group - тепер курс автоматично визначається
         return cleaned_data
 
     def clean_academic_group(self):
@@ -303,13 +343,13 @@ class StudentProfileForm(forms.ModelForm):
         if not group:
             raise ValidationError("Це поле обов'язкове.")
             
-        # Convert group to uppercase
+        # Convert group to uppercase first
         group = group.upper()
         
-        # Regular expression to match the correct format
-        pattern = r'^(?:ФЕ[СЛ](?:-[1-4][1-9])?|ФЕ[ІМ](?:-(?:[1-4][1-9]|[1-2][1-9]М))?|ФЕП-[1-4][1-9](?:ВПК)?)$'
+        # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
+        pattern = r'^ФЕ[СЛІПМ]-[1-4][0-9](ВПК|М)?$'
         if not re.match(pattern, group):
-            raise ValidationError("Академічна група повинна мати формат: ФЕЇ-14, ФЕС-21, ФЕП-23ВПК тощо.")
+            raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
         
         return group
 

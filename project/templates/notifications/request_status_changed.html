@@ -4,19 +4,19 @@
         <h2 style="color: #2c3e50;">Сповіщення від системи</h2>
         <div style="border-left: 4px solid {% if status_text == 'прийняв'%} #28a745 {%else%} #dc3545{%endif%}; padding-left: 10px;">
             <p style="font-size: 16px;">
-                <strong>{{ teacher_name }}</strong> {{ status_text }} ваш запит! 
+                <strong>{{ teacher_name }}</strong> {{ status_text }} {% if status_text == 'скасував' %}вашу роботу{% else %}ваш запит{% endif %}! 
             </p>
-            {% if status_text == 'відхилив' %}
+            {% if status_text == 'відхилив' or status_text == 'скасував' %}
                 <div style="margin-top: 10px;">
-                        <p style="background-color: #f8f9fa; padding: 10px; border-radius: 5px;"><strong>Причина відмови:</strong> {{ rejected_reason }}</p>
+                        <p style="background-color: #f8f9fa; padding: 10px; border-radius: 5px;"><strong>Причина:</strong> {{ rejected_reason }}</p>
                         <p style="margin-top: 15px; padding: 10px;">
-                            Просимо не засмучуватись з приводу відмови. В <a href="{{catalog_url}}" style="color: #007bff; font-weight: 500;">каталозі викладачів</a> ви зможете знайти наукового керівника, який відповідатиме вашим потребам.</p>
+                            Просимо не засмучуватись. В <a href="{{catalog_url}}" style="color: #007bff; font-weight: 500;">каталозі викладачів</a> ви зможете знайти іншого наукового керівника, який відповідатиме вашим потребам.</p>
                 </div>
             {% else %}  
                 <p style="margin-top: 10px; padding: 10px 0;">Бажаємо плідної співпраці та успіхів у реалізації Ваших наукових планів!</p>
             {% endif %}
             <p style="font-size: 14px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                Переглянте детальнішу інформацію на сторінці вашого <a href="{{profile_url}}" style="color: #007bff; font-weight: 500;">профілю</a>!
+                Перегляньте детальнішу інформацію на сторінці вашого <a href="{{profile_url}}" style="color: #007bff; font-weight: 500;">профілю</a>!
             </p>
             
             <div style="text-align: right; color: #888; font-size: 13px; margin-top: 20px; font-style: italic;">

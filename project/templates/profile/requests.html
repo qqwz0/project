@@ -267,6 +267,15 @@
                                 
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+
+                                {% if request.rejected_reason %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #dc2626; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-info-circle" style="margin-right: 5px;"></i> Причина відхилення
+                                        </h4>
+                                        <p style="margin: 0; color: #7f1d1d;">{{ request.rejected_reason }}</p>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <span class="status {{ request.request_status }}">{{ request.get_request_status_display }}</span>
@@ -544,17 +553,16 @@
     {% endif %}
 {% endif %}
 
-<div id="rejectModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="closeRejectModal()">&times;</span>
-        <h3>Відхилити запит студента</h3>
-        <form id="rejectForm" onsubmit="handleRejectSubmit(event)">
+<div id="rejectModal" class="rejection-modal">
+    <div class="rejection-modal-content">
+        <span class="rejection-modal-close" onclick="closeRejectModal()">&times;</span>
+        <h3 class="rejection-modal-header">Відхилити запит студента</h3>
+        <form id="rejectForm" class="rejection-modal-form" onsubmit="handleRejectSubmit(event)">
             <input type="hidden" id="rejectRequestId" name="requestId">
-            <div class="form-group">
-                <label for="rejectReason">Причина відмови:</label>
-                <textarea id="rejectReason" name="rejectReason" rows="4" cols="30"></textarea>
+            <div class="rejection-modal-form-group">
+                <textarea id="rejectReason" name="rejectReason" rows="4" class="rejection-modal-textarea" placeholder="Вкажіть причину відмови..."></textarea>
             </div>
-            <button type="submit" class="request-button reject modal-reject-btn">Відхилити</button>
+            <button type="submit" class="rejection-modal-submit">Відхилити</button>
         </form>
     </div>
 </div>
@@ -570,89 +578,116 @@
 </div>
 
 <!-- Student Refuse Modal -->
-<div id="studentRefuseModal" class="modal">
-    <div class="modal-content" style="border: none">
-        <span class="close-modal" onclick="closeStudentRefuseModal()">&times;</span>
-        <h3>Відмовитися від курсової роботи</h3>
-        <form id="studentRefuseForm" onsubmit="handleStudentRefuseSubmit(event)">
+<div id="studentRefuseModal" class="rejection-modal">
+    <div class="rejection-modal-content">
+        <span class="rejection-modal-close" onclick="closeStudentRefuseModal()">&times;</span>
+        <h3 class="rejection-modal-header">Відмовитися від курсової роботи</h3>
+        <form id="studentRefuseForm" class="rejection-modal-form" onsubmit="handleStudentRefuseSubmit(event)">
             <input type="hidden" id="studentRefuseRequestId" name="requestId">
-            <div class="form-group">
-                <label for="studentRefuseReason">Причина відмови:</label>
-                <textarea id="studentRefuseReason" name="refuseReason" rows="4" cols="30"></textarea>
+            <div class="rejection-modal-form-group">
+                <textarea id="studentRefuseReason" name="refuseReason" rows="4" class="rejection-modal-textarea" placeholder="Вкажіть причину вашої відмови..."></textarea>
             </div>
-            <button type="submit" class="request-button reject modal-reject-btn">Відмовитися</button>
+            <button type="submit" class="rejection-modal-submit">Відмовитися</button>
         </form>
     </div>
 </div>
 
-<!-- Student Edit Request Modal -->
-<div id="studentEditRequestModal" class="modal">
-    <div class="modal-content" style="border: none">
-        <span class="close-modal" onclick="closeStudentEditRequestModal()">&times;</span>
-        <h3>Редагувати запит студента</h3>
-        <form id="studentEditRequestForm" onsubmit="handleStudentEditRequestSubmit(event)">
+<div id="studentEditRequestModal" class="student-edit-modal">
+    <div class="student-modal-content edit-request-section">
+        <span class="student-close-modal" onclick="closeStudentEditRequestModal()">&times;</span>
+        <h3>Редагувати запит</h3>
+        <form id="studentEditRequestForm" class="student-request-form">
+            <div id="edit-form-errors" class="error-container"></div>
+            {% csrf_token %}
             <input type="hidden" id="studentEditRequestId" name="requestId">
-            <!-- Редагування мотивації -->
-            <div class="form-group">
-            <label for="editMotivation">Мотивація:</label>
-            <textarea id="editMotivation" name="motivation" rows="4" style="width:100%;padding:8px;">
-                {{ request.motivation_text }}
-            </textarea>
+            
+            <!-- Тема викладача -->
+            <div class="student-dropdown">
+                <label for="editTeacherTheme">Тема від викладача:</label>
+                <div class="student-dropdown-input" id="edit-teacher-theme-dropdown">
+                    <input type="text" id="editTeacherThemeDisplay" readonly placeholder="Не обрано">
+                    <input type="hidden" id="editTeacherTheme" name="teacher_theme_id">
+                    <button type="button" class="student-dropdown-toggle">
+                        <i class="fas fa-chevron-down student-dropdown-icon"></i>
+                    </button>
+                    <div id="editTeacherThemeMenu" class="student-dropdown-menu">
+                        <!-- Опції будуть завантажені сюди через JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Тематика студента -->
+            <div class="student-theme-container">
+                <label for="newThemeInput">Ваша тематика:</label>
+                <div class="student-input-add">
+                    <input type="text" id="newThemeInput" class="student-form-input" placeholder="Введіть текст нової теми">
+                    <button type="button" onclick="addNewThemeField()" title="Додати тему" class="student-add-theme">
+                        +
+                    </button>
+                </div>
+                <div class="student-theme-counter">
+                    <small>
+                        <span id="theme-count-edit">0</span>/3 тем
+                    </small>
+                </div>
+                <div id="themes-container" class="student-themes-container">
+                    <ul id="all-themes-container" class="student-theme-list">
+                        <!-- Теми будуть додані сюди -->
+                    </ul>
+                    <div id="theme-placeholder" class="student-theme-placeholder">
+                        <i class="fas fa-lightbulb"></i>
+                        <p>Додайте свої власні теми</p>
+                        <small>Ви можете додати до 3 тем</small>
+                    </div>
+                </div>
             </div>
 
-            <!-- Редагування тем студента -->
-            <div class="form-group">
-            <label>Тематика студента:</label>
-            <ul class="student-themes-list-edit" style="list-style:none;padding:0;">
-                {% for theme in request.student_themes.all %}
-                <li style="margin-bottom:4px;">
-                <label style="display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" name="themes" value="{{ theme.id }}" checked>
-                    {{ theme.theme }}
-                </label>
-                </li>
-                {% endfor %}
-            </ul>
+            <!-- Редагування мотивації -->
+            <div class="student-textarea-container">
+                <textarea id="editMotivation" name="motivation" rows="4" placeholder="Опишіть вашу мотивацію"></textarea>
             </div>
-            <button type="submit" class="request-button accept modal-reject-btn">Зберегти</button>
+
+            <button type="submit" class="student-submit-btn">Зберегти зміни</button>
         </form>
     </div>
 </div>
 
 <style>
-.theme-cards {
+.approve-theme-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
     margin-top: 15px;
 }
 
-.theme-card {
+.approve-theme-card {
     border: 2px solid #E5E7EB;
     border-radius: 8px;
-    padding: 15px;
+    padding: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
     background: #F9FAFB;
     position: relative;
     overflow: hidden;
+    min-height: auto;
 }
 
-.theme-card.selected {
+.approve-theme-card.selected {
     border-color: #22C55E;
     background: #F0FDF4;
 }
 
-.theme-card:hover {
+.approve-theme-card:hover {
     border-color: #22C55E;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.theme-card h4 {
-    margin: 0 0 8px 0;
+.approve-theme-card h4 {
+    margin: 0 0 6px 0;
     color: #374151;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
+    line-height: 1.3;
 }
 
 .theme-source {
@@ -661,12 +696,12 @@
     margin-top: 8px;
 }
 
-.theme-card input[type="radio"] {
+.approve-theme-card input[type="radio"] {
     position: absolute;
     opacity: 0;
 }
 
-.theme-card.selected::after {
+.approve-theme-card.selected::after {
     content: '✓';
     position: absolute;
     top: 10px;
@@ -675,25 +710,11 @@
     font-weight: bold;
 }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 25px;
-    border: 1px solid #6FCF97;
-    border-radius: 12px;
-    width: 80%;
-    max-width: 800px;
-    position: relative;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
 .highlight {
     background-color: #F0FDF4;
-    border-left: 4px solid #6FCF97;
     padding: 15px;
     margin: 1rem 0;
-    border-radius: 0 8px 8px 0;
+    border-radius: 8px;
 }
 
 .modal-buttons {
@@ -727,11 +748,35 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Додаємо анімації для модалки редагування */
+.student-add-theme.wiggle {
+    animation: wiggle 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes wiggle {
+    0% { transform: rotate(-2deg); }
+    100% { transform: rotate(2deg); }
+}
+
+.student-dropdown-toggle {
+    transition: transform 0.2s ease;
+}
+
+.student-dropdown-toggle.active .student-dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.student-dropdown-icon {
+    transition: transform 0.2s ease;
+}
 </style>
 
 <script>
+    // --- REJECT REQUEST MODAL (TEACHER) ---
     function showRejectModal(requestId) {
-        document.getElementById('rejectModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('rejectModal').style.display = 'flex';
         document.getElementById('rejectRequestId').value = requestId;
         document.getElementById('rejectReason').value = '';
         document.getElementById('rejectReason').focus();
@@ -739,40 +784,42 @@
 
     function closeRejectModal() {
         document.getElementById('rejectModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 
     function handleRejectSubmit(event) {
         event.preventDefault();
         const requestId = document.getElementById('rejectRequestId').value;
         const reason = document.getElementById('rejectReason').value;
-        window.handleRequest('reject', requestId, reason);
+        // Assuming window.handleRequest exists globally or is defined elsewhere
+        if (window.handleRequest) {
+            window.handleRequest('reject', requestId, reason);
+        }
         closeRejectModal();
     }
 
+    // --- TAB LOADING ---
     function loadTab(tabName, element) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tabName + '-section').style.display = 'block';
 
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        event.target.classList.add('active');
+        if(element) {
+            element.classList.add('active');
+        }
     }
 
-    // --- APPROVE REQUEST MODAL LOGIC ---
+    // --- APPROVE REQUEST MODAL (TEACHER) ---
     const approveModal = document.getElementById('approveRequestModal');
     const approveDetails = document.getElementById('approveRequestDetails');
 
-    // Видаляємо старий код відкриття модалки по кліку на картку
-    document.querySelectorAll('.request-card.pending-request').forEach(card => {
-        card.removeEventListener('click', function() {});
-    });
-
     function openApproveModal(requestId) {
+        document.body.classList.add('modal-open');
+        if (!approveDetails || !approveModal) return;
         approveDetails.innerHTML = '<div style="text-align:center;padding:2em;">Завантаження...</div>';
-        approveModal.style.display = 'block';
+        approveModal.style.display = 'flex';
         fetch(`/users/request-details-for-approve/${requestId}/`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(response => response.json())
         .then(data => {
@@ -783,11 +830,10 @@
             
             let themesHtml = '';
             if (data.themes && data.themes.length > 0) {
-                themesHtml = '<div class="theme-cards">';
+                themesHtml = '<div class="approve-theme-cards">';
                 data.themes.forEach(theme => {
-                    const source = theme.is_teacher_theme ? 'Тема викладача' : 'Тема студента';
                     themesHtml += `
-                        <label class="theme-card" data-theme-id="${theme.id}">
+                        <label class="approve-theme-card" data-theme-id="${theme.id}">
                             <input type="radio" name="selected_theme" value="${theme.id}">
                             <h4>${theme.title}</h4>
                         </label>
@@ -798,120 +844,51 @@
                 themesHtml = '<div style="color:#888;">Немає доступних тем для вибору</div>';
             }
             
-            // Generate motivation section conditionally
-            const motivationHtml = data.motivation
-                ? `<p><strong>Мотивація:</strong> ${data.motivation}</p>`
-                : '';
+            const motivationHtml = data.motivation ? `<p><strong>Мотивація:</strong> ${data.motivation}</p>` : '';
 
-            // Build the complete modal content with inline styles only
             approveDetails.innerHTML = `
-                <h3 style="color: #374151; font-size: 1.5rem; margin-bottom: 1.5rem;
-                        font-weight: 600; border-bottom: 2px solid #6FCF97;
-                        padding-bottom: 0.5rem;">
+                <h3 style="color: #374151; font-size: 1.5rem; margin-bottom: 1.5rem; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; text-align: center; padding-left: 2rem; padding-right: 2rem;">
                     Підтвердження запиту
                 </h3>
-                
                 <div class="highlight" style="margin-bottom: 20px;">
                     <p><strong>Студент:</strong> ${data.student_name} (${data.student_group})</p>
-                    ${motivationHtml}
-                    <p><strong>Дата запиту:</strong> ${data.request_date}</p>
                 </div>
-                
                 <div style="margin-top: 20px; margin-bottom: 20px;">
-                    <h4 style="color: #374151; font-weight: 600; margin-bottom: 10px;">
-                        Оберіть тему курсової роботи:
-                    </h4>
-                    <div style="margin-top: 10px;">
-                        ${themesHtml}
-                    </div>
+                    <h4 style="color: #374151; font-weight: 600; margin-bottom: 10px;">Оберіть тему курсової роботи:</h4>
+                    <div style="margin-top: 10px;">${themesHtml}</div>
                 </div>
-
                 <div style="margin-top: 20px; margin-bottom: 20px;">
-                    <label for="approveComment" 
-                        style="font-weight: 600; display: block; margin-bottom: 5px; color: #374151;">
-                        Коментар до студента:
-                    </label>
-                    <textarea 
-                        id="approveComment" 
-                        name="approveComment" 
-                        rows="3" 
-                        style="width: 100%; padding: 8px; border: 1px solid #d1d5db; 
-                            border-radius: 4px; font-family: inherit; font-size: 14px; 
-                            resize: vertical; box-sizing: border-box;"
-                        placeholder="Ваші додаткові вказівки чи зауваження...">
-                    </textarea>
+                    <label for="approveComment" style="font-weight: 600; display: block; margin-bottom: 5px; color: #374151;">Коментар до студента:</label>
+                    <textarea id="approveComment" name="approveComment" rows="3" class="form-control" placeholder="Ваші додаткові вказівки чи зауваження..."></textarea>
                 </div>
-                
-                <div style="margin-top: 15px; margin-bottom: 20px; padding: 12px; 
-                            background-color: #f8fafc; border: 1px solid #e2e8f0; 
-                            border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="sendContacts" name="sendContacts" 
-                        style="width: 18px; height: 18px; accent-color: #6FCF97; 
-                                cursor: pointer; margin: 0;">
-                    <label for="sendContacts" 
-                        style="margin: 0; font-size: 0.95rem; color: #374151; 
-                                cursor: pointer; font-weight: 500; line-height: 1.4;">
-                        Надіслати студенту контакти
-                    </label>
+                <div style="margin-top: 15px; margin-bottom: 20px; padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="sendContacts" name="sendContacts" style="width: 18px; height: 18px; accent-color: #6FCF97; cursor: pointer; margin: 0;">
+                    <label for="sendContacts" style="margin: 0; font-size: 0.95rem; color: #374151; cursor: pointer; font-weight: 500; line-height: 1.4;">Надіслати студенту контакти</label>
                 </div>
-
-                <div class="modal-buttons" style="display: flex; justify-content: flex-end; 
-                                                gap: 10px; margin-top: 20px;">
-                    <button onclick="closeApproveModal()" 
-                            class="cancel-btn"
-                            style="padding: 10px 20px; border: none; border-radius: 4px; 
-                                font-weight: 500; cursor: pointer; background-color: #f3f4f6; 
-                                color: #374151; transition: background-color 0.2s;"
-                            onmouseover="this.style.backgroundColor='#e5e7eb'" 
-                            onmouseout="this.style.backgroundColor='#f3f4f6'">
-                        Скасувати
-                    </button>
-                    <button onclick="submitApprove(${requestId})" 
-                            class="confirm-btn"
-                            style="padding: 10px 20px; border: none; border-radius: 4px; 
-                                font-weight: 500; cursor: pointer; background-color: #6FCF97; 
-                                color: white; transition: background-color 0.2s;"
-                            onmouseover="this.style.backgroundColor='#5cbf87'" 
-                            onmouseout="this.style.backgroundColor='#6FCF97'">
-                        Підтвердити запит
-                    </button>
+                <div class="modal-buttons">
+                    <button onclick="closeApproveModal()" class="approve-modal-cancel-btn">Скасувати</button>
+                    <button onclick="submitApprove(${requestId})" class="approve-modal-confirm-btn">Підтвердити запит</button>
                 </div>
             `;
 
-
-            // Add click handlers for theme cards
-            document.querySelectorAll('.theme-card').forEach(card => {
+            document.querySelectorAll('.approve-theme-card').forEach(card => {
                 card.addEventListener('click', function() {
-                    // Remove selection from all cards
-                    document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
-                    // Add selection to clicked card
+                    document.querySelectorAll('.approve-theme-card').forEach(c => c.classList.remove('selected'));
                     this.classList.add('selected');
-                    // Check the radio input
                     this.querySelector('input[type="radio"]').checked = true;
                 });
             });
         })
         .catch(err => {
-            approveDetails.innerHTML = `<div style='color:red;'>Помилка завантаження</div>`;
+            approveDetails.innerHTML = `<div style='color:red;'>Помилка завантаження: ${err}</div>`;
         });
     }
 
     function closeApproveModal() {
-        approveModal.style.display = 'none';
-        approveDetails.innerHTML = '';
+        if (approveModal) approveModal.style.display = 'none';
+        if (approveDetails) approveDetails.innerHTML = '';
+        document.body.classList.remove('modal-open');
     }
-
-    window.onclick = function(event) {
-        if (event.target == approveModal) {
-            closeApproveModal();
-        }
-    }
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeApproveModal();
-        }
-    });
 
     function submitApprove(requestId) {
         const selected = approveDetails.querySelector('input[name="selected_theme"]:checked');
@@ -926,30 +903,28 @@
         fetch(`/users/approve-request-with-theme/${requestId}/`, {
             method: 'POST',
             headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({
-            theme_id: themeId,
-            comment: comment,
-            send_contacts: sendContacts
-            })
+            body: JSON.stringify({ theme_id: themeId, comment: comment, send_contacts: sendContacts })
         })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-            closeApproveModal();
-            window.location.reload();
+                closeApproveModal();
+                window.location.reload();
             } else {
-            alert(data.error || 'Не вдалося підтвердити запит');
+                alert(data.error || 'Не вдалося підтвердити запит');
             }
         })
         .catch(() => alert('Помилка при підтвердженні запиту.'));
-        }
+    }
 
+    // --- STUDENT REFUSE MODAL ---
     function showStudentRefuseModal(requestId) {
-        document.getElementById('studentRefuseModal').style.display = 'block';
+        document.body.classList.add('modal-open');
+        document.getElementById('studentRefuseModal').style.display = 'flex';
         document.getElementById('studentRefuseRequestId').value = requestId;
         document.getElementById('studentRefuseReason').value = '';
         document.getElementById('studentRefuseReason').focus();
@@ -957,13 +932,8 @@
 
     function closeStudentRefuseModal() {
         document.getElementById('studentRefuseModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeStudentRefuseModal();
-        }
-    });
 
     function handleStudentRefuseSubmit(event) {
         event.preventDefault();
@@ -989,112 +959,264 @@
         })
         .catch(() => alert('Помилка при відмові від курсової.'));
     }
-</script>
 
-<script>
-// Відкрити "редагувати запит" модал
-  function openStudentEditRequestModal(requestId) {
-    const modal = document.getElementById('studentEditRequestModal');
-    document.getElementById('studentEditRequestId').value = requestId;
-    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
-    modal.style.display = 'block';
-  }
+    // --- STUDENT EDIT REQUEST MODAL ---
+    function openStudentEditRequestModal(requestId) {
+        document.body.classList.add('modal-open');
+        const modal = document.getElementById('studentEditRequestModal');
+        document.getElementById('studentEditRequestId').value = requestId;
 
-  // Закрити модал
-  function closeStudentEditRequestModal() {
-    document.getElementById('studentEditRequestModal').style.display = 'none';
-  }
+        const existingErrors = modal.querySelectorAll('.error-message');
+        existingErrors.forEach(error => error.remove());
+        
+        document.getElementById('editMotivation').style.borderColor = '#ccc';
+        document.getElementById('editMotivation').value = '';
+        document.getElementById('all-themes-container').innerHTML = '';
+        document.getElementById('newThemeInput').value = '';
+        
+        const teacherThemeMenu = document.getElementById('editTeacherThemeMenu');
+        const teacherThemeDisplay = document.getElementById('editTeacherThemeDisplay');
+        const teacherThemeHiddenInput = document.getElementById('editTeacherTheme');
+        
+        teacherThemeMenu.innerHTML = '';
+        teacherThemeDisplay.value = 'Не обрано';
+        teacherThemeHiddenInput.value = '';
 
-  // Відправка форми редагування
-  function handleStudentEditRequestSubmit(event) {
-    event.preventDefault();
-    const form = document.getElementById('studentEditRequestForm');
-    const requestId = document.getElementById('studentEditRequestId').value;
-    const data = new FormData(form);
+        fetch(`/users/get-student-request-details/${requestId}/`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Не вдалося завантажити дані для редагування.');
+                return;
+            }
+            if (data.motivation) {
+                document.getElementById('editMotivation').value = data.motivation;
+            }
+            
+            data.student_themes.forEach(theme => createThemeElement(theme.theme, theme.id));
+            updateThemeInputState();
+            updatePlaceholderVisibility();
 
-    fetch(`/users/edit-student-request/${requestId}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: data
-    })
-    .then(res => res.json())
-    .then(json => {
-      if (json.success) {
-        closeStudentEditRequestModal();
-        window.location.reload();
-      } else {
-        alert(json.error || 'Не вдалось зберегти зміни');
-      }
-    })
-    .catch(() => alert('Помилка при збереженні'));
-  }
+            const defaultOption = document.createElement('div');
+            defaultOption.className = 'student-dropdown-item';
+            defaultOption.dataset.value = '';
+            defaultOption.textContent = 'Не обрано';
+            teacherThemeMenu.appendChild(defaultOption);
 
-  // Закрити модал ESC чи клік поза ним, якщо потрібно
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeStudentEditRequestModal();
-  });
-  window.onclick = e => {
-    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
-  };
+            let selectedThemeName = 'Не обрано';
+            if (data.available_teacher_themes) {
+                data.available_teacher_themes.forEach(theme => {
+                    const option = document.createElement('div');
+                    option.className = 'student-dropdown-item';
+                    option.dataset.value = theme.id;
+                    option.textContent = theme.theme;
+                    if (theme.id === data.selected_teacher_theme_id) {
+                        selectedThemeName = theme.theme;
+                        teacherThemeHiddenInput.value = theme.id;
+                    }
+                    teacherThemeMenu.appendChild(option);
+                });
+            }
+            teacherThemeDisplay.value = selectedThemeName;
+            modal.style.display = 'flex';
+        })
+        .catch(err => console.error('Помилка при завантаженні даних.', err));
+    }
 
-  // Підключаємо сабміт-обробник
-  document.getElementById('studentEditRequestForm')
-          .addEventListener('submit', handleStudentEditRequestSubmit);
-</script>
+    function createThemeElement(themeText, themeId = null) {
+        const container = document.getElementById('all-themes-container');
+        const newField = document.createElement('li');
+        newField.className = 'theme-item';
+        const inputHtml = themeId ? `<input type="hidden" name="themes" value="${themeId}">` : `<input type="hidden" name="new_themes" value="${themeText}">`;
+        newField.innerHTML = `<span title="${themeText}">${themeText}</span>${inputHtml}<button type="button" onclick="removeTheme(this)" title="Видалити тему" class="remove-theme">×</button>`;
+        container.appendChild(newField);
+        updateThemeInputState();
+        updatePlaceholderVisibility();
+    }
 
-<script>
-// Відкрити "редагувати запит" модал
-  function openStudentEditRequestModal(requestId) {
-    const modal = document.getElementById('studentEditRequestModal');
-    document.getElementById('studentEditRequestId').value = requestId;
-    // TODO: підвантажити існуючі дані запиту у форму, якщо потрібно
-    modal.style.display = 'block';
-  }
+    function removeTheme(button) {
+        button.parentElement.remove();
+        updateThemeInputState();
+        updatePlaceholderVisibility();
+    }
 
-  // Закрити модал
-  function closeStudentEditRequestModal() {
-    document.getElementById('studentEditRequestModal').style.display = 'none';
-  }
+    function updateThemeInputState() {
+        const themeCount = document.querySelectorAll('#all-themes-container > li').length;
+        const newThemeInput = document.getElementById('newThemeInput');
+        const addThemeButton = document.querySelector('button[onclick="addNewThemeField()"]');
+        const isLimitReached = themeCount >= 3;
+        
+        newThemeInput.disabled = isLimitReached;
+        addThemeButton.disabled = isLimitReached;
+        newThemeInput.placeholder = isLimitReached ? "Досягнуто ліміт тем (максимум 3)" : "Введіть текст нової теми";
+        addThemeButton.style.backgroundColor = isLimitReached ? '#d1d5db' : '#0378ec';
+        addThemeButton.style.cursor = isLimitReached ? 'not-allowed' : 'pointer';
+        
+        document.getElementById('theme-count-edit').textContent = themeCount;
+        checkStudentButtonReadiness(); // Check wiggle state
+    }
 
-  // Відправка форми редагування
-  function handleStudentEditRequestSubmit(event) {
-    event.preventDefault();
-    const form = document.getElementById('studentEditRequestForm');
-    const requestId = document.getElementById('studentEditRequestId').value;
-    const data = new FormData(form);
+    function updatePlaceholderVisibility() {
+        const themeCount = document.querySelectorAll('#all-themes-container > li').length;
+        const placeholder = document.getElementById('theme-placeholder');
+        const themeList = document.getElementById('all-themes-container');
+        placeholder.style.display = themeCount > 0 ? 'none' : 'block';
+        themeList.style.display = themeCount > 0 ? 'flex' : 'none';
+    }
 
-    fetch(`/users/edit-student-request/${requestId}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: data
-    })
-    .then(res => res.json())
-    .then(json => {
-      if (json.success) {
-        closeStudentEditRequestModal();
-        window.location.reload();
-      } else {
-        alert(json.error || 'Не вдалось зберегти зміни');
-      }
-    })
-    .catch(() => alert('Помилка при збереженні'));
-  }
+    function addNewThemeField() {
+        const input = document.getElementById('newThemeInput');
+        const themeText = input.value.trim();
+        if (!themeText || document.querySelectorAll('#all-themes-container > li').length >= 3) return;
+        createThemeElement(themeText);
+        input.value = '';
+        input.focus();
+    }
 
-  // Закрити модал ESC чи клік поза ним, якщо потрібно
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeStudentEditRequestModal();
-  });
-  window.onclick = e => {
-    if (e.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
-  };
+    function closeStudentEditRequestModal() {
+        document.body.classList.remove('modal-open');
+        const modal = document.getElementById('studentEditRequestModal');
+        if (modal) modal.style.display = 'none';
+    }
 
-  // Підключаємо сабміт-обробник
-  document.getElementById('studentEditRequestForm')
-          .addEventListener('submit', handleStudentEditRequestSubmit);
+    function handleStudentEditRequestSubmit(event) {
+        event.preventDefault();
+        const form = document.getElementById('studentEditRequestForm');
+        const requestId = document.getElementById('studentEditRequestId').value;
+        const errorContainer = document.getElementById('edit-form-errors');
+        errorContainer.innerHTML = ''; // Clear previous errors
+        
+        const data = new FormData(form);
+
+        fetch(`/users/edit-student-request/${requestId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+            body: data
+        })
+        .then(res => res.json())
+        .then(json => {
+            if (json.success) {
+                closeStudentEditRequestModal();
+                window.location.reload();
+            } else {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = json.error || 'Не вдалось зберегти зміни';
+                errorContainer.appendChild(errorDiv);
+                setTimeout(() => {
+                    if (errorDiv) errorDiv.remove();
+                }, 5000);
+            }
+        })
+        .catch(err => {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = 'Помилка при збереженні. Спробуйте ще раз.';
+            errorContainer.appendChild(errorDiv);
+            setTimeout(() => {
+                if (errorDiv) errorDiv.remove();
+            }, 5000);
+        });
+    }
+
+    // --- Wiggle Animation Helpers ---
+    function startWiggle() {
+        const studentAddBtn = document.querySelector('.student-add-theme');
+        if (studentAddBtn && !studentAddBtn.classList.contains('wiggle') && !studentAddBtn.disabled) {
+            studentAddBtn.classList.add('wiggle');
+        }
+    }
+    function stopWiggle() {
+        const studentAddBtn = document.querySelector('.student-add-theme');
+        if (studentAddBtn) studentAddBtn.classList.remove('wiggle');
+    }
+    function checkStudentButtonReadiness() {
+        const newThemeInput = document.getElementById('newThemeInput');
+        if (!newThemeInput) return;
+        const text = newThemeInput.value.trim();
+        const themeCount = document.querySelectorAll('#all-themes-container > li').length;
+        const isLimitReached = themeCount >= 3;
+        
+        if (text.length >= 3 && !isLimitReached) {
+            startWiggle();
+        } else {
+            stopWiggle();
+        }
+    }
+
+    // --- GLOBAL EVENT LISTENERS ---
+    document.addEventListener('DOMContentLoaded', function() {
+        // Attach form submit handler
+        const editForm = document.getElementById('studentEditRequestForm');
+        if(editForm) editForm.addEventListener('submit', handleStudentEditRequestSubmit);
+
+        // Custom dropdown logic for edit modal
+        const dropdown = document.getElementById('edit-teacher-theme-dropdown');
+        const dropdownMenu = document.getElementById('editTeacherThemeMenu');
+        const displayInput = document.getElementById('editTeacherThemeDisplay');
+        const hiddenInput = document.getElementById('editTeacherTheme');
+        const toggleBtn = dropdown ? dropdown.querySelector('.student-dropdown-toggle') : null;
+
+        if (dropdown && dropdownMenu && displayInput && hiddenInput && toggleBtn) {
+            // Open/close on click and toggle active class
+            dropdown.addEventListener('click', function(event) {
+                if (!event.target.classList.contains('student-dropdown-item')) {
+                    const isOpen = dropdownMenu.style.display === 'block';
+                    dropdownMenu.style.display = isOpen ? 'none' : 'block';
+                    toggleBtn.classList.toggle('active', !isOpen);
+                }
+            });
+
+            // Select item and close
+            dropdownMenu.addEventListener('click', function(event) {
+                if (event.target.classList.contains('student-dropdown-item')) {
+                    displayInput.value = event.target.textContent;
+                    hiddenInput.value = event.target.dataset.value;
+                    dropdownMenu.style.display = 'none';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+
+            // Close when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!dropdown.contains(event.target)) {
+                    dropdownMenu.style.display = 'none';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+        }
+
+        // Wiggle animation for add theme button
+        const newThemeInput = document.getElementById('newThemeInput');
+        if (newThemeInput) {
+            newThemeInput.addEventListener('input', checkStudentButtonReadiness);
+            newThemeInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNewThemeField();
+                }
+            });
+        }
+    });
+
+    // Close modals on Escape key or clicking outside
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeApproveModal();
+            closeRejectModal();
+            closeStudentRefuseModal();
+            closeStudentEditRequestModal();
+        }
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == approveModal) closeApproveModal();
+        if (event.target.id === 'studentEditRequestModal') closeStudentEditRequestModal();
+        if (event.target.id === 'studentRefuseModal') closeStudentRefuseModal();
+        if (event.target.id === 'rejectModal') closeRejectModal();
+    });
 </script>
 
 <!-- Підключаємо зовнішній JavaScript файл для фільтрації запитів -->

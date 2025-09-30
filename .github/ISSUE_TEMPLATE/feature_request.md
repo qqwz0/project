@@ -1,10 +1,8 @@
----
 name: Feature request
 about: Запит на фічу
-title: "[FEAT] "
-labels: ["feature", "P2-Medium"]
+title: '[FEAT] '
+labels: ['feature', 'P2-Medium']
 assignees: []
----
 
 ### User story
 
