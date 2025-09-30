@@ -377,19 +377,6 @@ body {
   z-index: 1000;
 }
 
-.success-popup {
-  background: var(--white);
-  border-radius: var(--border-radius-sm);
-  box-shadow: var(--shadow-lg);
-  padding: 16px 20px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 400px;
-  border-left: 4px solid var(--primary-blue);
-}
-
 .success-popup.error {
   border-left-color: #ef4444;
 }

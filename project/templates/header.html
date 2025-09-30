@@ -19,7 +19,7 @@
     <header class="header">
       <div class="header-content">
         <div class="header-logo">
-          <img src="{% static 'images/LOGOfaculty.PNG' %}" alt="Logo">
+          <img src="{% static 'images/LOGO.svg' %}" alt="Logo">
         </div>
 
         {% if user.is_authenticated %}
@@ -110,6 +110,10 @@
           <span class="burger-line"></span>
           <span class="burger-line"></span>
           <span class="burger-line"></span>
+
+          {% if unread or notifications %}
+            <span class="burger-notification-dot" id="burger-notification-dot"></span>
+          {% endif %}  
         </button>
 
         <!-- Mobile menu wrapper for collapsible navigation -->
