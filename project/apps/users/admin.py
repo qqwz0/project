@@ -8,6 +8,7 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render
 import re
+import requests
 from django.urls import path
 from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
@@ -1378,18 +1379,9 @@ def import_teachers_excel_view(request):
                         user.patronymic = patronymic
                         user.save()
                     
-                    # Створюємо або оновлюємо профіль викладача
-                    teacher_profile, teacher_created = OnlyTeacher.objects.get_or_create(
-                        teacher_id=user,
-                        defaults={
-                            'academic_level': 'Викладач',
-                            'department': department,
-                        }
-                    )
-                    
-                    if not teacher_created and department:
-                        teacher_profile.department = department
-                        teacher_profile.save()
+                    # Створюємо або оновлюємо профіль викладача з profile_link
+                    from apps.users.services.registration_services import create_teacher_profile
+                    create_teacher_profile(user, 'Викладач', department)
                     
                     # Створюємо слоти для потоків
                     for stream_col in available_stream_columns:
