@@ -69,13 +69,13 @@ class Stream(models.Model):
         super().clean()
         
         # Регулярний вираз для перевірки формату коду потоку
-        # Допустимі коди: ФЕС-1, ФЕП-2, ФЕЛ-3, ФЕІ-4, ФЕМ-2, ФЕІ-2м, ФЕМ-1м
-        pattern = r'^(ФЕ[СПЛІМ])-([1-4])(?:м)?$'
+        # Допустимі коди: ФЕС-1, ФЕП-2, ФЕЛ-3, ФЕІ-4, ФЕМ-2, ФЕІ-2м, ФЕМ-1м, ФЕП-2ВПК, ФЕП-3ВПК, ФЕП-4ВПК
+        pattern = r'^(ФЕ[СПЛІМ])-([1-4])(?:м|ВПК)?$'
         
         match = re.match(pattern, self.stream_code)
         if not match:
             raise ValidationError({
-                'stream_code': "Код потоку має бути у форматі 'ФЕС-1', 'ФЕП-2', 'ФЕЛ-3', 'ФЕІ-4', 'ФЕМ-2', 'ФЕІ-2м' або 'ФЕМ-1м'."
+                'stream_code': "Код потоку має бути у форматі 'ФЕС-1', 'ФЕП-2', 'ФЕЛ-3', 'ФЕІ-4', 'ФЕМ-2', 'ФЕІ-2м', 'ФЕМ-1м', 'ФЕП-2ВПК', 'ФЕП-3ВПК', 'ФЕП-4ВПК'."
             })
         
         faculty = match.group(1)
@@ -121,12 +121,13 @@ class Slot(models.Model):
         return f"{self.stream_id.stream_code} ({available} доступно з {self.quota})"
     
     def get_available_slots(self):
-        active_requests_count = Request.objects.filter(
+        # Рахуємо тільки активні запити, які займають місця
+        occupied_requests_count = Request.objects.filter(
             slot=self,
             request_status='Активний'
         ).count()
         
-        self.occupied = active_requests_count
+        self.occupied = occupied_requests_count
         self.save()
         return self.quota - self.occupied
     
@@ -412,7 +413,7 @@ class Request(models.Model):
     
 class TeacherTheme(models.Model):
     teacher_id = models.ForeignKey(OnlyTeacher, on_delete=models.SET_NULL, null=True, related_name='themes')
-    theme = models.CharField(max_length=100)
+    theme = models.CharField(max_length=200)
     theme_description = models.TextField(blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)

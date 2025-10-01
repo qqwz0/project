@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Імпорт тем викладачів з Excel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        .form-row {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .default {
+            background-color: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .help {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .help ul {
+            margin-left: 20px;
+        }
+        .help li {
+            margin-bottom: 5px;
+        }
+        .help table {
+            margin: 10px 0;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .help th, .help td {
+            padding: 8px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        .help th {
+            background-color: #f8f9fa;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        #result {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Імпорт тем викладачів з Excel файлу</h1>
+    <div class="form-row">
+        <div class="help">
+            <h3>Інструкції:</h3>
+            <p>Excel файл повинен містити наступні колонки (назви колонок нечутливі до регістру):</p>
+            <ul>
+                <li><strong>Корпоративна скринька</strong> - email викладача (@lnu.edu.ua)</li>
+                <li><strong>Потік</strong> - код потоку (наприклад, ФЕІ-3)</li>
+                <li><strong>Тема</strong> - назва теми дипломної роботи</li>
+                <li><strong>Студент</strong> - ПІБ студента</li>
+                <li><strong>Опис теми (за бажанням)</strong> - додатковий опис теми (необов'язково)</li>
+            </ul>
+            
+            <h3>Приклад структури файлу:</h3>
+            <table border="1" style="border-collapse: collapse; margin: 10px 0;">
+                <tr>
+                    <th style="padding: 5px;">Корпоративна скринька</th>
+                    <th style="padding: 5px;">Потік</th>
+                    <th style="padding: 5px;">Тема</th>
+                    <th style="padding: 5px;">Студент</th>
+                    <th style="padding: 5px;">Опис теми (за бажанням)</th>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;">oleh.sinkevych@lnu.edu.ua</td>
+                    <td style="padding: 5px;">ФЕІ-3</td>
+                    <td style="padding: 5px;">Розробка платформи для збору та аналізу читацьких даних</td>
+                    <td style="padding: 5px;">Становська Софія</td>
+                    <td style="padding: 5px;">Детальний опис проекту...</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="import-form">
+        {% csrf_token %}
+        <div class="form-row">
+            <label for="id_excel_file">Оберіть Excel файл:</label>
+            <input type="file" name="excel_file" id="id_excel_file" accept=".xlsx,.xls" required>
+        </div>
+        
+        <div class="form-row">
+            <input type="submit" value="Завантажити та імпортувати" class="default">
+            <a href="/admin/users/studentrequestmapping/" class="button">Скасувати</a>
+        </div>
+    </form>
+
+    <div id="loading">
+        <p>Обробка файлу... Будь ласка, зачекайте.</p>
+    </div>
+
+    <div id="result">
+        <h3>Результат імпорту:</h3>
+        <div id="result-content"></div>
+    </div>
+    </div>
+
+<script>
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const resultContent = document.getElementById('result-content');
+    
+    loading.style.display = 'block';
+    result.style.display = 'none';
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        
+        if (data.success) {
+            resultContent.innerHTML = `
+                <div class="success">
+                    <p><strong>Успішно імпортовано:</strong> ${data.success_count} тем</p>
+                    <p><strong>Помилок:</strong> ${data.error_count}</p>
+                    <pre>${data.message}</pre>
+                </div>
+            `;
+        } else {
+            resultContent.innerHTML = `
+                <div class="error">
+                    <p><strong>Помилка:</strong> ${data.error}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        resultContent.innerHTML = `
+            <div class="error">
+                <p><strong>Помилка:</strong> ${error.message}</p>
+            </div>
+        `;
+    });
+});
+</script>
+
+</body>
+</html>

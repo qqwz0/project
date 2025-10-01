@@ -20,9 +20,13 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.catalog import views
+from apps.users.admin import import_teachers_excel_view, import_students_excel_view, import_themes_excel_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('import-teachers-excel/', import_teachers_excel_view, name='import_teachers_excel'),
+    path('import-students-excel/', import_students_excel_view, name='import_students_excel'),
+    path('import-themes-excel/', import_themes_excel_view, name='import_themes_excel'),
     path('', views.home, name='home'),  # Home page
     path('users/', include('apps.users.urls')),
     path('catalog/', include('apps.catalog.urls')),

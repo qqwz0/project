@@ -281,6 +281,16 @@ LOGGING = {
         'django.server': {
             'handlers': ['console'],
             'level': 'DEBUG',
+        },
+        'apps.users.services.registration_services': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'propagate': False,
+        },
+        'apps.users.admin': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

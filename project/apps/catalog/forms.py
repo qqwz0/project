@@ -130,6 +130,7 @@ class RequestForm(forms.ModelForm):
         super(RequestForm, self).__init__(*args, **kwargs)
         # Query all unoccupied themes for this teacher
         themes = TeacherTheme.objects.filter(teacher_id=teacher_id, is_occupied=False, is_deleted=False, is_active=True)
+        print(f"All unoccupied themes for teacher {teacher_id}: {themes.count()}")
         
         # Filter themes by student's stream if user is provided
         if user and hasattr(user, 'academic_group') and user.academic_group:
@@ -141,13 +142,23 @@ class RequestForm(forms.ModelForm):
             match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
             if match:
                 user_stream_code = match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
+                print(f"Student academic group: {user.academic_group}, extracted stream: {user_stream_code}")
                 try:
                     user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
+                    print(f"Found stream: {user_stream}")
                     # Filter themes that are available for this stream
+                    themes_before = themes.count()
                     themes = themes.filter(streams=user_stream)
+                    themes_after = themes.count()
+                    print(f"Themes before stream filter: {themes_before}, after: {themes_after}")
                 except Stream.DoesNotExist:
+                    print(f"Stream {user_stream_code} not found")
                     # If stream not found, show no themes
                     themes = themes.none()
+            else:
+                print(f"Could not extract stream from academic group: {user.academic_group}")
+        else:
+            print(f"No user or academic group provided. User: {user}, academic_group: {getattr(user, 'academic_group', 'N/A') if user else 'N/A'}")
 
         self.themes_list = [(theme.theme, theme.theme) for theme in themes]
         

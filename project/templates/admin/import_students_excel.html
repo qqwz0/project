@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Імпорт студентів з Excel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        .form-row {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .default {
+            background-color: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .help {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .help ul {
+            margin-left: 20px;
+        }
+        .help li {
+            margin-bottom: 5px;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        #result {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Імпорт студентів з Excel файлу</h1>
+        
+        <div class="form-row">
+            <div class="help">
+                <h3>Інструкції:</h3>
+                <p>Excel файл повинен містити наступні колонки (назви колонок нечутливі до регістру):</p>
+                <ul>
+                    <li><strong>Прізвище</strong> - прізвище студента</li>
+                    <li><strong>Ім'я</strong> - ім'я студента</li>
+                    <li><strong>По-батькові</strong> - по батькові студента (необов'язково)</li>
+                    <li><strong>Кафедра</strong> - коротка назва кафедри (СП, КОІТ, РКТ, РКС, ФБМЕ, СНПЕ)</li>
+                    <li><strong>Група</strong> - академічна група студента</li>
+                </ul>
+                
+                <h3>Дозволені кафедри (назви нечутливі до регістру):</h3>
+                <ul>
+                    <li><strong>СП</strong> - Кафедра системного програмного забезпечення</li>
+                    <li><strong>КОІТ</strong> - Кафедра оптоелектроніки та інформаційних технологій</li>
+                    <li><strong>РКТ</strong> - Кафедра радіокомп'ютерних технологій</li>
+                    <li><strong>РКС</strong> - Кафедра радіокомп'ютерних систем</li>
+                    <li><strong>ФБМЕ</strong> - Кафедра фізики та біомедичної електроніки</li>
+                    <li><strong>СНПЕ</strong> - Кафедра систем навігації та пристроїв електроніки</li>
+                </ul>
+                <p><em>Можна використовувати як короткі назви (СП, КОІТ), так і повні назви кафедр.</em></p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="import-form">
+            {% csrf_token %}
+            <div class="form-row">
+                <label for="id_excel_file">Оберіть Excel файл:</label>
+                <input type="file" name="excel_file" id="id_excel_file" accept=".xlsx,.xls" required>
+            </div>
+            
+            <div class="form-row">
+                <input type="submit" value="Завантажити та імпортувати" class="default">
+                <a href="/admin/users/studentexcelmapping/" class="button">Скасувати</a>
+            </div>
+        </form>
+
+        <div id="loading">
+            <p>Обробка файлу... Будь ласка, зачекайте.</p>
+        </div>
+
+        <div id="result">
+            <h3>Результат імпорту:</h3>
+            <div id="result-content"></div>
+        </div>
+    </div>
+
+<script>
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const resultContent = document.getElementById('result-content');
+    
+    loading.style.display = 'block';
+    result.style.display = 'none';
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        
+        if (data.success) {
+            resultContent.innerHTML = `
+                <div class="success">
+                    <p><strong>Успішно імпортовано:</strong> ${data.success_count} студентів</p>
+                    <p><strong>Помилок:</strong> ${data.error_count}</p>
+                    <pre>${data.message}</pre>
+                </div>
+            `;
+        } else {
+            resultContent.innerHTML = `
+                <div class="error">
+                    <p><strong>Помилка:</strong> ${data.error}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        resultContent.innerHTML = `
+            <div class="error">
+                <p><strong>Помилка:</strong> ${error.message}</p>
+            </div>
+        `;
+    });
+});
+</script>
+
+</body>
+</html>

@@ -285,14 +285,25 @@ def handle_registration_callback(request, code):
             from apps.catalog.models import Department
             try:
                 department = Department.objects.get(id=department_id)
+                logger.info(f"Found department: {department.department_name} for user {email}")
             except Department.DoesNotExist:
                 logger.warning(f"Department with ID {department_id} not found")
+        else:
+            logger.warning(f"No department_id in session for user {email}")
 
         if submitted_role != derived_role:
             return fail_and_redirect(
                 request,
                 "Будь ласка, вкажіть правильну роль.",
                 f"Role mismatch. Submitted: {submitted_role}, Derived: {derived_role}"
+            )
+
+        # Перевіряємо, що для викладачів обов'язково вказана кафедра
+        if derived_role == "Викладач" and not department:
+            return fail_and_redirect(
+                request,
+                "Для викладачів обов'язково потрібно вказати кафедру. Будь ласка, спробуйте зареєструватися знову.",
+                f"Teacher registration without department. Email: {email}"
             )
 
         # Перевірка факультету через Microsoft Graph API

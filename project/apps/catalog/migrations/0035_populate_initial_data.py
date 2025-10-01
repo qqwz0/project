@@ -44,6 +44,7 @@ def populate_initial_data(apps, schema_editor):
     # Тільки ФЕІ (122) та ФЕМ (176) мають магістратуру
     specialties_data = [
         {'code': '121', 'name': 'Інженерія програмного забезпечення', 'education_level': 'bachelor'},
+        {'code': '121ВПК', 'name': 'Високопродуктивний комп\'ютинг', 'education_level': 'bachelor'},
         {'code': '122', 'name': "Комп'ютерні науки", 'education_level': 'bachelor'},
         {'code': '122', 'name': "Комп'ютерні науки", 'education_level': 'master'},
         {'code': '126', 'name': 'Інформаційні системи та технології', 'education_level': 'bachelor'},
@@ -76,6 +77,22 @@ def populate_initial_data(apps, schema_editor):
     # Створюємо потоки для кожного курсу (1-4) та рівня освіти
     current_year = 2025
     streams_created = []
+    
+    # Спеціальна логіка для 121ВПК (Високопродуктивний комп'ютинг)
+    specialty_121vpk = created_specialties.get('121ВПК_bachelor')
+    if specialty_121vpk:
+        # Створюємо потоки ФЕП-1ВПК, ФЕП-2ВПК, ФЕП-3ВПК, ФЕП-4ВПК
+        for course in [1, 2, 3, 4]:
+            stream_code = f"ФЕП-{course}ВПК"
+            stream, created = Stream.objects.get_or_create(
+                stream_code=stream_code,
+                defaults={
+                    'specialty': specialty_121vpk
+                }
+            )
+            if created:
+                streams_created.append(stream)
+                print(f"Створено потік: {stream.stream_code}")
     
     for faculty_code, specialty_code in stream_to_specialty_mapping.items():
         # Визначаємо які рівні освіти доступні для цієї спеціальності
