@@ -1381,7 +1381,7 @@ def import_teachers_excel_view(request):
                     
                     # Створюємо або оновлюємо профіль викладача з profile_link
                     from apps.users.services.registration_services import create_teacher_profile
-                    create_teacher_profile(user, 'Викладач', department)
+                    teacher_profile = create_teacher_profile(user, 'Викладач', department)
                     
                     # Створюємо слоти для потоків
                     for stream_col in available_stream_columns:

@@ -319,7 +319,7 @@ def create_teacher_profile(user, job_title, department_obj):
             logger.info(f"Updated OnlyTeacher for {user.email} with department {department_obj.department_name}")
         else:
             logger.info(f"Created OnlyTeacher for {user.email} with department {department_obj.department_name}")
-            
+        return teacher_profile
     except Exception as e:
         logger.error(f"Error creating OnlyTeacher for user {user.email}: {str(e)}", exc_info=True)
         raise  # Передаємо помилку далі
