@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мій профіль — Advisor Finder</title>
-    
     {% load static %}
+     <link
+      rel="icon"
+      type="image/x-icon"
+      href="{% static 'images/LOGO.svg' %}"
+    />
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" type="text/css" href="{% static 'css/profile.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/header.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/requests.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/messages.css' %}">
@@ -16,8 +19,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Teacher edit styles - ОСТАННІЙ щоб перекривати всі інші -->
-    <link rel="stylesheet" type="text/css" href="{% static 'css/teacher_edit.css' %}?v=16">
-    
+    <link rel="stylesheet" type="text/css" href="{% static 'css/teacher_edit.css' %}?v=16">    
+    <link rel="stylesheet" type="text/css" href="{% static 'css/profile.css' %}">
+
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>

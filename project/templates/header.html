@@ -5,6 +5,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Advisor Finder</title>
+     <link
+      rel="icon"
+      type="image/x-icon"
+      href="{% static 'images/LOGO.svg' %}"
+    />
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
     <script
@@ -29,7 +34,7 @@
             <i class="fas fa-home"></i>
             <span class="nav-tooltip">Головна</span>
           </a>
-          {% if user.is_authenticated and user_profile.role == 'Студент' %}
+          {% if user.is_authenticated and auth_user.role == 'Студент' %}
             <a id="nav-search" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
               <i class="fas fa-search"></i>
               <span class="nav-tooltip">Пошук</span>

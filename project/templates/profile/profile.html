@@ -105,19 +105,22 @@
     </div>
     {% endif %}
 
-    <div id="requests-section" class="tab-content" style="{% if user_profile.role != 'Викладач' %}display: block;{% else %}display: none;{% endif %}">
-        {% include 'profile/requests.html' with requests=pending_requests %}
-    </div>
+    {% if is_own_profile and user_profile.role != 'Викладач' %}
+        <div id="requests-section" class="tab-content">
+            {% include 'profile/requests.html' with requests=pending_requests %}
+        </div>
+    {% endif %}
+
 
     {% if is_own_profile or request.user.role == 'Викладач' %}
     <div id="active-section" class="tab-content" style="display: none;">
-        {% include 'profile/active.html' with active_requests=active_requests %}
-    </div>
+            {% include 'profile/active.html' with active_requests=active_requests %}
+        </div>
 
     <div id="archive-section" class="tab-content" style="display: none;">
-        {% include 'profile/archive.html' with archived_requests=archived_requests %}
-    </div>
-    {% endif %}
+            {% include 'profile/archive.html' with archived_requests=archived_requests %}
+        </div>
+        {% endif %}
 
     <!-- Messages -->
     {% if messages %}
