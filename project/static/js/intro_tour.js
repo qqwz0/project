@@ -570,6 +570,11 @@
 function getBurgerStep() {
   const el = document.querySelector("#burger-menu");
   if (!el) return null; // return null if burger doesn't exist
+
+  // Check computed style for visibility
+  const style = window.getComputedStyle(el);
+  if (style.display === "none") return null;
+
   return {
     element: el,
     intro: "Меню навігації: натисніть, щоб відкрити навігацію по сайту.",
