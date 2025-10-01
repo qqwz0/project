@@ -288,12 +288,14 @@ def create_teacher_profile(user, job_title, department_obj):
     logger.info(f"Creating teacher profile for {user.email} with department: {department_obj.department_name}")
 
     # Формуємо базовий profile_link
-    last_name = user.email.split('.')[1]
-    first_initial = user.email.split('.')[0][0]
+    email = user.email.split('@')[0]  # take only the "first.last" part
+    first_name, last_name = email.split('.')  # split into first and last
+    first_initial = first_name[0]  # take first letter of first name
     base_link = f"{last_name}-{first_initial}"
 
+
     # Формуємо повне посилання
-    full_url = f"https://{faculty_short_name}.lnu.edu.ua/{base_link}"
+    full_url = f"https://{faculty_short_name}.lnu.edu.ua/employee/{base_link}"
 
     if url_exists(full_url):
         profile_link = full_url
@@ -327,6 +329,7 @@ def create_teacher_profile(user, job_title, department_obj):
 def url_exists(url):
     try:
         response = requests.head(url, allow_redirects=True, timeout=5)
+        print(f"Checked URL: {url} - Status Code: {response.status_code}")
         return response.status_code == 200
     except requests.RequestException:
         return False
