@@ -777,7 +777,9 @@ class RequestAdmin(admin.ModelAdmin):
     @admin.display(description='Кафедра викладача',
                    ordering='teacher_id__department__department_name')
     def get_teacher_department(self, obj):
-        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
+        if obj.teacher_id and hasattr(obj.teacher_id, 'department') and obj.teacher_id.department:
+            return obj.teacher_id.department.department_name
+        return "—"
 
     @admin.display(description='Група студента',
                    ordering='student_id__academic_group')
