@@ -1229,7 +1229,7 @@ def import_teachers_excel_view(request):
             
             # Валідація структури файлу (case insensitive)
             required_columns = ['Прізвище', 'Ім\'я', 'По-батькові', 'Адреса корпоративної скриньки', 'Кафедра']
-            stream_columns = ['ФЕІ-2', 'ФЕС-2', 'ФЕП-2', 'ФЕП-2ВПК', 'ФЕП-3ВПК', 'ФЕП-4ВПК', 'ФЕІ-3']
+            stream_columns = list(Stream.objects.values_list('stream_code', flat=True))
             
             # Створюємо мапінг колонок (оригінальна назва -> нормалізована)
             column_mapping = {}
@@ -2048,9 +2048,8 @@ def import_themes_excel_view(request):
             # Формуємо результат
             result_message = f'Імпорт завершено. Успішно: {success_count}, Помилок: {error_count}'
             if errors:
-                result_message += f'\nПомилки:\n' + '\n'.join(errors[:10])
-                if len(errors) > 10:
-                    result_message += f'\n... та ще {len(errors) - 10} помилок'
+                result_message += f'\nПомилки:\n' + '\n'.join(errors)
+        
             
             return JsonResponse({
                 'success': True,
