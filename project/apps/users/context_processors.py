@@ -20,26 +20,18 @@ def user_profile_picture(request):
     return {}
 
 from django.templatetags.static import static
-from .models import CustomUser  # adjust import if needed
 from django.core.files.storage import default_storage
 
 def user_context(request):
     context = {}
-
     if request.user.is_authenticated:
-        # Add user_profile (the CustomUser instance itself)
-        context['user_profile'] = request.user  
-
-        # Handle profile picture
+        context['auth_user'] = request.user
+        profile_pic_url = static('images/default-avatar.jpg')
         if request.user.profile_picture and request.user.profile_picture.name:
             try:
                 if default_storage.exists(request.user.profile_picture.name):
-                    context['profile_picture_url'] = default_storage.url(request.user.profile_picture.name)
-                    return context
+                    profile_pic_url = default_storage.url(request.user.profile_picture.name)
             except Exception:
                 pass
-
-        # Default avatar fallback
-        context['profile_picture_url'] = static('images/default-avatar.jpg')
-
+        context['profile_picture_url'] = profile_pic_url
     return context
