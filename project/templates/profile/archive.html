@@ -87,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.archived-request-card').forEach(card => {
         card.addEventListener('click', function() {
             const requestId = this.dataset.requestId;
-            console.log('Clicked archived request id:', requestId);
             fetch(`/users/archived-request-details/${requestId}/`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -95,13 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('Received data from server:', data);
-                console.log('Files count:', data.files ? data.files.length : 0);
-                if (data.files) {
-                    console.log('Files:', data.files.map(f => ({id: f.id, name: f.file_name})));
-                }
-                
+            .then(data => {                
                 if (data.error) {
                     console.error('Error fetching archived request details:', data.error);
                     if (data.error === 'Forbidden') {

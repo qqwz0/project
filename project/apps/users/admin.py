@@ -510,30 +510,31 @@ class OnlyTeacherForm(forms.ModelForm):
         }
 
 class OnlyTeacherAdmin(admin.ModelAdmin):
-    list_display = ('get_full_name', 'get_academic_level')
+    list_display = ('get_full_name', 'academic_level', 'additional_email', 'phone_number', 'department')
     actions = ['import_teachers_from_excel']
 
-    # Показати тільки потрібні поля
-    fields = ('teacher_id', 'academic_level')  # видимі поля в формі
-    readonly_fields = ('teacher_id',)
+    # Всі поля моделі
+    fields = ('teacher_id', 'academic_level', 'additional_email', 'phone_number', 'profile_link', 'department')
+    readonly_fields = ()  # всі редаговані
 
     search_fields = (
         'teacher_id__first_name',
         'teacher_id__last_name',
         'teacher_id__patronymic',
+        'additional_email',
+        'phone_number',
     )
 
     def view_on_site(self, obj):
         return reverse('profile_detail', args=[obj.teacher_id.pk])
 
-    # Дозволити зміну, але лише поля academic_level
+    # Повний доступ: додавання, редагування, видалення
     def has_add_permission(self, request):
-        return False  # нових додавати не можна
+        return True
 
     def has_delete_permission(self, request, obj=None):
-        return False  # видаляти не можна
+        return True
 
-    # Дозволити редагування
     def has_change_permission(self, request, obj=None):
         return True
 
@@ -541,18 +542,12 @@ class OnlyTeacherAdmin(admin.ModelAdmin):
     def get_full_name(self, obj):
         return f"{obj.teacher_id.first_name} {obj.teacher_id.last_name} {obj.teacher_id.patronymic or ''}"
 
-    @admin.display(description='Академічний рівень')
-    def get_academic_level(self, obj):
-        return obj.academic_level
-
     @admin.action(description='Імпорт викладачів з Excel файлу')
     def import_teachers_from_excel(self, request, queryset):
-        """
-        Admin action для імпорту викладачів з Excel файлу.
-        Перенаправляє на форму завантаження файлу.
-        """
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(reverse('import_teachers_excel'))
+
+
 
 @admin.register(OnlyStudent)
 class OnlyStudentAdmin(admin.ModelAdmin):
@@ -564,14 +559,17 @@ class OnlyStudentAdmin(admin.ModelAdmin):
         'student_id__patronymic',
         'group__group_code'
     )
-    readonly_fields = ('student_id',)
-    fields = ('student_id', 'group', 'department', 'additional_email', 'phone_number')
+    # якщо треба редагувати user, прибери student_id з readonly
+    readonly_fields = ('student_id',)  
+    fields = ('group', 'department', 'additional_email', 'phone_number')
 
+    # дозволяємо додавання
     def has_add_permission(self, request):
-        return False
+        return True  
 
+    # дозволяємо видалення
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True  
 
     @admin.display(description='ПІБ студента')
     def get_full_name(self, obj):
