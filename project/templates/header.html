@@ -29,7 +29,7 @@
             <i class="fas fa-home"></i>
             <span class="nav-tooltip">Головна</span>
           </a>
-          {% if user_profile.role == 'Студент' %}
+          {% if user.is_authenticated and user_profile.role == 'Студент' %}
             <a id="nav-search" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
               <i class="fas fa-search"></i>
               <span class="nav-tooltip">Пошук</span>
@@ -123,7 +123,7 @@
               <i class="fas fa-home"></i>
               <span class="nav-tooltip">Головна</span>
             </a>
-            {% if user_profile.role == 'Студент' %}
+            {% if user.is_authenticated and user_profile.role == 'Студент' %}
               <a id="nav-search-mobile" href="{% url 'teachers_catalog' %}" title="Каталог викладачів" class="nav-icon">
                 <i class="fas fa-search"></i>
                 <span class="nav-tooltip">Пошук</span>
@@ -248,7 +248,7 @@
     </div>
 
     <script src="{% static 'js/notification.js' %}"></script>
-    <script>window.APP_ROLE = "{{ user_profile.role|default_if_none:'' }}";</script>
+    <script>window.APP_ROLE = "{% if user.is_authenticated %}{{ user_profile.role|default_if_none:'' }}{% endif %}";</script>
     <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
     <script src="{% static 'js/intro_tour.js' %}"></script>
     <!-- Added burger menu functionality -->

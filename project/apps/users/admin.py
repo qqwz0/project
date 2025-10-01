@@ -768,8 +768,10 @@ class RequestAdmin(admin.ModelAdmin):
             ]
         return super().get_fields(request, obj)
 
-    @admin.display(description='Студент — Викладач')
+    @admin.display(description='Студент — Викладач')
     def get_student_teacher(self, obj):
+        if not obj.student_id or not obj.teacher_id or not obj.teacher_id.teacher_id:
+            return "—"
         student_name = obj.student_id.get_full_name_with_patronymic()
         teacher_name = obj.teacher_id.teacher_id.get_full_name_with_patronymic()
         return f"{student_name} — {teacher_name}"
@@ -784,6 +786,8 @@ class RequestAdmin(admin.ModelAdmin):
     @admin.display(description='Група студента',
                    ordering='student_id__academic_group')
     def get_student_group(self, obj):
+        if not obj.student_id:
+            return "—"
         return obj.student_id.academic_group
     
     @admin.display(description='Тип роботи', ordering='work_type')
