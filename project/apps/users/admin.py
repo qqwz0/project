@@ -1857,19 +1857,7 @@ def import_themes_excel_view(request):
                         theme.is_occupied = True
                         theme.save()
                     
-                    # Займаємо слот навіть якщо студент ще не зареєстрований
-                    if has_students:
-                        # Знаходимо слот для цього викладача та потоку
-                        slot = Slot.objects.filter(
-                            teacher_id=teacher_profile,
-                            stream_id=stream
-                        ).first()
-                        
-                        if slot:
-                            # Займаємо місце в слоті
-                            slot.occupied += len(theme_data['students'])
-                            slot.save()
-                            print(f"DEBUG: Зайнято {len(theme_data['students'])} місць в слоті {slot.id}")
+                    # НЕ оновлюємо слоти тут - це буде зроблено автоматично при створенні запитів
                     
                     # Створюємо запити для студентів (тільки якщо є студенти)
                     created_requests = 0
@@ -1939,6 +1927,13 @@ def import_themes_excel_view(request):
                                         error_count += 1
                                         continue
                                     
+                                    # Перевіряємо чи є вільні місця в слоті (використовуємо правильний метод)
+                                    available_slots = slot.get_available_slots()
+                                    if available_slots <= 0:
+                                        errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} вже заповнений (зайнято: {slot.occupied}/{slot.quota})')
+                                        error_count += 1
+                                        continue
+                                    
                                     # Створюємо віртуальний запит без student_id
                                     request_obj, request_created = Request.objects.get_or_create(
                                         teacher_id=teacher_profile,
@@ -1970,7 +1965,7 @@ def import_themes_excel_view(request):
                                     success_count += 1
                                     continue
                                 
-                                # Перевіряємо чи є вільні місця в слоті
+                                # Знаходимо слот для цього викладача та потоку
                                 slot = Slot.objects.filter(
                                     teacher_id=teacher_profile,
                                     stream_id=stream
@@ -1981,8 +1976,10 @@ def import_themes_excel_view(request):
                                     error_count += 1
                                     continue
                                 
-                                if slot.occupied >= slot.quota:
-                                    errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} вже заповнений')
+                                # Перевіряємо чи є вільні місця в слоті (використовуємо правильний метод)
+                                available_slots = slot.get_available_slots()
+                                if available_slots <= 0:
+                                    errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} вже заповнений (зайнято: {slot.occupied}/{slot.quota})')
                                     error_count += 1
                                     continue
                                 
@@ -2021,7 +2018,19 @@ def import_themes_excel_view(request):
                                 error_count += 1
                                 continue
                     
-                    # Слоти вже оновлені вище
+                    # Оновлюємо слоти після створення всіх запитів для теми
+                    if created_requests > 0:
+                        # Знаходимо слот для цього викладача та потоку
+                        slot = Slot.objects.filter(
+                            teacher_id=teacher_profile,
+                            stream_id=stream
+                        ).first()
+                        
+                        if slot:
+                            # Оновлюємо зайнятість слота використовуючи правильний метод
+                            slot.update_occupied_slots(increment=0)  # Просто перераховуємо
+                            print(f"DEBUG: Оновлено слот {slot.id}: зайнято {slot.occupied}/{slot.quota}")
+                    
                     created_themes_count += 1
                     print(f"DEBUG: Успішно оброблено тему '{theme_data['theme_title']}' ({created_themes_count}/{len(themes_by_teacher_stream)})")
                     
