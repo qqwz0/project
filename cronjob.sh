@@ -116,6 +116,3 @@ log() {
 if command -v mail >/dev/null 2>&1; then
     mail -s "Deployment Report $(date '+%Y-%m-%d %H:%M:%S')" "$EMAIL" < "$LOG_FILE"
 fi
-
-# Clear log file after email to avoid duplication
-> "$LOG_FILE"
