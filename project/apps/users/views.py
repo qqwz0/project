@@ -307,13 +307,18 @@ def handle_registration_callback(request, code):
             )
 
         # Перевірка факультету через Microsoft Graph API
-        from apps.users.services.registration_services import validate_faculty_from_microsoft
-        if not validate_faculty_from_microsoft(microsoft_department):
-            return fail_and_redirect(
-                request,
-                "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій.",
-                f"Faculty validation failed. Microsoft department: {microsoft_department}"
-            )
+        # Але тільки для нових користувачів - якщо користувач вже існує, пропускаємо перевірку
+        existing_user = CustomUser.objects.filter(email=email).first()
+        if not existing_user:
+            from apps.users.services.registration_services import validate_faculty_from_microsoft
+            if not validate_faculty_from_microsoft(microsoft_department):
+                return fail_and_redirect(
+                    request,
+                    "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій.",
+                    f"Faculty validation failed. Microsoft department: {microsoft_department}"
+                )
+        else:
+            logger.info(f"Existing user {email} bypassing faculty validation")
 
         with transaction.atomic():
             user, created = CustomUser.objects.get_or_create(
@@ -425,13 +430,18 @@ def handle_login_callback(request, code):
             return redirect("login")
 
         # Перевірка факультету через Microsoft Graph API
-        from apps.users.services.registration_services import validate_faculty_from_microsoft
-        if not validate_faculty_from_microsoft(microsoft_department):
-            logger.error("Faculty validation failed for user %s. Microsoft department: %s", email, microsoft_department)
-            messages.error(
-                request, "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій."
-            )
-            return redirect("login")
+        # Але тільки для нових користувачів - якщо користувач вже існує, пропускаємо перевірку
+        existing_user = CustomUser.objects.filter(email=email).first()
+        if not existing_user:
+            from apps.users.services.registration_services import validate_faculty_from_microsoft
+            if not validate_faculty_from_microsoft(microsoft_department):
+                logger.error("Faculty validation failed for user %s. Microsoft department: %s", email, microsoft_department)
+                messages.error(
+                    request, "Вказаний факультет не підтримується системою. Доступ дозволений лише для факультету електроніки та комп'ютерних технологій."
+                )
+                return redirect("login")
+        else:
+            logger.info(f"Existing user {email} bypassing faculty validation for login")
 
         logger.debug("User email: %s", email)
 
