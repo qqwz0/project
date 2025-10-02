@@ -13,6 +13,37 @@
     <link rel="stylesheet" href="{% static 'css/register.css' %}">
     <link rel="stylesheet" href="{% static 'css/header.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+      .group-hint {
+        background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 100%);
+        border: 1px solid #bee5eb;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 15px;
+        font-size: 14px;
+        color: #0c5460;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+      }
+      
+      .group-hint.show {
+        opacity: 1;
+        max-height: 100px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+      }
+      
+      .group-hint strong {
+        color: #0a4a57;
+      }
+    </style>
     <script>
       function updateRole(role) {
         const roleInput = document.getElementById("id_role");
@@ -34,6 +65,9 @@
         if (role === "Студент") {
           groupContainer.innerHTML = `
             <label for="{{ form.group.id_for_label }}" class="form-h3">{{ form.group.label }}</label>
+            <div class="group-hint" id="group-hint">
+              Вкажіть правильну назву вашої групи. Після реєстрації змінити її буде неможливо.
+            </div>
             <div class="input-box">
               {{ form.group }}
             </div>
@@ -45,6 +79,25 @@
               </div>
             {% endif %}
           `;
+          
+          // Додаємо обробник події для показу підказки при фокусі на поле групи
+          setTimeout(() => {
+            const groupInput = document.querySelector('#id_group');
+            const groupHint = document.querySelector('#group-hint');
+            
+            if (groupInput && groupHint) {
+              groupInput.addEventListener('focus', () => {
+                groupHint.classList.add('show');
+              });
+              
+              groupInput.addEventListener('blur', () => {
+                // Підказка залишається видимою після того як користувач почав вводити
+                if (groupInput.value.trim() === '') {
+                  groupHint.classList.remove('show');
+                }
+              });
+            }
+          }, 100);
         } else if (role === "Викладач") {
           groupContainer.innerHTML = `
           <label for="{{ form.department.id_for_label }}" class="form-h3">{{ form.department.label }}</label>
