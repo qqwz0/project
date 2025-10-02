@@ -88,7 +88,9 @@ def create_student_profile(user, group_code, email, faculty, department=None):
         logger.info(f"Created OnlyStudent for {email} with group {group_code} and department {department}")
         
         # Автоматично створюємо запити для студента, якщо він є в мапінгу
-        create_automatic_requests_for_student(user, group_code)
+        logger.info(f"Calling create_automatic_requests_for_student for {user.get_full_name_with_patronymic()}, group: {group_code}")
+        result = create_automatic_requests_for_student(user, group_code)
+        logger.info(f"create_automatic_requests_for_student returned: {result}")
         
     except Group.DoesNotExist:
         logger.warning(f"Group {group_code} not found for {email}, creating new group.")
@@ -131,7 +133,9 @@ def create_student_profile(user, group_code, email, faculty, department=None):
                 logger.info(f"Created OnlyStudent for {email} with new group {group_code} and department {department}")
                 
                 # Автоматично створюємо запити для студента, якщо він є в мапінгу
-                create_automatic_requests_for_student(user, group_code)
+                logger.info(f"Calling create_automatic_requests_for_student for {user.get_full_name_with_patronymic()}, group: {group_code}")
+                result = create_automatic_requests_for_student(user, group_code)
+                logger.info(f"create_automatic_requests_for_student returned: {result}")
                 
             else:
                 logger.error(f"Invalid group code format: {group_code}")
@@ -154,8 +158,12 @@ def create_automatic_requests_for_student(user, group_code):
     from apps.users.models import StudentExcelMapping, StudentRequestMapping
     from apps.catalog.models import Request, TeacherTheme, Slot, Stream
     from apps.users.models import CustomUser
+    from django.db import transaction
     
     try:
+        logger.info(f"=== STARTING create_automatic_requests_for_student ===")
+        logger.info(f"User: {user.get_full_name_with_patronymic()}, ID: {user.id}, group: {group_code}")
+        
         # Шукаємо студента в мапінгу
         logger.info(f"Looking for mapping for student: {user.get_full_name_with_patronymic()}, group: {group_code}")
         
@@ -193,17 +201,38 @@ def create_automatic_requests_for_student(user, group_code):
                     ).first()
         
         if not student_mapping:
-            logger.info(f"No mapping found for student {user.get_full_name_with_patronymic()}")
+            logger.info(f"No StudentExcelMapping found for student {user.get_full_name_with_patronymic()}")
             # Логуємо всі доступні мапінги для діагностики
             all_mappings = StudentExcelMapping.objects.filter(group=group_code)
-            logger.info(f"Available mappings for group {group_code}: {list(all_mappings.values('last_name', 'first_name', 'patronymic', 'department'))}")
-            return None
+            logger.info(f"Available StudentExcelMapping for group {group_code}: {list(all_mappings.values('last_name', 'first_name', 'patronymic', 'department'))}")
+            
+            # ВАЖЛИВО! Тепер шукаємо в StudentRequestMapping
+            logger.info(f"=== SEARCHING in StudentRequestMapping ===")
+            request_mappings = StudentRequestMapping.objects.filter(
+                student_name__icontains=user.get_full_name_with_patronymic()
+            ) | StudentRequestMapping.objects.filter(
+                student_name__icontains=f"{user.last_name} {user.first_name}"
+            )
+            
+            logger.info(f"Found {request_mappings.count()} StudentRequestMapping entries")
+            for mapping in request_mappings:
+                logger.info(f"  - Student: {mapping.student_name}, Stream: {mapping.stream}, Theme: {mapping.theme}")
+            
+            if not request_mappings.exists():
+                logger.info(f"No StudentRequestMapping found either.")
+                # Логуємо всі доступні StudentRequestMapping для діагностики
+                all_request_mappings = StudentRequestMapping.objects.all()[:10]  # Перші 10 для прикладу
+                logger.info(f"Sample StudentRequestMapping entries: {list(all_request_mappings.values('student_name', 'stream', 'theme'))}")
+                logger.info(f"Exiting create_automatic_requests_for_student.")
+                return None
         
-        logger.info(f"Found mapping for student: {student_mapping.full_name}, department: {student_mapping.department}")
-        
-        # Автоматично призначаємо кафедру студенту
-        if student_mapping.department:
-            from apps.catalog.models import Department
+        # Якщо є StudentExcelMapping - призначаємо кафедру
+        if student_mapping:
+            logger.info(f"Found StudentExcelMapping for student: {student_mapping.full_name}, department: {student_mapping.department}")
+            
+            # Автоматично призначаємо кафедру студенту
+            if student_mapping.department:
+                from apps.catalog.models import Department
             
             # Мапінг скорочень кафедр до повних назв
             DEPARTMENT_MAPPING = {
@@ -230,41 +259,68 @@ def create_automatic_requests_for_student(user, group_code):
             except Department.DoesNotExist:
                 logger.warning(f"Department {department_name} (mapped from {student_mapping.department}) not found")
         
-        # Шукаємо запити для створення
-        student_requests = StudentRequestMapping.objects.filter(
-            student_name__icontains=user.get_full_name_with_patronymic()
-        )
+        # Шукаємо запити для створення - пробуємо різні варіанти імені
+        logger.info(f"=== SEARCHING StudentRequestMapping for automatic requests ===")
         
-        logger.info(f"Found {student_requests.count()} request mappings for student {user.get_full_name_with_patronymic()}")
+        # Варіанти пошуку імені
+        search_variants = [
+            user.get_full_name_with_patronymic(),  # "Камаренко Вікторія Іванівна"
+            f"{user.last_name} {user.first_name}",  # "Камаренко Вікторія"
+            f"{user.first_name} {user.last_name}",  # "Вікторія Камаренко"
+        ]
+        
+        student_requests = StudentRequestMapping.objects.none()  # Порожній QuerySet
+        
+        for variant in search_variants:
+            logger.info(f"Searching for: '{variant}'")
+            found_requests = StudentRequestMapping.objects.filter(student_name__icontains=variant)
+            logger.info(f"  Found {found_requests.count()} matches")
+            student_requests = student_requests | found_requests  # Об'єднуємо результати
+        
+        student_requests = student_requests.distinct()  # Видаляємо дублікати
+        logger.info(f"Total unique request mappings found: {student_requests.count()}")
+        
+        for mapping in student_requests:
+            logger.info(f"  - Student: '{mapping.student_name}', Stream: '{mapping.stream}', Theme: '{mapping.theme}'")
         
         for request_mapping in student_requests:
             try:
+                logger.info(f"=== PROCESSING mapping: {request_mapping.student_name} -> {request_mapping.theme} ===")
+                
                 # Знаходимо викладача
+                logger.info(f"Looking for teacher: {request_mapping.teacher_email}")
                 teacher_user = CustomUser.objects.get(email=request_mapping.teacher_email, role='Викладач')
                 teacher_profile = teacher_user.catalog_teacher_profile
+                logger.info(f"Found teacher: {teacher_user.get_full_name()}")
                 
                 # Знаходимо потік
                 stream = Stream.objects.get(stream_code=request_mapping.stream)
                 
                 # Знаходимо тему викладача
+                logger.info(f"Looking for teacher theme with teacher={teacher_profile.pk}, theme contains '{request_mapping.theme[:50]}...'")
                 teacher_theme = TeacherTheme.objects.filter(
                     teacher_id=teacher_profile,
                     theme__icontains=request_mapping.theme
                 ).first()
                 
                 if not teacher_theme:
+                    logger.info(f"Teacher theme not found, creating new one")
                     # Створюємо тему, якщо її немає
                     teacher_theme = TeacherTheme.objects.create(
                         teacher_id=teacher_profile,
                         theme=request_mapping.theme,
                         theme_description=request_mapping.theme_description,
                         is_active=True,
-                        is_occupied=True
+                        is_occupied=False  # ВИПРАВЛЕНО: Спочатку не зайнята
                     )
                     # Додаємо тему до потоку
                     teacher_theme.streams.add(stream)
+                    logger.info(f"Created new teacher theme with ID: {teacher_theme.id}")
+                else:
+                    logger.info(f"Found existing teacher theme with ID: {teacher_theme.id}")
                 
                 # Знаходимо слот
+                logger.info(f"Looking for slot with teacher={teacher_profile.pk}, stream={stream.stream_code}")
                 slot = Slot.objects.filter(
                     teacher_id=teacher_profile,
                     stream_id=stream
@@ -272,45 +328,129 @@ def create_automatic_requests_for_student(user, group_code):
                 
                 if not slot:
                     logger.warning(f"No slot found for teacher {teacher_profile} and stream {stream}")
+                    # Логуємо всі слоти цього викладача
+                    all_slots = Slot.objects.filter(teacher_id=teacher_profile).values('stream_id__stream_code', 'quota', 'occupied')
+                    logger.info(f"Available slots for teacher: {list(all_slots)}")
                     continue
+                
+                logger.info(f"Found slot: quota={slot.quota}, occupied={slot.occupied}")
                 
                 # Перевіряємо чи є вільні місця
                 if slot.occupied >= slot.quota:
-                    logger.warning(f"Slot for teacher {teacher_profile} and stream {stream} is full")
+                    logger.warning(f"Slot for teacher {teacher_profile} and stream {stream} is full ({slot.occupied}/{slot.quota})")
                     continue
                 
-                # Створюємо або оновлюємо запит
-                request_obj, created = Request.objects.update_or_create(
+                # Спочатку шукаємо віртуальний запит (без student_id)
+                logger.info(f"Searching for virtual request with teacher={teacher_profile.pk}, theme={teacher_theme.id}, topic='{request_mapping.theme}'")
+                
+                # Спробуємо різні варіанти пошуку віртуального запиту
+                virtual_request = Request.objects.filter(
                     teacher_id=teacher_profile,
                     teacher_theme=teacher_theme,
-                    defaults={
-                        'student_id': user,  # Завжди оновлюємо student_id!
-                        'request_status': 'Активний',
-                        'motivation_text': f'Автоматично створений запит для теми: {request_mapping.theme}',
-                        'slot': slot,
-                        'topic_name': request_mapping.theme,
-                        'topic_description': request_mapping.theme_description
-                    }
-                )
+                    student_id__isnull=True,
+                    topic_name=request_mapping.theme
+                ).first()
                 
-                if created:
-                    # Оновлюємо зайнятість слота
-                    slot.occupied += 1
-                    slot.save()
-                    
-                    # Позначаємо тему як зайняту
-                    teacher_theme.is_occupied = True
-                    teacher_theme.save()
-                    
-                    logger.info(f"Created automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                # Якщо не знайшли точний збіг, спробуємо пошук за частковим збігом
+                if not virtual_request:
+                    virtual_request = Request.objects.filter(
+                        teacher_id=teacher_profile,
+                        teacher_theme=teacher_theme,
+                        student_id__isnull=True,
+                        topic_name__icontains=request_mapping.theme[:50]  # Перші 50 символів
+                    ).first()
+                
+                # Якщо все ще не знайшли, спробуємо пошук без topic_name
+                if not virtual_request:
+                    virtual_request = Request.objects.filter(
+                        teacher_id=teacher_profile,
+                        teacher_theme=teacher_theme,
+                        student_id__isnull=True
+                    ).first()
+                
+                if virtual_request:
+                    logger.info(f"Found virtual request ID: {virtual_request.id}, topic: '{virtual_request.topic_name}'")
                 else:
-                    logger.info(f"Updated automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                    logger.info(f"No virtual request found for teacher {teacher_profile.pk} and theme {teacher_theme.id}")
+                    # Логуємо всі віртуальні запити цього викладача для діагностики
+                    all_virtual = Request.objects.filter(
+                        teacher_id=teacher_profile,
+                        student_id__isnull=True
+                    ).values('id', 'topic_name', 'teacher_theme__theme')
+                    logger.info(f"All virtual requests for teacher: {list(all_virtual)}")
                 
-                return request_obj  # Повертаємо створений/оновлений запит
+                # Обгортаємо критичні операції в транзакцію
+                with transaction.atomic():
+                    if virtual_request:
+                        # Переконуємося що user збережений в БД
+                        if not user.pk:
+                            user.save()
+                        
+                        # Оновлюємо віртуальний запит реальним студентом
+                        virtual_request.student_id = user
+                        virtual_request.request_status = 'Активний'
+                        virtual_request.motivation_text = f'Автоматично створений запит для теми: {request_mapping.theme}'
+                        virtual_request.slot = slot
+                        virtual_request.topic_description = request_mapping.theme_description
+                        virtual_request.save()
+                        request_obj = virtual_request
+                        created = True  # ВИПРАВЛЕНО: Позначаємо як створений для правильного оновлення слота
+                        logger.info(f"Updated virtual request {virtual_request.id} with student {user.get_full_name_with_patronymic()}")
+                    else:
+                        # Переконуємося що user збережений в БД
+                        if not user.pk:
+                            user.save()
+                            
+                        # Створюємо новий запит
+                        request_obj, created = Request.objects.update_or_create(
+                            teacher_id=teacher_profile,
+                            teacher_theme=teacher_theme,
+                            student_id=user,
+                            defaults={
+                                'request_status': 'Активний',
+                                'motivation_text': f'Автоматично створений запит для теми: {request_mapping.theme}',
+                                'slot': slot,
+                                'topic_name': request_mapping.theme,
+                                'topic_description': request_mapping.theme_description
+                            }
+                        )
+                    
+                    # ВИПРАВЛЕНО: Оновлюємо слот і тему тільки при створенні нового запиту або оновленні віртуального
+                    if request_obj:
+                        # Для віртуальних запитів (коли оновлюємо student_id з null на реального студента)
+                        # або для нових запитів - оновлюємо слот
+                        if virtual_request or created:
+                            # Перевіряємо чи слот ще не переповнений (тільки для нових запитів)
+                            if created and slot.occupied < slot.quota:
+                                slot.occupied += 1
+                                slot.save()
+                                logger.info(f"Updated slot occupancy to {slot.occupied}/{slot.quota}")
+                            elif virtual_request:
+                                # Для віртуальних запитів слот вже був оновлений при створенні
+                                logger.info(f"Virtual request updated, slot occupancy remains: {slot.occupied}/{slot.quota}")
+                        
+                        # Позначаємо тему як зайняту
+                        teacher_theme.is_occupied = True
+                        teacher_theme.save()
+                        
+                        if virtual_request:
+                            logger.info(f"Updated virtual request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                        elif created:
+                            logger.info(f"Created new automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                        else:
+                            logger.info(f"Updated existing automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                    
+                    # ВИПРАВЛЕНО: Не повертаємо одразу, щоб обробити всі мапінги
+                    logger.info(f"Successfully processed mapping for {user.get_full_name_with_patronymic()}")
                 
             except Exception as e:
                 logger.error(f"Error creating automatic request for student {user.get_full_name_with_patronymic()}: {str(e)}")
                 continue
+        
+        # ВИПРАВЛЕНО: Повертаємо True, якщо хоча б один запит було оброблено
+        if student_requests.exists():
+            logger.info(f"Successfully processed {student_requests.count()} mappings for student {user.get_full_name_with_patronymic()}")
+            return True
                 
     except Exception as e:
         logger.error(f"Error in create_automatic_requests_for_student: {str(e)}")
