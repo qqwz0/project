@@ -80,17 +80,17 @@ def fail_and_redirect(request, msg, log_msg=None, level="error"):
     return redirect("register")
 
 
-def create_student_profile(user, group_code, email, department=None):
+def create_student_profile(user, group_code, email, faculty, department=None):
     from apps.catalog.models import Group, OnlyStudent
     try:
         group_obj = Group.objects.get(group_code=group_code)
-        OnlyStudent.objects.create(student_id=user, group=group_obj, department=department)
+        OnlyStudent.objects.create(student_id=user, group=group_obj, faculty=faculty, department=department)
         logger.info(f"Created OnlyStudent for {email} with group {group_code} and department {department}")
     except Group.DoesNotExist:
         logger.warning(f"Group {group_code} not found for {email}, using fallback group.")
         fallback = Group.objects.first()
         if fallback:
-            OnlyStudent.objects.create(student_id=user, group=fallback, department=department)
+            OnlyStudent.objects.create(student_id=user, group=fallback, department=department, faculty=None)
             logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
         else:
             logger.error("No groups available in DB for student creation.")
