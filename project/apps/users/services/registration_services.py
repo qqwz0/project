@@ -279,12 +279,12 @@ def create_automatic_requests_for_student(user, group_code):
                     logger.warning(f"Slot for teacher {teacher_profile} and stream {stream} is full")
                     continue
                 
-                # Створюємо запит
-                request_obj, created = Request.objects.get_or_create(
+                # Створюємо або оновлюємо запит
+                request_obj, created = Request.objects.update_or_create(
                     teacher_id=teacher_profile,
-                    student_id=user,
                     teacher_theme=teacher_theme,
                     defaults={
+                        'student_id': user,  # Завжди оновлюємо student_id!
                         'request_status': 'Активний',
                         'motivation_text': f'Автоматично створений запит для теми: {request_mapping.theme}',
                         'slot': slot,
@@ -303,7 +303,10 @@ def create_automatic_requests_for_student(user, group_code):
                     teacher_theme.save()
                     
                     logger.info(f"Created automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
-                    return request_obj  # Повертаємо створений запит
+                else:
+                    logger.info(f"Updated automatic request for student {user.get_full_name_with_patronymic()} with theme {request_mapping.theme}")
+                
+                return request_obj  # Повертаємо створений/оновлений запит
                 
             except Exception as e:
                 logger.error(f"Error creating automatic request for student {user.get_full_name_with_patronymic()}: {str(e)}")
