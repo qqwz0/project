@@ -292,11 +292,6 @@ class StudentProfileForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    academic_group = forms.CharField(
-        label="Академічна група",
-        max_length=10,
-        widget=forms.TextInput(attrs={'class': 'form-input'})
-    )
     # Поля course та education_level видалені - тепер автоматично визначаються через групу
     additional_email = forms.EmailField(
         label="Додаткова електронна скринька",
@@ -325,7 +320,6 @@ class StudentProfileForm(forms.ModelForm):
             self.fields['first_name'].initial = user.first_name
             self.fields['last_name'].initial = user.last_name
             self.fields['patronymic'].initial = user.patronymic
-            self.fields['academic_group'].initial = user.academic_group
             
         instance = kwargs.get('instance')
         if instance:
@@ -338,20 +332,6 @@ class StudentProfileForm(forms.ModelForm):
         # Видалено валідацію course vs academic_group - тепер курс автоматично визначається
         return cleaned_data
 
-    def clean_academic_group(self):
-        group = self.cleaned_data.get('academic_group')
-        if not group:
-            raise ValidationError("Це поле обов'язкове.")
-            
-        # Convert group to uppercase first
-        group = group.upper()
-        
-        # Simple validation for group format: ФЕ + letter + - + digits + optional suffix
-        pattern = r'^ФЕ[СЛІПМ]-[1-4][0-9](ВПК|М)?$'
-        if not re.match(pattern, group):
-            raise ValidationError("Академічна група повинна мати формат: ФЕС-21, ФЕІ-14, ФЕП-23ВПК, ФЕІ-21М тощо.")
-        
-        return group
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get('phone_number', '')

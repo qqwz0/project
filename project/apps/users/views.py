@@ -1116,27 +1116,11 @@ def student_profile_edit(request):
                     request.user.first_name = form.cleaned_data["first_name"]
                     request.user.last_name = form.cleaned_data["last_name"]
                     request.user.patronymic = form.cleaned_data["patronymic"]
-                    old_academic_group = request.user.academic_group
-                    new_academic_group = form.cleaned_data["academic_group"]
-                    request.user.academic_group = new_academic_group
                     request.user.save()
                     
                     # Update student profile fields
                     student_profile.additional_email = form.cleaned_data['additional_email']
                     student_profile.phone_number = form.cleaned_data['phone_number']
-                    
-                    # Оновлення групи якщо змінилася
-                    if old_academic_group != new_academic_group:
-                        try:
-                            # Знайти відповідну групу для нової academic_group
-                            group_code = new_academic_group  # Припускаємо що в базі Group є код identical до academic_group
-                            new_group = Group.objects.get(group_code=group_code)
-                            student_profile.group = new_group
-                            logger.info(f"Updated student {request.user.email} group from {old_academic_group} to {new_academic_group}")
-                        except Group.DoesNotExist:
-                            logger.warning(f"Group {group_code} not found. Student {request.user.email} group not updated in OnlyStudent.")
-                            messages.warning(request, f"Група '{group_code}' не знайдена в системі. Зверніться до адміністратора.")
-                    
                     student_profile.save()
 
                     messages.success(request, "Профіль успішно оновлено")
