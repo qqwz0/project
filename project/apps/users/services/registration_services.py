@@ -91,16 +91,60 @@ def create_student_profile(user, group_code, email, faculty, department=None):
         create_automatic_requests_for_student(user, group_code)
         
     except Group.DoesNotExist:
-        logger.warning(f"Group {group_code} not found for {email}, using fallback group.")
-        fallback = Group.objects.first()
-        if fallback:
-            OnlyStudent.objects.create(student_id=user, group=fallback, department=department, faculty=None)
-            logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
+        logger.warning(f"Group {group_code} not found for {email}, creating new group.")
+        # Створюємо нову групу замість використання fallback
+        try:
+            # Знаходимо відповідний потік для групи
+            from apps.catalog.models import Stream
             
-            # Автоматично створюємо запити для студента, якщо він є в мапінгу
-            create_automatic_requests_for_student(user, group_code)
-        else:
-            logger.error("No groups available in DB for student creation.")
+            # Парсимо код групи щоб знайти потік
+            # Наприклад: ФЕП-22ВПК -> потік ФЕП-2м
+            if '-' in group_code:
+                faculty_code = group_code.split('-')[0]  # ФЕП
+                course_and_group = group_code.split('-')[1]  # 22ВПК
+                
+                # Витягуємо курс (перша цифра)
+                course = course_and_group[0] if course_and_group and course_and_group[0].isdigit() else '1'
+                stream_code = f"{faculty_code}-{course}м"
+                
+                # Знаходимо або створюємо потік
+                stream, created = Stream.objects.get_or_create(
+                    stream_code=stream_code,
+                    defaults={
+                        'faculty': faculty,
+                        'course': int(course),
+                        'education_level': 'master' if 'м' in stream_code.lower() else 'bachelor'
+                    }
+                )
+                
+                if created:
+                    logger.info(f"Created new stream: {stream_code}")
+                
+                # Створюємо нову групу
+                group_obj = Group.objects.create(
+                    group_code=group_code,
+                    stream=stream
+                )
+                logger.info(f"Created new group: {group_code}")
+                
+                OnlyStudent.objects.create(student_id=user, group=group_obj, faculty=faculty, department=department)
+                logger.info(f"Created OnlyStudent for {email} with new group {group_code} and department {department}")
+                
+                # Автоматично створюємо запити для студента, якщо він є в мапінгу
+                create_automatic_requests_for_student(user, group_code)
+                
+            else:
+                logger.error(f"Invalid group code format: {group_code}")
+                
+        except Exception as e:
+            logger.error(f"Failed to create new group {group_code}: {e}")
+            # Fallback до першої групи тільки якщо не вдалося створити нову
+            fallback = Group.objects.first()
+            if fallback:
+                OnlyStudent.objects.create(student_id=user, group=fallback, department=department, faculty=None)
+                logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
+            else:
+                logger.error("No groups available in DB for student creation.")
 
 
 def create_automatic_requests_for_student(user, group_code):
