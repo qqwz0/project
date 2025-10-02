@@ -115,7 +115,7 @@ def reverse_clean_and_set_departments(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0040_fix_department_names_final'),
+        ('catalog', '0040_clean_and_set_departments'),
     ]
 
     operations = [
