@@ -17,7 +17,7 @@
         <template x-if="item.teacher.academic_level === null">
           <h3>Викладач</h3>
         </template>  
-        <p class="department" x-text="`Кафедра ${item.teacher.teacher_id.department || 'Не вказано'}`"></p>
+        <p class="department" x-text="`Кафедра: ${item.teacher.teacher_id.department || 'Не вказано'}`"></p>
 
         <!-- Conditional logic for displaying the number of free slots. -->
         <div class="slots-container" x-show="item.is_matched || !item.is_matched">

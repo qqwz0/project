@@ -155,3 +155,57 @@ class CustomUser(AbstractUser):
 #         if os.path.exists(old_file.path):
 #             os.remove(old_file.path)
 
+
+class StudentExcelMapping(models.Model):
+    """
+    Мапінг студентів з Excel файлу для автоматичного призначення кафедр
+    """
+    last_name = models.CharField(max_length=100, verbose_name="Прізвище")
+    first_name = models.CharField(max_length=100, verbose_name="Ім'я")
+    patronymic = models.CharField(max_length=100, blank=True, verbose_name="По-батькові")
+    department = models.CharField(max_length=200, verbose_name="Кафедра")
+    group = models.CharField(max_length=50, verbose_name="Група")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Мапінг студентів Excel"
+        verbose_name_plural = "Мапінги студентів Excel"
+        unique_together = ['last_name', 'first_name', 'patronymic', 'group']
+
+    def __str__(self):
+        return f"{self.last_name} {self.first_name} {self.patronymic} - {self.group}"
+
+    @property
+    def full_name(self):
+        return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
+
+
+class StudentRequestMapping(models.Model):
+    """
+    Мапінг студентів з Excel файлу для автоматичного створення запитів
+    """
+    teacher_email = models.EmailField(verbose_name="Email викладача")
+    stream = models.CharField(max_length=50, verbose_name="Потік")
+    theme = models.CharField(max_length=500, verbose_name="Тема")
+    theme_description = models.TextField(blank=True, verbose_name="Опис теми")
+    student_name = models.CharField(max_length=200, verbose_name="Студент")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Мапінг запитів студентів"
+        verbose_name_plural = "Мапінги запитів студентів"
+        unique_together = ['teacher_email', 'stream', 'student_name']
+
+    def __str__(self):
+        return f"{self.student_name} - {self.theme[:50]}..."
+
+    @property
+    def teacher_name(self):
+        try:
+            teacher = CustomUser.objects.get(email=self.teacher_email)
+            return teacher.get_full_name_with_patronymic()
+        except CustomUser.DoesNotExist:
+            return self.teacher_email
+

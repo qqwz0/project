@@ -3,9 +3,10 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import F, Q
 from django.http import FileResponse, HttpResponse
-from django.urls import reverse
+from django.urls import reverse, path
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
+from django.shortcuts import render
 import re
 from django.urls import path
 from django.shortcuts import redirect, get_object_or_404
@@ -13,7 +14,7 @@ from django.utils import timezone
 
 from docxtpl import DocxTemplate
 
-from .models import CustomUser
+from .models import CustomUser, StudentExcelMapping, StudentRequestMapping
 from apps.catalog.models import (
     Stream,
     Slot,
@@ -65,7 +66,6 @@ class CustomUserChangeForm(forms.ModelForm):
             'patronymic': _('По батькові'),
             'email': _('Email'),
             'academic_group': _('Академічна група'),
-            'department': _('Кафедра'),
             'role': _('Роль'),
             'profile_picture': _('Фото профілю'),
             'is_staff': _('Персонал'),
@@ -85,14 +85,6 @@ class CustomUserChangeForm(forms.ModelForm):
 
         # Зробити деякі поля необов'язковими
         self.fields['academic_group'].required = False
-        self.fields['department'].required = False
-
-        # Якщо користувач - адміністратор кафедри
-        if self.current_user and self.current_user.groups.filter(name='department_admin').exists() and not self.current_user.is_superuser:
-            department = self.current_user.get_department()
-            if department:
-                # Обмежити список кафедр лише своєю
-                self.fields['department'].queryset = self.fields['department'].queryset.filter(pk=department.pk)
 
 class CustomUserAdmin(UserAdmin):
     form = CustomUserChangeForm
@@ -108,7 +100,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        (_('Personal info'), {'fields': ('last_name', 'first_name', 'patronymic', 'academic_group', 'department')}),
+        (_('Personal info'), {'fields': ('last_name', 'first_name', 'patronymic', 'academic_group')}),
         (_('Permissions'), {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
@@ -118,7 +110,7 @@ class CustomUserAdmin(UserAdmin):
             'classes': ('wide',),
             'fields': (
                 'email',
-                'last_name', 'first_name', 'patronymic', 'academic_group', 'department', 'role',
+                'last_name', 'first_name', 'patronymic', 'academic_group', 'role',
                 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'
             ),
         }),
@@ -136,8 +128,7 @@ class CustomUserAdmin(UserAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser:
-            return qs.filter(department=request.user.get_department())
+        # Прибираємо фільтрацію по кафедрі для CustomUser
         return qs
 
     @admin.display(description='ПІБ')
@@ -148,9 +139,6 @@ class CustomUserAdmin(UserAdmin):
     def get_academic_group(self, obj):
         return obj.academic_group or "—"
 
-    @admin.display(description='Кафедра')
-    def get_department(self, obj):
-        return obj.department or "—"
 
     
 class HasSlotsFilter(admin.SimpleListFilter):
@@ -274,7 +262,9 @@ class SlotAdmin(admin.ModelAdmin):
 
     @admin.display(description='Кафедра', ordering='teacher_id__department__department_name')
     def get_department(self, obj):
-        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
+        if obj.teacher_id and hasattr(obj.teacher_id, 'department') and obj.teacher_id.department:
+            return obj.teacher_id.department.department_name
+        return "—"
 
     @admin.display(description='Потік', ordering='stream_id__stream_code')
     def get_stream_code(self, obj):
@@ -416,10 +406,32 @@ class TeacherThemeAdmin(admin.ModelAdmin):
 PREFIX_MAP = {
     "ФЕС": '126 "Інформаційні системи та технології"',
     "ФЕП": '121 "Інженерія програмного забезпечення"',
+    "ФЕПВПК": '121ВПК "Високопродуктивний комп\'ютинг"',
     "ФЕІ": '122 "Комп\'ютерні науки"',
     "ФЕМ": '171 "Електроніка та комп\'ютерні системи"',
     "ФЕЛ": '176 "Сенсорні та діагностичні електронні системи"',
 }
+
+# Мапа повних назв кафедр до коротких
+DEPARTMENT_SHORT_NAMES = {
+    'Кафедра системного програмного забезпечення': 'СП',
+    'Кафедра оптоелектроніки та інформаційних технологій': 'КОІТ',
+    'Кафедра радіокомп\'ютерних технологій': 'РКТ',
+    'Кафедра радіокомп\'ютерних систем': 'РКС',
+    'Кафедра фізики та біомедичної електроніки': 'ФБМЕ',
+    'Кафедра систем навігації та пристроїв електроніки': 'СНПЕ',
+}
+
+# Список дозволених кафедр (case insensitive)
+ALLOWED_DEPARTMENTS = [
+    'СП', 'КОІТ', 'РКТ', 'РКС', 'ФБМЕ', 'СНПЕ',  # Короткі назви
+    'Кафедра системного програмного забезпечення',
+    'Кафедра оптоелектроніки та інформаційних технологій',
+    'Кафедра радіокомп\'ютерних технологій',
+    'Кафедра радіокомп\'ютерних систем',
+    'Кафедра фізики та біомедичної електроніки',
+    'Кафедра систем навігації та пристроїв електроніки',
+]
 
 class StreamForm(forms.ModelForm):
     """
@@ -498,29 +510,31 @@ class OnlyTeacherForm(forms.ModelForm):
         }
 
 class OnlyTeacherAdmin(admin.ModelAdmin):
-    list_display = ('get_full_name', 'get_academic_level')
+    list_display = ('get_full_name', 'academic_level', 'additional_email', 'phone_number', 'department')
+    actions = ['import_teachers_from_excel']
 
-    # Показати тільки потрібні поля
-    fields = ('teacher_id', 'academic_level')  # видимі поля в формі
-    readonly_fields = ('teacher_id',)
+    # Всі поля моделі
+    fields = ('teacher_id', 'academic_level', 'additional_email', 'phone_number', 'profile_link', 'department')
+    readonly_fields = ()  # всі редаговані
 
     search_fields = (
         'teacher_id__first_name',
         'teacher_id__last_name',
         'teacher_id__patronymic',
+        'additional_email',
+        'phone_number',
     )
 
     def view_on_site(self, obj):
         return reverse('profile_detail', args=[obj.teacher_id.pk])
 
-    # Дозволити зміну, але лише поля academic_level
+    # Повний доступ: додавання, редагування, видалення
     def has_add_permission(self, request):
-        return False  # нових додавати не можна
+        return True
 
     def has_delete_permission(self, request, obj=None):
-        return False  # видаляти не можна
+        return True
 
-    # Дозволити редагування
     def has_change_permission(self, request, obj=None):
         return True
 
@@ -528,9 +542,12 @@ class OnlyTeacherAdmin(admin.ModelAdmin):
     def get_full_name(self, obj):
         return f"{obj.teacher_id.first_name} {obj.teacher_id.last_name} {obj.teacher_id.patronymic or ''}"
 
-    @admin.display(description='Академічний рівень')
-    def get_academic_level(self, obj):
-        return obj.academic_level
+    @admin.action(description='Імпорт викладачів з Excel файлу')
+    def import_teachers_from_excel(self, request, queryset):
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(reverse('import_teachers_excel'))
+
+
 
 @admin.register(OnlyStudent)
 class OnlyStudentAdmin(admin.ModelAdmin):
@@ -542,14 +559,17 @@ class OnlyStudentAdmin(admin.ModelAdmin):
         'student_id__patronymic',
         'group__group_code'
     )
-    readonly_fields = ('student_id',)
-    fields = ('student_id', 'group', 'additional_email', 'phone_number')
+    # якщо треба редагувати user, прибери student_id з readonly
+    readonly_fields = ('student_id',)  
+    fields = ('group', 'department', 'additional_email', 'phone_number')
 
+    # дозволяємо додавання
     def has_add_permission(self, request):
-        return False
+        return True  
 
+    # дозволяємо видалення
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True  
 
     @admin.display(description='ПІБ студента')
     def get_full_name(self, obj):
@@ -746,8 +766,10 @@ class RequestAdmin(admin.ModelAdmin):
             ]
         return super().get_fields(request, obj)
 
-    @admin.display(description='Студент — Викладач')
+    @admin.display(description='Студент — Викладач')
     def get_student_teacher(self, obj):
+        if not obj.student_id or not obj.teacher_id or not obj.teacher_id.teacher_id:
+            return "—"
         student_name = obj.student_id.get_full_name_with_patronymic()
         teacher_name = obj.teacher_id.teacher_id.get_full_name_with_patronymic()
         return f"{student_name} — {teacher_name}"
@@ -755,11 +777,15 @@ class RequestAdmin(admin.ModelAdmin):
     @admin.display(description='Кафедра викладача',
                    ordering='teacher_id__department__department_name')
     def get_teacher_department(self, obj):
-        return obj.teacher_id.get_department_name() if obj.teacher_id.get_department_name() else "—"
+        if obj.teacher_id and hasattr(obj.teacher_id, 'department') and obj.teacher_id.department:
+            return obj.teacher_id.department.department_name
+        return "—"
 
     @admin.display(description='Група студента',
                    ordering='student_id__academic_group')
     def get_student_group(self, obj):
+        if not obj.student_id:
+            return "—"
         return obj.student_id.academic_group
     
     @admin.display(description='Тип роботи', ordering='work_type')
@@ -1278,3 +1304,915 @@ admin.site.register(TeacherTheme, TeacherThemeAdmin)
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Slot, SlotAdmin)
 admin.site.register(Semestr, SemestrAdmin)
+
+# Додаємо view для імпорту Excel файлів
+def import_teachers_excel_view(request):
+    """
+    View для відображення форми імпорту Excel файлів викладачів
+    """
+    if request.method == 'POST':
+        from django.http import JsonResponse
+        from django.contrib import messages
+        import pandas as pd
+        from apps.catalog.models import Department, Stream, Slot, TeacherTheme, Faculty
+        from apps.users.models import CustomUser, StudentExcelMapping, StudentRequestMapping
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Отримуємо файл з request
+            excel_file = request.FILES.get('excel_file')
+            if not excel_file:
+                return JsonResponse({'error': 'Файл не вибрано'}, status=400)
+            
+            # Читаємо Excel файл
+            df = pd.read_excel(excel_file, engine='openpyxl')
+            
+            # Валідація структури файлу (case insensitive)
+            required_columns = ['Прізвище', 'Ім\'я', 'По-батькові', 'Адреса корпоративної скриньки', 'Кафедра']
+            stream_columns = ['ФЕІ-2', 'ФЕС-2', 'ФЕП-2', 'ФЕП-2ВПК', 'ФЕП-3ВПК', 'ФЕП-4ВПК', 'ФЕІ-3']
+            
+            # Створюємо мапінг колонок (оригінальна назва -> нормалізована)
+            column_mapping = {}
+            for col in df.columns:
+                normalized_col = col.strip()  # Видаляємо пробіли
+                column_mapping[normalized_col] = col
+            
+            # Перевіряємо наявність обов'язкових колонок (case insensitive)
+            missing_columns = []
+            for req_col in required_columns:
+                found = False
+                for df_col in df.columns:
+                    if df_col.strip().lower() == req_col.lower():
+                        found = True
+                        break
+                if not found:
+                    missing_columns.append(req_col)
+            
+            if missing_columns:
+                return JsonResponse({
+                    'error': f'Відсутні обов\'язкові колонки: {", ".join(missing_columns)}'
+                }, status=400)
+            
+            # Перевіряємо наявність колонок потоків (case insensitive)
+            available_stream_columns = []
+            for stream_col in stream_columns:
+                for df_col in df.columns:
+                    if df_col.strip().lower() == stream_col.lower():
+                        available_stream_columns.append(df_col)  # Використовуємо оригінальну назву
+                        break
+            
+            if not available_stream_columns:
+                return JsonResponse({
+                    'error': 'Не знайдено колонок з кількістю слотів для потоків'
+                }, status=400)
+            
+            success_count = 0
+            error_count = 0
+            errors = []
+            
+            # Отримуємо перший факультет (або створюємо якщо немає)
+            faculty = Faculty.objects.first()
+            if not faculty:
+                faculty = Faculty.objects.create(
+                    name="Факультет електроніки та комп'ютерних технологій",
+                    short_name="electronics"
+                )
+            
+            # Створюємо мапінг для швидкого пошуку колонок (case insensitive)
+            def find_column(df_columns, target_column):
+                """Знаходить колонку в DataFrame нечутливо до регістру"""
+                for col in df_columns:
+                    if col.strip().lower() == target_column.lower():
+                        return col
+                return None
+            
+            # Обробляємо кожен рядок
+            for index, row in df.iterrows():
+                try:
+                    # Знаходимо колонки (case insensitive)
+                    last_name_col = find_column(df.columns, 'Прізвище')
+                    first_name_col = find_column(df.columns, 'Ім\'я')
+                    patronymic_col = find_column(df.columns, 'По-батькові')
+                    email_col = find_column(df.columns, 'Адреса корпоративної скриньки')
+                    department_col = find_column(df.columns, 'Кафедра')
+                    
+                    # Валідація обов'язкових полів
+                    if pd.isna(row[last_name_col]) or pd.isna(row[first_name_col]) or pd.isna(row[email_col]):
+                        errors.append(f'Рядок {index + 2}: Пропущено обов\'язкові поля')
+                        error_count += 1
+                        continue
+                    
+                    # Отримуємо дані користувача
+                    last_name = str(row[last_name_col]).strip()
+                    first_name = str(row[first_name_col]).strip()
+                    patronymic = str(row[patronymic_col]).strip() if patronymic_col and not pd.isna(row[patronymic_col]) else ''
+                    email = str(row[email_col]).strip()
+                    department_name = str(row[department_col]).strip() if department_col and not pd.isna(row[department_col]) else ''
+                    
+                    # Валідація email
+                    if '@lnu.edu.ua' not in email:
+                        errors.append(f'Рядок {index + 2}: Невірний email {email}')
+                        error_count += 1
+                        continue
+                    
+                    # Знаходимо або створюємо кафедру (case insensitive)
+                    department = None
+                    if department_name:
+                        # Валідація кафедри - перевіряємо, чи вона дозволена
+                        department_name_clean = department_name.strip()
+                        is_allowed_department = False
+                        for allowed_dept in ALLOWED_DEPARTMENTS:
+                            if department_name_clean.upper() == allowed_dept.upper():
+                                is_allowed_department = True
+                                break
+                        
+                        if not is_allowed_department:
+                            errors.append(f'Рядок {index + 2}: Недозволена кафедра "{department_name_clean}". Дозволені: {", ".join(ALLOWED_DEPARTMENTS[:6])}')
+                            error_count += 1
+                            continue
+                        
+                        # Перевіряємо, чи це коротка назва кафедри (case insensitive)
+                        full_department_name = None
+                        for full_name, short_name in DEPARTMENT_SHORT_NAMES.items():
+                            if department_name_clean.upper() == short_name.upper():
+                                full_department_name = full_name
+                                break
+                        
+                        # Якщо не знайшли в мапінгу, шукаємо в існуючих кафедрах (case insensitive)
+                        if not full_department_name:
+                            existing_departments = Department.objects.all()
+                            for dept in existing_departments:
+                                if dept.department_name.strip().upper() == department_name_clean.upper():
+                                    full_department_name = dept.department_name
+                                    break
+                        
+                        # Якщо все ще не знайшли, використовуємо оригінальну назву
+                        final_department_name = full_department_name or department_name_clean
+                        
+                        # Перевіряємо, чи кафедра існує
+                        try:
+                            department = Department.objects.get(department_name__iexact=final_department_name)
+                        except Department.DoesNotExist:
+                            # Створюємо нову кафедру
+                            department, created = Department.objects.get_or_create(
+                                department_name=final_department_name,
+                                defaults={'faculty': faculty}
+                            )
+                    
+                    # Створюємо або знаходимо користувача
+                    user, user_created = CustomUser.objects.get_or_create(
+                        email=email,
+                        defaults={
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'patronymic': patronymic,
+                            'role': 'Викладач',
+                            'is_active': True,
+                            'is_staff': False,
+                        }
+                    )
+                    
+                    if not user_created:
+                        # Оновлюємо існуючого користувача
+                        user.first_name = first_name
+                        user.last_name = last_name
+                        user.patronymic = patronymic
+                        user.save()
+                    
+                    # Створюємо або оновлюємо профіль викладача
+                    teacher_profile, teacher_created = OnlyTeacher.objects.get_or_create(
+                        teacher_id=user,
+                        defaults={
+                            'academic_level': 'Викладач',
+                            'department': department,
+                        }
+                    )
+                    
+                    if not teacher_created and department:
+                        teacher_profile.department = department
+                        teacher_profile.save()
+                    
+                    # Створюємо слоти для потоків
+                    for stream_col in available_stream_columns:
+                        slots_count = row[stream_col]
+                        if pd.notna(slots_count) and int(slots_count) > 0:
+                            try:
+                                # Визначаємо код потоку з назви колонки (case insensitive)
+                                # Знаходимо відповідний код потоку зі списку stream_columns
+                                stream_code = None
+                                for expected_stream in stream_columns:
+                                    if stream_col.strip().lower() == expected_stream.lower():
+                                        stream_code = expected_stream
+                                        break
+                                
+                                if not stream_code:
+                                    errors.append(f'Рядок {index + 2}: Невідома колонка потоку: {stream_col}')
+                                    error_count += 1
+                                    continue
+                                
+                                # Знаходимо потік
+                                stream = Stream.objects.get(stream_code=stream_code)
+                                
+                                # Створюємо або оновлюємо слот
+                                slot, slot_created = Slot.objects.get_or_create(
+                                    teacher_id=teacher_profile,
+                                    stream_id=stream,
+                                    defaults={'quota': int(slots_count), 'occupied': 0}
+                                )
+                                
+                                if not slot_created:
+                                    slot.quota = int(slots_count)
+                                    slot.save()
+                                
+                                # Теми створюються окремо через систему імпорту тем
+                                # Не створюємо автоматичні теми тут
+                                
+                            except Stream.DoesNotExist:
+                                errors.append(f'Рядок {index + 2}: Потік {stream_code} не знайдено')
+                                error_count += 1
+                                continue
+                            except Exception as e:
+                                errors.append(f'Рядок {index + 2}: Помилка створення слоту для {stream_code}: {str(e)}')
+                                error_count += 1
+                                continue
+                    
+                    success_count += 1
+                    
+                except Exception as e:
+                    errors.append(f'Рядок {index + 2}: Загальна помилка: {str(e)}')
+                    error_count += 1
+                    continue
+            
+            # Оновлюємо зайнятість всіх слотів після імпорту
+            from apps.catalog.models import Slot
+            all_slots = Slot.objects.all()
+            for slot in all_slots:
+                slot.get_available_slots()  # Це оновить occupied для кожного слота
+            
+            # Логуємо результат імпорту
+            logger.info(f"Імпорт тем завершено. Успішно: {success_count}, Помилок: {error_count}")
+            if errors:
+                logger.warning(f"Помилки при імпорті тем: {errors[:5]}")  # Логуємо перші 5 помилок
+            
+            # Формуємо результат
+            result_message = f'Імпорт завершено. Успішно: {success_count}, Помилок: {error_count}'
+            if errors:
+                result_message += f'\nПомилки:\n' + '\n'.join(errors[:10])  # Показуємо перші 10 помилок
+                if len(errors) > 10:
+                    result_message += f'\n... та ще {len(errors) - 10} помилок'
+            
+            return JsonResponse({
+                'success': True,
+                'message': result_message,
+                'success_count': success_count,
+                'error_count': error_count
+            })
+            
+        except Exception as e:
+            logger.error(f'Помилка імпорту Excel: {str(e)}')
+            return JsonResponse({'error': f'Помилка обробки файлу: {str(e)}'}, status=500)
+    
+    return render(request, 'admin/import_teachers_excel.html')
+
+
+def import_students_excel_view(request):
+    """
+    View для відображення форми імпорту Excel файлів студентів
+    """
+    if request.method == 'POST':
+        from django.http import JsonResponse
+        import pandas as pd
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            excel_file = request.FILES.get('excel_file')
+            if not excel_file:
+                return JsonResponse({'error': 'Файл не вибрано'}, status=400)
+            
+            # Читаємо Excel файл
+            df = pd.read_excel(excel_file, engine='openpyxl')
+            
+            # Валідація структури файлу (case insensitive)
+            required_columns = ['Прізвище', 'Ім\'я', 'По-батькові', 'Кафедра', 'Група']
+            
+            # Перевіряємо наявність обов'язкових колонок (case insensitive)
+            missing_columns = []
+            for req_col in required_columns:
+                found = False
+                for df_col in df.columns:
+                    if df_col.strip().lower() == req_col.lower():
+                        found = True
+                        break
+                if not found:
+                    missing_columns.append(req_col)
+            
+            if missing_columns:
+                return JsonResponse({
+                    'error': f'Відсутні обов\'язкові колонки: {", ".join(missing_columns)}'
+                }, status=400)
+            
+            success_count = 0
+            error_count = 0
+            errors = []
+            
+            # Створюємо мапінг для швидкого пошуку колонок (case insensitive)
+            def find_column(df_columns, target_column):
+                """Знаходить колонку в DataFrame нечутливо до регістру"""
+                for col in df_columns:
+                    if col.strip().lower() == target_column.lower():
+                        return col
+                return None
+            
+            # Обробляємо кожен рядок
+            for index, row in df.iterrows():
+                try:
+                    # Знаходимо колонки (case insensitive)
+                    last_name_col = find_column(df.columns, 'Прізвище')
+                    first_name_col = find_column(df.columns, 'Ім\'я')
+                    patronymic_col = find_column(df.columns, 'По-батькові')
+                    department_col = find_column(df.columns, 'Кафедра')
+                    group_col = find_column(df.columns, 'Група')
+                    
+                    # Валідація обов'язкових полів
+                    if pd.isna(row[last_name_col]) or pd.isna(row[first_name_col]) or pd.isna(row[group_col]):
+                        errors.append(f'Рядок {index + 2}: Пропущено обов\'язкові поля')
+                        error_count += 1
+                        continue
+                    
+                    # Отримуємо дані студента
+                    last_name = str(row[last_name_col]).strip()
+                    first_name = str(row[first_name_col]).strip()
+                    patronymic = str(row[patronymic_col]).strip() if patronymic_col and not pd.isna(row[patronymic_col]) else ''
+                    department = str(row[department_col]).strip() if department_col and not pd.isna(row[department_col]) else ''
+                    group = str(row[group_col]).strip()
+                    
+                    # Валідація кафедри - перевіряємо, чи вона дозволена
+                    if department:
+                        department_clean = department.strip()
+                        is_allowed_department = False
+                        for allowed_dept in ALLOWED_DEPARTMENTS:
+                            if department_clean.upper() == allowed_dept.upper():
+                                is_allowed_department = True
+                                break
+                        
+                        if not is_allowed_department:
+                            errors.append(f'Рядок {index + 2}: Nедозволена кафедра "{department_clean}". Дозволені: {", ".join(ALLOWED_DEPARTMENTS[:6])}')
+                            error_count += 1
+                            continue
+                    
+                    # Створюємо або оновлюємо запис мапінгу
+                    mapping, created = StudentExcelMapping.objects.get_or_create(
+                        last_name=last_name,
+                        first_name=first_name,
+                        patronymic=patronymic,
+                        group=group,
+                        defaults={'department': department}
+                    )
+                    
+                    if not created:
+                        # Оновлюємо існуючий запис
+                        mapping.department = department
+                        mapping.save()
+                    
+                    success_count += 1
+                    
+                except Exception as e:
+                    errors.append(f'Рядок {index + 2}: Загальна помилка: {str(e)}')
+                    error_count += 1
+                    continue
+            
+            # Формуємо результат
+            result_message = f'Імпорт завершено. Успішно: {success_count}, Помилок: {error_count}'
+            if errors:
+                result_message += f'\nПомилки:\n' + '\n'.join(errors[:10])
+                if len(errors) > 10:
+                    result_message += f'\n... та ще {len(errors) - 10} помилок'
+            
+            return JsonResponse({
+                'success': True,
+                'message': result_message,
+                'success_count': success_count,
+                'error_count': error_count
+            })
+            
+        except Exception as e:
+            logger.error(f'Помилка імпорту Excel студентів: {str(e)}')
+            return JsonResponse({'error': f'Помилка обробки файлу: {str(e)}'}, status=500)
+    
+    return render(request, 'admin/import_students_excel.html')
+
+
+def import_themes_excel_view(request):
+    """
+    View для відображення форми імпорту Excel файлів тем викладачів
+    """
+    print(f"DEBUG: import_themes_excel_view викликано, method: {request.method}")
+    print(f"DEBUG: request.FILES: {request.FILES}")
+    if request.method == 'POST':
+        from django.http import JsonResponse
+        import pandas as pd
+        import logging
+        from apps.catalog.models import TeacherTheme, Stream, Slot, Request
+        from apps.users.models import StudentExcelMapping
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            excel_file = request.FILES.get('excel_file')
+            if not excel_file:
+                return JsonResponse({'error': 'Файл не вибрано'}, status=400)
+            
+            # Читаємо Excel файл
+            df = pd.read_excel(excel_file, engine='openpyxl')
+            
+            # Логуємо структуру файлу для дебагу
+            print(f"DEBUG: Загальна кількість рядків: {len(df)}")
+            print(f"DEBUG: Колонки в файлі: {list(df.columns)}")
+            print(f"DEBUG: Перші 3 рядки:")
+            print(df.head(3).to_string())
+            
+            # Валідація структури файлу (case insensitive)
+            required_columns = ['Корпоративна скринька', 'Потік', 'Тема']  # Студент не обов'язковий
+            
+            # Перевіряємо наявність обов'язкових колонок (case insensitive)
+            missing_columns = []
+            for req_col in required_columns:
+                found = False
+                for df_col in df.columns:
+                    if df_col.strip().lower() == req_col.lower():
+                        found = True
+                        break
+                if not found:
+                    missing_columns.append(req_col)
+            
+            if missing_columns:
+                return JsonResponse({
+                    'error': f'Відсутні обов\'язкові колонки: {", ".join(missing_columns)}'
+                }, status=400)
+            
+            success_count = 0
+            error_count = 0
+            errors = []
+            
+            # Створюємо мапінг для швидкого пошуку колонок (case insensitive)
+            def find_column(df_columns, target_column):
+                """Знаходить колонку в DataFrame нечутливо до регістру"""
+                for col in df_columns:
+                    if col.strip().lower() == target_column.lower():
+                        return col
+                return None
+            
+            # Групуємо теми по викладачах та потоках
+            themes_by_teacher_stream = {}
+            
+            # Обробляємо кожен рядок
+            print(f"DEBUG: Починаємо обробку {len(df)} рядків для імпорту тем")
+            processed_rows = 0
+            for index, row in df.iterrows():
+                processed_rows += 1
+                if processed_rows % 10 == 0:  # Логуємо кожні 10 рядків
+                    print(f"DEBUG: Оброблено {processed_rows}/{len(df)} рядків")
+                try:
+                    # Знаходимо колонки (case insensitive)
+                    email_col = find_column(df.columns, 'Корпоративна скринька')
+                    stream_col = find_column(df.columns, 'Потік')
+                    theme_col = find_column(df.columns, 'Тема')
+                    student_col = find_column(df.columns, 'Студент')
+                    description_col = find_column(df.columns, 'Опис теми (за бажанням)')
+                    
+                    print(f"DEBUG: Колонки знайдені - email: {email_col}, stream: {stream_col}, theme: {theme_col}, student: {student_col}")
+                    
+                    # Валідація обов'язкових полів
+                    if email_col is None or stream_col is None or theme_col is None:
+                        errors.append(f'Рядок {index + 2}: Не знайдено обов\'язкові колонки')
+                        error_count += 1
+                        continue
+                    
+                    # Перевіряємо, чи не є обов'язкові поля порожніми або NaN
+                    email_empty = pd.isna(row[email_col]) or str(row[email_col]).strip() == '' or str(row[email_col]).strip().lower() == 'nan'
+                    stream_empty = pd.isna(row[stream_col]) or str(row[stream_col]).strip() == '' or str(row[stream_col]).strip().lower() == 'nan'
+                    theme_empty = pd.isna(row[theme_col]) or str(row[theme_col]).strip() == '' or str(row[theme_col]).strip().lower() == 'nan'
+                    
+                    # Студент не обов'язковий
+                    student_empty = True
+                    if student_col and not (pd.isna(row[student_col]) or str(row[student_col]).strip() == '' or str(row[student_col]).strip().lower() == 'nan'):
+                        student_empty = False
+                    
+                    if email_empty or stream_empty or theme_empty:
+                        missing_fields = []
+                        if email_empty: missing_fields.append('email')
+                        if stream_empty: missing_fields.append('stream')
+                        if theme_empty: missing_fields.append('theme')
+                        
+                        errors.append(f'Рядок {index + 2}: Пропущено обов\'язкові поля: {", ".join(missing_fields)}')
+                        error_count += 1
+                        continue
+                    
+                    # Отримуємо дані теми
+                    teacher_email = str(row[email_col]).strip()
+                    stream_code = str(row[stream_col]).strip()
+                    theme_title = str(row[theme_col]).strip()
+                    student_name = str(row[student_col]).strip() if not student_empty else ''
+                    theme_description = str(row[description_col]).strip() if description_col and not pd.isna(row[description_col]) else ''
+                    
+                    # Нормалізуємо грецькі літери до кириличних
+                    greek_to_cyrillic = {
+                        'Φ': 'Ф',  # Greek Phi to Cyrillic Ef
+                        'Ε': 'Е',  # Greek Epsilon to Cyrillic E
+                        'Ι': 'І',  # Greek Iota to Cyrillic I
+                        'Μ': 'М',  # Greek Mu to Cyrillic M
+                        'Π': 'П',  # Greek Pi to Cyrillic P
+                        'Σ': 'С',  # Greek Sigma to Cyrillic S
+                        'Λ': 'Л',  # Greek Lambda to Cyrillic L
+                    }
+                    
+                    # Замінюємо грецькі літери в коді потоку
+                    original_stream_code = stream_code
+                    for greek, cyrillic in greek_to_cyrillic.items():
+                        stream_code = stream_code.replace(greek, cyrillic)
+                    
+                    # Логування для дебагу
+                    if original_stream_code != stream_code:
+                        logger.info(f"Нормалізовано код потоку: {original_stream_code} -> {stream_code}")
+                    
+                    logger.info(f"Обробляємо рядок {index + 2}: email={teacher_email}, stream={stream_code}, theme={theme_title}, student={student_name}")
+                    print(f"DEBUG: Обробляємо рядок {index + 2}: email={teacher_email}, stream={stream_code}, theme={theme_title}, student={student_name}")
+                    
+                    # Додаємо детальне логування для дебагу
+                    print(f"DEBUG: Знайдені колонки - email: {email_col}, stream: {stream_col}, theme: {theme_col}, student: {student_col}")
+                    print(f"DEBUG: Дані рядка - email: '{teacher_email}', stream: '{stream_code}', theme: '{theme_title}', student: '{student_name}'")
+                    
+                    # Додаємо логування для перевірки порожніх полів
+                    print(f"DEBUG: Перевірка полів - email isna: {pd.isna(row[email_col])}, stream isna: {pd.isna(row[stream_col])}, theme isna: {pd.isna(row[theme_col])}, student isna: {pd.isna(row[student_col])}")
+                    print(f"DEBUG: Перевірка порожніх рядків - email empty: '{str(row[email_col]).strip() == ''}', stream empty: '{str(row[stream_col]).strip() == ''}', theme empty: '{str(row[theme_col]).strip() == ''}', student empty: '{str(row[student_col]).strip() == ''}'")
+                    
+                    # Валідація email
+                    if '@lnu.edu.ua' not in teacher_email:
+                        errors.append(f'Рядок {index + 2}: Невірний email викладача {teacher_email}')
+                        error_count += 1
+                        continue
+                    
+                    # Групуємо по викладачу + потоку + темі
+                    key = (teacher_email, stream_code, theme_title)
+                    if key not in themes_by_teacher_stream:
+                        themes_by_teacher_stream[key] = {
+                            'theme_title': theme_title,
+                            'theme_description': theme_description,
+                            'students': []
+                        }
+                    
+                    # Додаємо студента тільки якщо він є (з детальною перевіркою)
+                    if student_name and not pd.isna(student_name):
+                        # Очищаємо від пробілів та невидимих символів
+                        student_name_clean = str(student_name).strip()
+                        # Видаляємо невидимі символи
+                        student_name_clean = ''.join(char for char in student_name_clean if char.isprintable()).strip()
+                        
+                        # Додаткова перевірка на системні значення
+                        invalid_values = {'nan', 'none', 'null', 'undefined', '0', '1', 'true', 'false', 'yes', 'no', 'да', 'ні', 'так', 'ні', ''}
+                        
+                        if student_name_clean and student_name_clean.lower() not in invalid_values:
+                            themes_by_teacher_stream[key]['students'].append(student_name_clean)
+                            print(f"DEBUG: Додано студента '{student_name_clean}' до теми '{theme_title}'")
+                        else:
+                            print(f"DEBUG: Пропущено невалідне ім'я студента для теми '{theme_title}' (оригінал: {repr(student_name)}, очищене: {repr(student_name_clean)})")
+                    else:
+                        print(f"DEBUG: Пропущено порожнє/NaN ім'я студента для теми '{theme_title}' (оригінал: {repr(student_name)})")
+                    
+                except Exception as e:
+                    error_msg = f'Рядок {index + 2}: Загальна помилка: {str(e)}'
+                    errors.append(error_msg)
+                    error_count += 1
+                    print(f"ERROR: {error_msg}")
+                    print(f"ERROR: Дані рядка: email={teacher_email}, stream={stream_code}, theme={theme_title}, student={student_name}")
+                    import traceback
+                    print(f"ERROR: Traceback: {traceback.format_exc()}")
+                    continue
+            
+            print(f"DEBUG: Завершено обробку {processed_rows} рядків")
+            print(f"DEBUG: Зібрано {len(themes_by_teacher_stream)} унікальних тем")
+            
+            # Створюємо теми та запити
+            print(f"DEBUG: Зібрано {len(themes_by_teacher_stream)} унікальних тем з Excel файлу")
+            print(f"DEBUG: Список тем: {list(themes_by_teacher_stream.keys())}")
+            print(f"DEBUG: Починаємо обробку {len(themes_by_teacher_stream)} тем")
+            created_themes_count = 0
+            for (teacher_email, stream_code, theme_title), theme_data in themes_by_teacher_stream.items():
+                print(f"DEBUG: Обробляємо тему '{theme_title}' для викладача {teacher_email}, потік {stream_code}")
+                try:
+                    # Знаходимо викладача
+                    try:
+                        teacher_user = CustomUser.objects.get(email=teacher_email, role='Викладач')
+                        teacher_profile = teacher_user.catalog_teacher_profile
+                    except CustomUser.DoesNotExist:
+                        errors.append(f'Викладач з email {teacher_email} не знайдено')
+                        error_count += 1
+                        continue
+                    
+                    # Знаходимо потік
+                    try:
+                        stream = Stream.objects.get(stream_code=stream_code)
+                        logger.info(f"Знайдено потік: {stream_code}")
+                    except Stream.DoesNotExist:
+                        # Спробуємо знайти потік case-insensitive
+                        try:
+                            stream = Stream.objects.get(stream_code__iexact=stream_code)
+                            logger.info(f"Знайдено потік (case-insensitive): {stream_code}")
+                        except Stream.DoesNotExist:
+                            # Покажемо всі доступні потоки для дебагу
+                            available_streams = list(Stream.objects.values_list('stream_code', flat=True))
+                            logger.error(f"Потік {stream_code} не знайдено. Доступні: {available_streams}")
+                            errors.append(f'Потік {stream_code} не знайдено. Доступні: {", ".join(available_streams[:10])}')
+                            error_count += 1
+                            continue
+                    
+                    # Створюємо тему викладача
+                    # Тема буде зайнята, якщо є студенти
+                    has_students = len(theme_data['students']) > 0
+                    print(f"DEBUG: Створюємо тему '{theme_data['theme_title']}' для викладача {teacher_email}, потік {stream_code}")
+                    print(f"DEBUG: Студенти: {theme_data['students']} (кількість: {len(theme_data['students'])})")
+                    print(f"DEBUG: has_students: {has_students}")
+                    theme, theme_created = TeacherTheme.objects.get_or_create(
+                        teacher_id=teacher_profile,
+                        theme=theme_data['theme_title'],
+                        defaults={
+                            'theme_description': theme_data['theme_description'],
+                            'is_active': True,
+                            'is_occupied': has_students,  # Зайнята, якщо є студенти
+                        }
+                    )
+                    
+                    # Якщо тема вже існує, але тепер є студенти - позначаємо як зайняту
+                    if not theme_created and has_students and not theme.is_occupied:
+                        theme.is_occupied = True
+                        theme.save()
+                    print(f"DEBUG: Тема створена: {theme_created}, ID: {theme.id}")
+                    
+                    # Завжди додаємо тему до потоку, незалежно від того, чи є студенти
+                    if not theme.streams.filter(pk=stream.pk).exists():
+                        theme.streams.add(stream)
+                        print(f"DEBUG: Додано тему '{theme.theme}' до потоку {stream.stream_code}")
+                    else:
+                        print(f"DEBUG: Тема '{theme.theme}' вже прив'язана до потоку {stream.stream_code}")
+                    
+                    # Показуємо фінальний стан теми
+                    final_streams = [s.stream_code for s in theme.streams.all()]
+                    print(f"DEBUG: Фінальний стан теми '{theme.theme}': is_occupied={theme.is_occupied}, потоки={final_streams}")
+                    
+                    # Оновлюємо статус теми, якщо тепер є студенти
+                    if has_students and not theme.is_occupied:
+                        theme.is_occupied = True
+                        theme.save()
+                    
+                    # Займаємо слот навіть якщо студент ще не зареєстрований
+                    if has_students:
+                        # Знаходимо слот для цього викладача та потоку
+                        slot = Slot.objects.filter(
+                            teacher_id=teacher_profile,
+                            stream_id=stream
+                        ).first()
+                        
+                        if slot:
+                            # Займаємо місце в слоті
+                            slot.occupied += len(theme_data['students'])
+                            slot.save()
+                            print(f"DEBUG: Зайнято {len(theme_data['students'])} місць в слоті {slot.id}")
+                    
+                    # Створюємо запити для студентів (тільки якщо є студенти)
+                    created_requests = 0
+                    if theme_data['students']:  # Тільки якщо є студенти
+                        for student_name in theme_data['students']:
+                            try:
+                                # Шукаємо студента в системі
+                                student_user = None
+                                
+                                # Спочатку шукаємо в мапінгу
+                                name_parts = student_name.strip().split()
+                                if len(name_parts) >= 2:
+                                    last_name = name_parts[0]
+                                    first_name = name_parts[1]
+                                    patronymic = name_parts[2] if len(name_parts) > 2 else ''
+                                    
+                                    student_mapping = StudentExcelMapping.objects.filter(
+                                        last_name__icontains=last_name,
+                                        first_name__icontains=first_name
+                                    ).first()
+                                    
+                                    if not student_mapping and patronymic:
+                                        # Спробуємо з по-батькові
+                                        student_mapping = StudentExcelMapping.objects.filter(
+                                            last_name__icontains=last_name,
+                                            first_name__icontains=first_name,
+                                            patronymic__icontains=patronymic
+                                        ).first()
+                                    
+                                    # Якщо знайшли мапінг, шукаємо користувача
+                                    if student_mapping:
+                                        student_user = CustomUser.objects.filter(
+                                            last_name__icontains=last_name,
+                                            first_name__icontains=first_name,
+                                            role='Студент'
+                                        ).first()
+                                        
+                                        if not student_user and patronymic:
+                                            student_user = CustomUser.objects.filter(
+                                                last_name__icontains=last_name,
+                                                first_name__icontains=first_name,
+                                                patronymic__icontains=patronymic,
+                                                role='Студент'
+                                            ).first()
+                                
+                                # Якщо не знайшли через мапінг, спробуємо прямий пошук
+                                if not student_user:
+                                    student_user = CustomUser.objects.filter(
+                                        last_name__icontains=name_parts[0] if name_parts else '',
+                                        first_name__icontains=name_parts[1] if len(name_parts) > 1 else '',
+                                        role='Студент'
+                                    ).first()
+                                
+                                if not student_user:
+                                    # Якщо студент не зареєстрований, створюємо "віртуальний" запит
+                                    # з порожнім student_id, але з правильним слотом
+                                    print(f"DEBUG: Студент {student_name} не зареєстрований, створюємо віртуальний запит")
+                                    
+                                    # Знаходимо слот для цього викладача та потоку
+                                    slot = Slot.objects.filter(
+                                        teacher_id=teacher_profile,
+                                        stream_id=stream
+                                    ).first()
+                                    
+                                    if not slot:
+                                        errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} не знайдено')
+                                        error_count += 1
+                                        continue
+                                    
+                                    # Створюємо віртуальний запит без student_id
+                                    request_obj, request_created = Request.objects.get_or_create(
+                                        teacher_id=teacher_profile,
+                                        teacher_theme=theme,
+                                        topic_name=theme_title,
+                                        defaults={
+                                            'request_status': 'Активний',
+                                            'motivation_text': f'Віртуальний запит для не зареєстрованого студента: {student_name}',
+                                            'slot': slot,
+                                            'topic_description': theme_data['theme_description']
+                                        }
+                                    )
+                                    
+                                    if request_created:
+                                        created_requests += 1
+                                        print(f"DEBUG: Створено віртуальний запит для {student_name}")
+                                    
+                                    # Створюємо запис в StudentRequestMapping для автоматичного створення запитів
+                                    StudentRequestMapping.objects.get_or_create(
+                                        teacher_email=teacher_email,
+                                        stream=stream_code,
+                                        student_name=student_name,
+                                        defaults={
+                                            'theme': theme_title,
+                                            'theme_description': theme_data['theme_description']
+                                        }
+                                    )
+                                    
+                                    success_count += 1
+                                    continue
+                                
+                                # Перевіряємо чи є вільні місця в слоті
+                                slot = Slot.objects.filter(
+                                    teacher_id=teacher_profile,
+                                    stream_id=stream
+                                ).first()
+                                
+                                if not slot:
+                                    errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} не знайдено')
+                                    error_count += 1
+                                    continue
+                                
+                                if slot.occupied >= slot.quota:
+                                    errors.append(f'Слот для викладача {teacher_email} та потоку {stream_code} вже заповнений')
+                                    error_count += 1
+                                    continue
+                                
+                                # Створюємо запит
+                                request_obj, request_created = Request.objects.get_or_create(
+                                    teacher_id=teacher_profile,
+                                    student_id=student_user,
+                                    teacher_theme=theme,
+                                    defaults={
+                                        'request_status': 'Активний',
+                                        'motivation_text': f'Автоматично створений запит для теми: {theme_title}',
+                                        'slot': slot,
+                                        'topic_name': theme_title,
+                                        'topic_description': theme_data['theme_description']
+                                    }
+                                )
+                                
+                                if request_created:
+                                    created_requests += 1
+                                    
+                                    # Створюємо запис в StudentRequestMapping для автоматичного створення запитів
+                                    StudentRequestMapping.objects.get_or_create(
+                                        teacher_email=teacher_email,
+                                        stream=stream_code,
+                                        student_name=student_name,
+                                        defaults={
+                                            'theme': theme_title,
+                                            'theme_description': theme_data['theme_description']
+                                        }
+                                    )
+                                
+                                success_count += 1
+                                
+                            except Exception as e:
+                                errors.append(f'Помилка створення запиту для студента {student_name}: {str(e)}')
+                                error_count += 1
+                                continue
+                    
+                    # Слоти вже оновлені вище
+                    created_themes_count += 1
+                    print(f"DEBUG: Успішно оброблено тему '{theme_data['theme_title']}' ({created_themes_count}/{len(themes_by_teacher_stream)})")
+                    
+                except Exception as e:
+                    error_msg = f'Загальна помилка обробки теми {theme_data["theme_title"]}: {str(e)}'
+                    errors.append(error_msg)
+                    error_count += 1
+                    print(f"ERROR: {error_msg}")
+                    print(f"ERROR: Дані теми: email={teacher_email}, stream={stream_code}, theme={theme_data['theme_title']}")
+                    print(f"ERROR: Студенти: {theme_data['students']}")
+                    import traceback
+                    print(f"ERROR: Traceback: {traceback.format_exc()}")
+                    continue
+            
+            print(f"DEBUG: Завершено створення тем. Створено: {created_themes_count}/{len(themes_by_teacher_stream)}")
+            
+            # Формуємо результат
+            result_message = f'Імпорт завершено. Успішно: {success_count}, Помилок: {error_count}'
+            if errors:
+                result_message += f'\nПомилки:\n' + '\n'.join(errors[:10])
+                if len(errors) > 10:
+                    result_message += f'\n... та ще {len(errors) - 10} помилок'
+            
+            return JsonResponse({
+                'success': True,
+                'message': result_message,
+                'success_count': success_count,
+                'error_count': error_count
+            })
+            
+        except Exception as e:
+            logger.error(f'Помилка імпорту Excel тем: {str(e)}')
+            return JsonResponse({'error': f'Помилка обробки файлу: {str(e)}'}, status=500)
+    
+    return render(request, 'admin/import_themes_excel.html')
+
+
+@admin.register(StudentExcelMapping)
+class StudentExcelMappingAdmin(admin.ModelAdmin):
+    list_display = ('last_name', 'first_name', 'patronymic', 'department', 'group', 'created_at')
+    list_filter = ('department', 'group', 'created_at')
+    search_fields = ('last_name', 'first_name', 'patronymic', 'group')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('last_name', 'first_name')
+    actions = ['import_students_from_excel']
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['import_url'] = reverse('import_students_excel')
+        return super().changelist_view(request, extra_context=extra_context)
+
+    @admin.action(description='Імпорт студентів з Excel файлу')
+    def import_students_from_excel(self, request, queryset):
+        """
+        Admin action для імпорту студентів з Excel файлу.
+        Перенаправляє на форму завантаження файлу.
+        """
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(reverse('import_students_excel'))
+
+
+@admin.register(StudentRequestMapping)
+class StudentRequestMappingAdmin(admin.ModelAdmin):
+    list_display = ('student_name', 'teacher_email', 'stream', 'theme', 'created_at')
+    list_filter = ('stream', 'teacher_email', 'created_at')
+    search_fields = ('student_name', 'teacher_email', 'theme')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('student_name', 'teacher_email')
+    actions = ['import_themes_from_excel']
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['import_url'] = reverse('import_themes_excel')
+        return super().changelist_view(request, extra_context=extra_context)
+
+    @admin.action(description='Імпорт тем викладачів з Excel файлу')
+    def import_themes_from_excel(self, request, queryset):
+        """
+        Admin action для імпорту тем викладачів з Excel файлу.
+        Перенаправляє на форму завантаження файлу.
+        """
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(reverse('import_themes_excel'))

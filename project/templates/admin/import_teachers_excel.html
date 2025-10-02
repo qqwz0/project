@@ -1,0 +1,159 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Імпорт викладачів з Excel{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Імпорт викладачів з Excel файлу</h1>
+    
+    <div class="form-row">
+        <div class="help">
+            <h3>Інструкції:</h3>
+            <p>Excel файл повинен містити наступні колонки:</p>
+            <ul>
+                <li><strong>Прізвище</strong> - прізвище викладача</li>
+                <li><strong>Ім'я</strong> - ім'я викладача</li>
+                <li><strong>По-батькові</strong> - по батькові викладача (необов'язково)</li>
+                <li><strong>Адреса корпоративної скриньки</strong> - email викладача (@lnu.edu.ua)</li>
+                <li><strong>Кафедра</strong> - назва кафедри (СП, КОІТ, РКТ, РКС, ФБМЕ, СНПЕ)</li>
+                <li><strong>ФЕІ-2, ФЕС-2, ФЕП-2, ФЕП-2ВПК, ФЕІ-3</strong> - кількість слотів для кожного потоку</li>
+            </ul>
+            
+            <h3>Дозволені кафедри:</h3>
+            <ul>
+                <li><strong>СП</strong> - Кафедра системного програмного забезпечення</li>
+                <li><strong>КОІТ</strong> - Кафедра оптоелектроніки та інформаційних технологій</li>
+                <li><strong>РКТ</strong> - Кафедра радіокомп'ютерних технологій</li>
+                <li><strong>РКС</strong> - Кафедра радіокомп'ютерних систем</li>
+                <li><strong>ФБМЕ</strong> - Кафедра фізики та біомедичної електроніки</li>
+                <li><strong>СНПЕ</strong> - Кафедра систем навігації та пристроїв електроніки</li>
+            </ul>
+            
+            <h3>Приклад структури файлу:</h3>
+            <table border="1" style="border-collapse: collapse; margin: 10px 0;">
+                <tr>
+                    <th style="padding: 5px;">Прізвище</th>
+                    <th style="padding: 5px;">Ім'я</th>
+                    <th style="padding: 5px;">По-батькові</th>
+                    <th style="padding: 5px;">Адреса корпоративної скриньки</th>
+                    <th style="padding: 5px;">Кафедра</th>
+                    <th style="padding: 5px;">ФЕІ-2</th>
+                    <th style="padding: 5px;">ФЕС-2</th>
+                    <th style="padding: 5px;">ФЕП-2</th>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;">Прізвище викладача</td>
+                    <td style="padding: 5px;">Ім'я викладача</td>
+                    <td style="padding: 5px;">По-батькові викладача</td>
+                    <td style="padding: 5px;">vykladach.test@lnu.edu.ua</td>
+                    <td style="padding: 5px;">РКТ</td>
+                    <td style="padding: 5px;">5</td>
+                    <td style="padding: 5px;">3</td>
+                    <td style="padding: 5px;">2</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="import-form">
+        {% csrf_token %}
+        <div class="form-row">
+            <label for="id_excel_file">Оберіть Excel файл:</label>
+            <input type="file" name="excel_file" id="id_excel_file" accept=".xlsx,.xls" required>
+        </div>
+        
+        <div class="form-row">
+            <input type="submit" value="Завантажити та імпортувати" class="default">
+            <a href="{% url 'admin:catalog_onlyteacher_changelist' %}" class="button">Скасувати</a>
+        </div>
+    </form>
+
+    <div id="loading" style="display: none;">
+        <p>Обробка файлу... Будь ласка, зачекайте.</p>
+    </div>
+
+    <div id="result" style="display: none;">
+        <h3>Результат імпорту:</h3>
+        <div id="result-content"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const resultContent = document.getElementById('result-content');
+    
+    loading.style.display = 'block';
+    result.style.display = 'none';
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        
+        if (data.success) {
+            resultContent.innerHTML = `
+                <div class="success">
+                    <p><strong>Успішно імпортовано:</strong> ${data.success_count} викладачів</p>
+                    <p><strong>Помилок:</strong> ${data.error_count}</p>
+                    <pre>${data.message}</pre>
+                </div>
+            `;
+        } else {
+            resultContent.innerHTML = `
+                <div class="error">
+                    <p><strong>Помилка:</strong> ${data.error}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        resultContent.innerHTML = `
+            <div class="error">
+                <p><strong>Помилка:</strong> ${error.message}</p>
+            </div>
+        `;
+    });
+});
+</script>
+
+<style>
+.success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.help ul {
+    margin-left: 20px;
+}
+
+.help li {
+    margin-bottom: 5px;
+}
+</style>
+{% endblock %}

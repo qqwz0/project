@@ -242,7 +242,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                                 "stream_id": {
                                     "stream_code": slot.stream_id.stream_code
                                 },
-                                "get_available_slots": slot.get_available_slots(),
+                                "get_available_slots": slot.quota - slot.occupied,
                         }
                         for slot in free_slots
                     ],
@@ -1212,8 +1212,7 @@ class ThemesAPIView(LoginRequiredMixin, View):
             )
             
             # Показуємо лише доступні теми (не зайняті)
-            if hasattr(TeacherTheme, 'is_occupied'):
-                themes_qs = themes_qs.filter(is_occupied=False)
+            themes_qs = themes_qs.filter(is_occupied=False)
             
             # Обмеження доступу для студента: показувати лише теми викладачів,
             # у яких є вільні слоти для потоку студента
@@ -1244,6 +1243,13 @@ class ThemesAPIView(LoginRequiredMixin, View):
                 teacher_ids_with_slots = slots.values_list('teacher_id', flat=True).distinct()
                 allowed_teacher_ids = teachers.filter(pk__in=teacher_ids_with_slots).values_list('pk', flat=True)
                 themes_qs = themes_qs.filter(teacher_id__in=allowed_teacher_ids)
+                
+                # Додаткова фільтрація тем по потоку студента
+                if is_matched:
+                    # Отримуємо потік студента
+                    user_stream_obj = Stream.objects.get(stream_code__iexact=user_stream)
+                    # Фільтруємо теми, які прив'язані до потоку студента
+                    themes_qs = themes_qs.filter(streams=user_stream_obj)
             
             # Пошуковий запит
             if query:
