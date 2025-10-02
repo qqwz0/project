@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
@@ -12,7 +13,7 @@
             <h1>500</h1>
             <h2>Внутрішня помилка сервера :(</h2>
             <p>Щось пішло не так. Будь ласка, спробуйте пізніше.</p>
-            <a href="/">На головну</a>
+            <a href="{% url 'home' %}">На головну</a>
         </div>
     </div>
 </body>
