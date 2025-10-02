@@ -527,7 +527,9 @@ class OnlyTeacherAdmin(admin.ModelAdmin):
     )
 
     def view_on_site(self, obj):
-        return reverse('profile_detail', args=[obj.teacher_id.pk])
+        if obj.teacher_id and obj.teacher_id.pk:
+            return reverse('profile_detail', args=[obj.teacher_id.pk])
+        return None
 
     # Повний доступ: додавання, редагування, видалення
     def has_add_permission(self, request):
@@ -589,7 +591,9 @@ class OnlyStudentAdmin(admin.ModelAdmin):
         return obj.specialty.name
 
     def view_on_site(self, obj):
-        return reverse('profile_detail', args=[obj.student_id.pk])
+        if obj.student_id and obj.student_id.pk:
+            return reverse('profile_detail', args=[obj.student_id.pk])
+        return None
 
     
 @admin.register(StudentTheme)
@@ -609,7 +613,9 @@ class StudentThemeAdmin(admin.ModelAdmin):
         return f"{u.last_name} {u.first_name} {u.patronymic or ''}".strip()
 
     def view_on_site(self, obj):
-        return reverse('profile_detail', args=[obj.student_id.pk])
+        if obj.student_id and obj.student_id.pk:
+            return reverse('profile_detail', args=[obj.student_id.pk])
+        return None
 
 class RequestForm(forms.ModelForm):
     class Meta:
@@ -817,7 +823,9 @@ class RequestAdmin(admin.ModelAdmin):
         return obj.grade if obj.request_status == 'Завершено' else ''
 
     def view_on_site(self, obj):
-        return reverse('profile_detail', args=[obj.student_id.pk])
+        if obj.student_id and obj.student_id.pk:
+            return reverse('profile_detail', args=[obj.student_id.pk])
+        return None
     
     def save_model(self, request, obj, form, change):
         # 1. Track the old status and old theme
