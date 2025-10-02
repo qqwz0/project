@@ -96,7 +96,7 @@
                         >{{ ann.created_at }}</time
                       >
                     </h3>
-                    <p class="announcement-content">{{ ann.content }}</p>
+                    <p class="announcement-content">{{ ann.content|safe }}</p>
                   </div>
                   {% empty %}
                   <p>Немає актуальних оголошень факультету.</p>
@@ -127,7 +127,7 @@
                         >{{ ann.created_at }}</time
                       >
                     </h3>
-                    <p class="announcement-content">{{ ann.content }}</p>
+                    <p class="announcement-content">{{ ann.content|safe }}</p>
                   </div>
                   {% empty %}
                   <p>Немає актуальних оголошень кафедри.</p>
