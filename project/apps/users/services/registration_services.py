@@ -4,7 +4,6 @@ import requests
 import logging
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.core.exceptions import ValidationError
 from apps.catalog.models import (OnlyStudent, OnlyTeacher)
 
 MICROSOFT_AUTH_URL = f"{settings.MICROSOFT_AUTHORITY}/oauth2/v2.0/authorize"
@@ -136,12 +135,16 @@ def create_student_profile(user, group_code, email, faculty, department=None):
                 
             else:
                 logger.error(f"Invalid group code format: {group_code}")
-                raise ValidationError(f"Неправильний формат групи: {group_code}. Використовуйте формат ФЕС-21, ФЕП-22ВПК тощо.")
                 
         except Exception as e:
             logger.error(f"Failed to create new group {group_code}: {e}")
-            # Не використовуємо fallback - викидаємо помилку
-            raise ValidationError(f"Не вдалося створити групу {group_code}. Перевірте правильність написання.")
+            # Fallback до першої групи тільки якщо не вдалося створити нову
+            fallback = Group.objects.first()
+            if fallback:
+                OnlyStudent.objects.create(student_id=user, group=fallback, department=department, faculty=None)
+                logger.warning(f"Fallback OnlyStudent created with group {fallback.group_code} and department {department}")
+            else:
+                logger.error("No groups available in DB for student creation.")
 
 
 def create_automatic_requests_for_student(user, group_code):

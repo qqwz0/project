@@ -109,9 +109,13 @@
     </div>
     {% endif %}
 
-    {% if is_own_profile and user_profile.role != 'Викладач' %}
-        <div id="requests-section" class="tab-content">
-            {% include 'profile/requests.html' with requests=pending_requests %}
+    {% if is_own_profile %}
+        <div id="requests-section" class="tab-content" {% if user_profile.role == 'Викладач' %}style="display: none;"{% endif %}>
+            {% if user_profile.role == 'Викладач' %}
+                {% include 'profile/requests.html' with pending_requests=pending_requests accepted_requests=accepted_requests rejected_requests=rejected_requests %}
+            {% else %}
+                {% include 'profile/requests.html' with requests=pending_requests %}
+            {% endif %}
         </div>
     {% endif %}
 
