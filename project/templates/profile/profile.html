@@ -46,8 +46,12 @@
                     {% elif user_profile.role == "Студент" %}
                         <h3>{{ user_profile.role }}</h3>
                         <p>Група: {{ user_profile.academic_group }}</p>
-                        {% if student_course and student_course >= 3 and user_profile.get_department_name %}
-                            <p>Кафедра: {{ user_profile.get_department_name }}</p>
+                        {% if student_course and student_course >= 3 %}
+                            {% if user_profile.get_department_name %}
+                                <p>Кафедра: {{ user_profile.get_department_name }}</p>
+                            {% else %}
+                                <p>Кафедра: зверніться до адміністрації сайту</p>
+                            {% endif %}
                         {% endif %}
                     {% endif %}
                 </div>
