@@ -526,103 +526,230 @@ textarea.error {
   .modal {
     width: 100vw;
     min-height: min-content;
-    border-radius: 16px; /* rounded on phones */
+    border-radius: 16px;
     overflow: hidden;
     padding: 5px;
     align-self: center;
     margin: 0 auto;
     max-height: 100vh;
   }
+  
   /* Make the dialog content box the ONLY scrollable area */
-  .modal .modal-box { max-height: 90vh; overflow-y: auto; overflow-x: hidden; }
+  .modal .modal-box { 
+    max-height: 90vh; 
+    overflow-y: auto; 
+    overflow-x: hidden; 
+  }
+  
   .modal .info-request-section {
     flex-direction: column;
     height: auto;
     min-height: auto;
     margin: 0;
   }
+  
   .modal .left-container,
   .modal .right-container {
     width: 100%;
     padding: 1rem 0.5rem;
     box-sizing: border-box;
   }
+  
   /* Prevent nested scrollbars; let .modal-box handle scrolling */
-  .modal .right-container { max-height: none; overflow: visible; }
-  .modal .left-container { max-height: 220px; overflow: hidden; }
+  .modal .right-container { 
+    max-height: none; 
+    overflow: visible; 
+  }
+  
+  .modal .left-container { 
+    max-height: 220px; 
+    overflow: hidden; 
+  }
+  
   .left-container img {
     width: 20vw;
     height: 20vw;
     min-width: 80px;
     min-height: 80px;
     margin: 0.5rem auto;
+    object-fit: cover;
+    border-radius: 50%;
   }
+  
   .left-container h2 {
     font-size: clamp(1.1rem, 4vw, 1.3rem);
     margin: 0.2rem 0;
   }
+  
   p.position {
     font-size: clamp(0.8rem, 3.5vw, 1rem);
     margin: 0.2rem 0;
   }
+  
   .left-container h3 {
     font-size: clamp(0.9rem, 3.8vw, 1.1rem);
     margin: 0.3rem 0;
   }
+  
   .modal .multiple-slots {
     width: 90%;
     margin: 0.5rem auto;
   }
+  
   .modal .multiple-slots ul {
     grid-template-columns: 1fr;
     gap: 0.3rem;
     padding: 0 0.5rem;
   }
+  
   .modal .multiple-slots li {
     width: 100%;
     padding: 0.3rem;
     font-size: clamp(0.75rem, 3.5vw, 0.9rem);
   }
+  
   .submit-btn {
     width: 90%;
     padding: 0.6rem;
     font-size: clamp(0.8rem, 4vw, 1rem);
     margin: 0.5rem auto;
   }
+  
   .form-input,
   .textera-container textarea {
     width: 95%;
     padding: 0.5rem;
     font-size: clamp(0.8rem, 3.8vw, 0.95rem);
+    box-sizing: border-box;
   }
+  
   .close-modal {
     top: 0.3rem;
     font-size: 1.2rem;
     padding: 0.2rem;
   }
+  
   .theme-item {
     width: 95%;
     font-size: clamp(0.75rem, 3.5vw, 0.85rem);
     padding: 0.4rem;
+    box-sizing: border-box;
   }
+  
   .dropdown-menu {
     width: 95%;
     left: 2.5%;
   }
+  
   .textera-container textarea {
     height: 6rem;
     width: 95%;
     margin: 0 auto;
   }
+  
   .right-container p {
     font-size: clamp(0.75rem, 3.5vw, 0.9rem);
     margin: 0.3rem 0;
     padding: 0 0.5rem;
   }
+  
   .right-container h1 {
     margin-top: 0;
   }
+
+  /* Tablet-specific styles (768px - 1024px) */
+  @media (min-width: 768px) {
+    .modal {
+      width: 90vw;
+      max-width: 700px;
+      margin: 1rem auto;
+    }
+
+    .modal .left-container {
+      border-right: none;
+      border-bottom: 1px solid #e0e0e0;
+      box-shadow: 0 0.25rem 0.25rem -0.25rem rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+    }
+
+    .modal .right-container {
+      padding: 1.5rem;
+    }
+
+    .left-container img {
+      width: 7rem;
+      height: 10rem;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+
+    .left-container h2 {
+      font-size: 1.05rem;
+    }
+
+    .left-container h3,
+    p.position {
+      font-size: 1rem;
+    }
+
+    /* Fix themes container width */
+    #themes-container {
+      max-width: 100%;
+      width: 100%;
+    }
+
+    /* Fix dropdown positioning */
+    .dropdown {
+      width: 100%;
+    }
+
+    .dropdown-input {
+      position: relative;
+      width: 100%;
+    }
+
+    .dropdown-input select {
+      width: 100%;
+      padding: 12px 3rem 12px 16px;
+      box-sizing: border-box;
+    }
+
+    .dropdown-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    /* Fix input width */
+    .input-add {
+      width: 100%;
+    }
+
+    .input-add input {
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .form-input,
+    .textera-container textarea {
+      width: 100%;
+    }
+
+    .theme-item {
+      width: 100%;
+    }
+
+    .dropdown-menu {
+      width: 100%;
+      left: 0;
+    }
+  }
 }
+
 .add-theme-container {
   margin: 0;
 }
@@ -943,50 +1070,6 @@ textarea.error {
 .dropdown-menu::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;
-}
-
-/* Tablet screens (768px - 1024px) */
-@media screen and (min-width: 768px) and (max-width: 1024px) {
-  .modal {
-    width: 90vw;
-    max-width: 700px;
-    margin: 1rem auto;
-  }
-
-  .modal .info-request-section {
-    flex-direction: column;
-    min-height: auto;
-  }
-
-  .modal .left-container,
-  .modal .right-container {
-    width: 100%;
-    padding: 1.5rem;
-  }
-
-  .modal .left-container {
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
-    box-shadow: 0 0.25rem 0.25rem -0.25rem rgba(0, 0, 0, 0.1);
-  }
-
-  .left-container img {
-    width: 10rem;
-    height: 10rem;
-  }
-
-  .left-container h2 {
-    font-size: 1.25rem;
-  }
-
-  .left-container h3,
-  p.position {
-    font-size: 1.1rem;
-  }
-
-  #themes-container {
-    max-width: 100%;
-  }
 }
 
 /* Mobile screens (up to 767px) */

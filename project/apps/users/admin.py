@@ -1033,31 +1033,53 @@ class SemestrAdmin(admin.ModelAdmin):
         return request.user.groups.filter(name='department_admin').exists() and not request.user.is_superuser
 
     def _get_user_department(self, request):
-        user = request.user  # <-- виправлено тут!
-        if hasattr(user, "role") and user.role == "Викладач":
-            try:
-                ot = OnlyTeacher.objects.select_related('department').get(teacher_id=user)
-                return ot.department
-            except OnlyTeacher.DoesNotExist:
+        try:
+            user = request.user
+            if not hasattr(user, "role"):
                 return None
-        elif hasattr(user, "role") and user.role == "Студент":
-            try:
-                os = OnlyStudent.objects.select_related('group__stream').get(student_id=user)
-                if os.group and os.group.stream and hasattr(os.group.stream, "department"):
-                    return os.group.stream.department
-                if hasattr(os, "department"):
-                    return os.department
-            except OnlyStudent.DoesNotExist:
-                return None
+                
+            if user.role == "Викладач":
+                try:
+                    ot = OnlyTeacher.objects.select_related('department').get(teacher_id=user)
+                    if not ot.department:
+                        return None
+                    return ot.department
+                except OnlyTeacher.DoesNotExist:
+                    return None
+                    
+            elif user.role == "Студент":
+                try:
+                    os = OnlyStudent.objects.select_related('group__stream').get(student_id=user)
+                    if os.group and os.group.stream and hasattr(os.group.stream, "department"):
+                        return os.group.stream.department
+                    if hasattr(os, "department"):
+                        return os.department
+                except OnlyStudent.DoesNotExist:
+                    return None
+                    
+        except Exception:
+            return None
+            
         return None
 
     def _allowed(self, request, obj):
-        if request.user.is_superuser:
-            return True
-        if not self._is_dept_admin(request):
+        try:
+            if request.user.is_superuser:
+                return True
+            if not self._is_dept_admin(request):
+                return False
+            
+            user_dept = self._get_user_department(request)
+            if not user_dept:
+                return False
+                
+            if not obj or not hasattr(obj, 'department_id'):
+                return False
+                
+            return obj.department_id == user_dept.id
+            
+        except Exception:
             return False
-        user_dept = self._get_user_department(request)
-        return user_dept and obj.department_id == user_dept.id
 
     # ----- queryset and form scoping -----
     
@@ -1109,65 +1131,87 @@ class SemestrAdmin(admin.ModelAdmin):
         return ScopedForm
 
     def save_model(self, request, obj, form, change):
-        apply_all = form.cleaned_data.get('apply_to_all_departments', False)
+        try:
+            apply_all = form.cleaned_data.get('apply_to_all_departments', False)
 
-        # Випадок для суперкористувача: пакетне створення
-        if apply_all and request.user.is_superuser:
-            ay = obj.academic_year
-            sem = obj.semestr
-            d_student = obj.lock_student_requests_date
-            d_teacher = obj.lock_teacher_editing_themes_date
-            d_cancel = obj.lock_cancel_requests_date
-            d_complete = obj.allow_complete_work_date
+            if apply_all and request.user.is_superuser:
+                from django.db import transaction
+                
+                ay = obj.academic_year
+                sem = obj.semestr
+                d_student = obj.lock_student_requests_date
+                d_teacher = obj.lock_teacher_editing_themes_date
+                d_cancel = obj.lock_cancel_requests_date
+                d_complete = obj.allow_complete_work_date
 
-            created = 0
-            skipped = 0
+                created = 0
+                skipped = 0
+                errors = []
 
-            for dept in Department.objects.all():
-                exists = Semestr.objects.filter(
-                    department=dept, academic_year=ay, semestr=sem
-                ).exists()
-                if exists:
-                    skipped += 1
-                    continue
+                with transaction.atomic():
+                    for dept in Department.objects.all():
+                        try:
+                            exists = Semestr.objects.filter(
+                                department=dept, academic_year=ay, semestr=sem
+                            ).exists()
+                            if exists:
+                                skipped += 1
+                                continue
 
-                s = Semestr(
-                    department=dept,
-                    academic_year=ay,
-                    semestr=sem,
-                    lock_student_requests_date=d_student,
-                    lock_teacher_editing_themes_date=d_teacher,
-                    lock_cancel_requests_date=d_cancel,
-                    allow_complete_work_date=d_complete,
-                )
-                # clean() викликається у вашому save()
-                s.save()
-                created += 1
+                            s = Semestr(
+                                department=dept,
+                                academic_year=ay,
+                                semestr=sem,
+                                lock_student_requests_date=d_student,
+                                lock_teacher_editing_themes_date=d_teacher,
+                                lock_cancel_requests_date=d_cancel,
+                                allow_complete_work_date=d_complete,
+                            )
+                            s.save()
+                            created += 1
+                            
+                        except Exception as e:
+                            errors.append(f"Помилка для {dept.department_name}: {str(e)}")
 
-            if created:
-                self.message_user(
-                    request,
-                    f"Створено {created} семестр(и/ів) для всіх кафедр. Пропущено (вже існували): {skipped}.",
-                    level=messages.SUCCESS
-                )
-            else:
-                self.message_user(
-                    request,
-                    "Усі відповідні семестри вже існують — нічого не створено.",
-                    level=messages.INFO
-                )
-            # Не зберігаємо поточний obj — це «шаблон» для розмноження
-            return
-
-        # Звичайна гілка: діє ваша існуюча логіка доступів
-        if self._is_dept_admin(request):
-            dept = self._get_user_department(request)
-            if not dept:
-                self.message_user(request, "Не знайдено кафедру для користувача в OnlyTeacher.", level=messages.ERROR)
+                if errors:
+                    self.message_user(
+                        request,
+                        f"Створено {created}, пропущено {skipped}. Помилки: {'; '.join(errors[:3])}",
+                        level=messages.WARNING
+                    )
+                elif created:
+                    self.message_user(
+                        request,
+                        f"Створено {created} семестр(и/ів) для всіх кафедр. Пропущено: {skipped}.",
+                        level=messages.SUCCESS
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        "Усі відповідні семестри вже існують — нічого не створено.",
+                        level=messages.INFO
+                    )
                 return
-            obj.department = dept
 
-        super().save_model(request, obj, form, change)
+            if self._is_dept_admin(request):
+                dept = self._get_user_department(request)
+                if not dept:
+                    self.message_user(
+                        request, 
+                        "Не знайдено кафедру для користувача.", 
+                        level=messages.ERROR
+                    )
+                    return
+                obj.department = dept
+
+            super().save_model(request, obj, form, change)
+            
+        except Exception as e:
+            self.message_user(
+                request,
+                f"Помилка збереження: {str(e)}",
+                level=messages.ERROR
+            )
 
     # ----- object-level permissions -----
     def has_view_permission(self, request, obj=None):
@@ -1240,6 +1284,7 @@ class SemestrAdmin(admin.ModelAdmin):
     def action_reject_pending_requests(self, request, queryset):
         total = 0
         processed = 0
+        errors = []
         for sem in queryset:
             if not self._allowed(request, sem):
                 self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
@@ -1247,8 +1292,10 @@ class SemestrAdmin(admin.ModelAdmin):
             count = sem.apply_student_requests_cancellation()
             total += count
             processed += 1
+        if errors:
+            self.message_user(request, f"Помилки: {'; '.join(errors[:3])}", level=messages.ERROR)
         if total:
-            self.message_user(request, f"Успішно відхилено {total} запитів (семестрів: {processed}).", level=messages.SUCCESS)
+            self.message_user(request, f"Відхилено {total} запитів (семестрів: {processed}).", level=messages.SUCCESS)
         else:
             self.message_user(request, "Жодних запитів для відхилення не знайдено або дедлайни ще не настали.", level=messages.INFO)
 
