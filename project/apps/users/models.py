@@ -100,10 +100,12 @@ class CustomUser(AbstractUser):
 
 
     def get_faculty(self):
-        profile = self.get_profile()
-        if profile and profile.department:
-            return profile.department.faculty
-        return None
+        try:
+            from apps.catalog.models import Group
+            group = Group.objects.get(group_code=self.academic_group)
+            return group.stream.specialty.faculty
+        except Exception:
+            return None  
 
     def get_department(self):
         """

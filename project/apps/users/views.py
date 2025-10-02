@@ -278,7 +278,6 @@ def handle_registration_callback(request, code):
         submitted_role = request.session.get("role")
         group = request.session.get("group")
         department_id = request.session.get("department_id")
-        
         # Отримуємо Department об'єкт з ID
         department = None
         if department_id:
@@ -344,8 +343,9 @@ def handle_registration_callback(request, code):
                 logger.info("New user registered: %s", email)
                 # Створюємо профіль в залежності від ролі
                 if derived_role == "Студент":
+                    faculty = user.get_faculty()
                     # Для всіх студентів кафедра буде визначена адміністратором
-                    create_student_profile(user, group, email, None)
+                    create_student_profile(user, group, email, faculty, None)
                 else:
                     # department тепер є Department об'єктом
                     create_teacher_profile(user, job_title, department)

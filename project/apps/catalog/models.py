@@ -13,6 +13,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from apps.users.models import CustomUser
 from django.db import transaction
+from django.db import IntegrityError
 
 logger = logging.getLogger(__name__)
         
@@ -524,21 +525,18 @@ class OnlyStudent(models.Model):
                                    verbose_name="Кафедра")
     additional_email = models.EmailField(blank=True, null=True, verbose_name="Додатковий email")
     phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="Телефон")
+    faculty = models.ForeignKey('Faculty', on_delete=models.SET_NULL, null=True, blank=True,
+                                verbose_name="Факультет")
     
     class Meta:
         verbose_name = "Студент"
         verbose_name_plural = "Студенти"
-    
+
     @property
     def specialty(self):
         """Повертає спеціальність через групу -> потік -> спеціальність"""
         return self.group.stream.specialty
-    
-    @property
-    def faculty(self):
-        """Повертає факультет через групу -> потік -> спеціальність -> факультет"""
-        return self.group.stream.specialty.faculty
-    
+        
     @property
     def education_level(self):
         """Повертає рівень освіти зі спеціальності"""
@@ -805,6 +803,7 @@ class Semestr(models.Model):
         verbose_name = "Семестр"
         verbose_name_plural = "Семестри"
         ordering = ['-academic_year', 'department', 'semestr']
+        
     def clean(self):
         from django.core.exceptions import ValidationError
         import re
@@ -812,39 +811,42 @@ class Semestr(models.Model):
 
         errors = {}
 
-    
-        if self.department and Semestr.objects.exclude(pk=self.pk).filter(
-            department=self.department,
-            academic_year=self.academic_year,
-            semestr=self.semestr
-        ).exists():
-            errors['academic_year'] = "Комбінація 'Навчальний рік' і 'Семестр' для цієї кафедри вже існує."
+        apply_all = getattr(self, "_apply_all_departments", False)
 
-        # Перевірка наявності кафедри
-        if not self.department:
-            errors['department'] = "Потрібно вибрати кафедру."
+        if not apply_all:
+            if self.department and Semestr.objects.exclude(pk=self.pk).filter(
+                department=self.department,
+                academic_year=self.academic_year,
+                semestr=self.semestr
+            ).exists():
+                errors['academic_year'] = (
+                    "Комбінація 'Навчальний рік' і 'Семестр' для цієї кафедри вже існує."
+                )
 
-        # Формат навчального року (YYYY/YY) і послідовність
-        if self.academic_year:
-            if not re.match(r'^\d{4}/\d{2}$', self.academic_year):
-                errors['academic_year'] = "Формат має бути YYYY/YY (наприклад 2024/25)."
-            else:
-                start_year = int(self.academic_year[:4])
-                end_suffix = int(self.academic_year[-2:])
-                if (start_year + 1) % 100 != end_suffix:
-                    errors['academic_year'] = "Друга частина року має бути (перший рік + 1). Приклад: 2024/25."
+            if not self.department:
+                errors['department'] = "Потрібно вибрати кафедру."
 
-        d_student = self.lock_student_requests_date
-        d_teacher = self.lock_teacher_editing_themes_date
-        d_cancel = self.lock_cancel_requests_date
-        d_complete = self.allow_complete_work_date
+            # Формат навчального року (YYYY/YY) і послідовність
+            if self.academic_year:
+                if not re.match(r'^\d{4}/\d{2}$', self.academic_year):
+                    errors['academic_year'] = "Формат має бути YYYY/YY (наприклад 2024/25)."
+                else:
+                    start_year = int(self.academic_year[:4])
+                    end_suffix = int(self.academic_year[-2:])
+                    if (start_year + 1) % 100 != end_suffix:
+                        errors['academic_year'] = "Друга частина року має бути (перший рік + 1). Приклад: 2024/25."
 
-        lock_dates = [d for d in [d_student, d_teacher, d_cancel] if d]
-        if d_complete and lock_dates and d_complete < max(lock_dates):
-            errors['allow_complete_work_date'] = "Дата дозволу завершення має бути не раніше за всі дати блокувань."
+            d_student = self.lock_student_requests_date
+            d_teacher = self.lock_teacher_editing_themes_date
+            d_cancel = self.lock_cancel_requests_date
+            d_complete = self.allow_complete_work_date
 
-        if errors:
-            raise ValidationError(errors)
+            lock_dates = [d for d in [d_student, d_teacher, d_cancel] if d]
+            if d_complete and lock_dates and d_complete < max(lock_dates):
+                errors['allow_complete_work_date'] = "Дата дозволу завершення має бути не раніше за всі дати блокувань."
+
+            if errors:
+                raise ValidationError(errors)
     
     def save(self, *args, **kwargs):
         
@@ -859,7 +861,8 @@ class Semestr(models.Model):
         super().save(*args, **kwargs)    
 
     def __str__(self):
-        return f"{self.academic_year} - {self.get_semestr_display()} ({self.department.department_name})"
+       if self.department:
+         return f"{self.academic_year} - {self.get_semestr_display()} ({self.department.department_name})"
     
     def is_lock_student_requests_passed(self):
         return self.lock_student_requests_date and timezone.now().date() >= self.lock_student_requests_date
@@ -934,6 +937,7 @@ class Semestr(models.Model):
             logger.info(f"Semester {self}: Auto-locked {stats['locked_themes']} active themes")
         
         return stats
+        
     @staticmethod
     def for_department_and_year(department, academic_year):
         return Semestr.objects.filter(department=department, academic_year=academic_year).first()

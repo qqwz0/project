@@ -952,7 +952,35 @@ class RequestAdmin(admin.ModelAdmin):
             self.message_user(request, str(e), level=messages.ERROR)
     export_to_word.short_description = "Експортувати шаблон запитів у Word"
 
+class SemestrAdminForm(forms.ModelForm):
+    apply_to_all_departments = forms.BooleanField(
+        required=False,
+        label="Створити для всіх кафедр",
+        help_text="Створить семестр для кожної кафедри, якщо ще не існує."
+    )
+
+    class Meta:
+        model = Semestr
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+        # позначимо інстанс прапорцем, щоб модель знала, що перевірки можна послабити
+        if cleaned.get('apply_to_all_departments'):
+            setattr(self.instance, "_apply_all_departments", True)
+        return cleaned
+
+    def validate_unique(self):
+        """
+        Коли створюємо 'для всіх кафедр', пропускаємо валідацію унікальності
+        (бо ми все одно не зберігаємо цей obj, а створюємо окремі екземпляри у save_model).
+        """
+        if getattr(self.instance, "_apply_all_departments", False):
+            return
+        return super().validate_unique()
+        
 class SemestrAdmin(admin.ModelAdmin):
+    form = SemestrAdminForm
     list_display = (
         'department',
         'academic_year',
@@ -1032,6 +1060,20 @@ class SemestrAdmin(admin.ModelAdmin):
         return user_dept and obj.department_id == user_dept.id
 
     # ----- queryset and form scoping -----
+    
+    def get_fieldsets(self, request, obj=None):
+        base = super().get_fieldsets(request, obj)
+        result = []
+        for title, opts in base:
+            opts = dict(opts)  # копія словника
+            if 'fields' in opts:
+                fields = list(opts['fields'])
+                if request.user.is_superuser and 'apply_to_all_departments' not in fields:
+                    fields.append('apply_to_all_departments')
+                opts['fields'] = tuple(fields)
+            result.append((title, opts))
+        return result
+    
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if self._is_dept_admin(request):
@@ -1056,14 +1098,75 @@ class SemestrAdmin(admin.ModelAdmin):
                 data['department'] = dept.pk
         return data
 
-    # enforce department on save for dept admins
+    def get_form(self, request, obj=None, **kwargs):
+        Form = super().get_form(request, obj, **kwargs)
+        class ScopedForm(Form):
+            def __init__(self2, *a, **k):
+                super().__init__(*a, **k)
+                # Показуємо чекбокс лише суперюзеру
+                if not request.user.is_superuser and 'apply_to_all_departments' in self2.fields:
+                    self2.fields.pop('apply_to_all_departments')
+        return ScopedForm
+
     def save_model(self, request, obj, form, change):
+        apply_all = form.cleaned_data.get('apply_to_all_departments', False)
+
+        # Випадок для суперкористувача: пакетне створення
+        if apply_all and request.user.is_superuser:
+            ay = obj.academic_year
+            sem = obj.semestr
+            d_student = obj.lock_student_requests_date
+            d_teacher = obj.lock_teacher_editing_themes_date
+            d_cancel = obj.lock_cancel_requests_date
+            d_complete = obj.allow_complete_work_date
+
+            created = 0
+            skipped = 0
+
+            for dept in Department.objects.all():
+                exists = Semestr.objects.filter(
+                    department=dept, academic_year=ay, semestr=sem
+                ).exists()
+                if exists:
+                    skipped += 1
+                    continue
+
+                s = Semestr(
+                    department=dept,
+                    academic_year=ay,
+                    semestr=sem,
+                    lock_student_requests_date=d_student,
+                    lock_teacher_editing_themes_date=d_teacher,
+                    lock_cancel_requests_date=d_cancel,
+                    allow_complete_work_date=d_complete,
+                )
+                # clean() викликається у вашому save()
+                s.save()
+                created += 1
+
+            if created:
+                self.message_user(
+                    request,
+                    f"Створено {created} семестр(и/ів) для всіх кафедр. Пропущено (вже існували): {skipped}.",
+                    level=messages.SUCCESS
+                )
+            else:
+                self.message_user(
+                    request,
+                    "Усі відповідні семестри вже існують — нічого не створено.",
+                    level=messages.INFO
+                )
+            # Не зберігаємо поточний obj — це «шаблон» для розмноження
+            return
+
+        # Звичайна гілка: діє ваша існуюча логіка доступів
         if self._is_dept_admin(request):
             dept = self._get_user_department(request)
             if not dept:
                 self.message_user(request, "Не знайдено кафедру для користувача в OnlyTeacher.", level=messages.ERROR)
                 return
             obj.department = dept
+
         super().save_model(request, obj, form, change)
 
     # ----- object-level permissions -----
