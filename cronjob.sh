@@ -114,5 +114,36 @@ log() {
 
 # Send email notification if mail is available
 if command -v mail >/dev/null 2>&1; then
-    mail -s "Deployment Report $(date '+%Y-%m-%d %H:%M:%S')" "$EMAIL" < "$LOG_FILE"
+    # Check if log file exists
+    if [ -f "$LOG_FILE" ]; then
+        log "Attempting to send email notification to $EMAIL"
+        
+        # Create a proper email with headers to avoid spam
+        {
+            echo "Subject: [$(hostname)] Deployment Report $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "From: deployment@$(hostname)"
+            echo "To: $EMAIL"
+            echo "Content-Type: text/plain; charset=UTF-8"
+            echo ""
+            echo "=== DEPLOYMENT REPORT ==="
+            echo "Server: $(hostname)"
+            echo "Date: $(date)"
+            echo "Project: $PROJECT_DIR"
+            echo "Branch: $BRANCH"
+            echo ""
+            echo "=== LOG DETAILS ==="
+            cat "$LOG_FILE"
+        } | sendmail "$EMAIL"
+        
+        # Also try with mail command as backup
+        mail -s "[$(hostname)] Deployment $(date '+%H:%M')" -r "deployment@$(hostname)" "$EMAIL" < "$LOG_FILE"
+        
+        log "Email notification sent to $EMAIL"
+    else
+        log "ERROR: Log file $LOG_FILE not found, sending simple notification"
+        echo "Deployment completed on $(hostname) at $(date), but log file was not found." | \
+        mail -s "[$(hostname)] Deployment Alert $(date '+%H:%M')" -r "deployment@$(hostname)" "$EMAIL"
+    fi
+else
+    log "WARNING: Mail command not available, email notification skipped"
 fi
