@@ -3,16 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Головна - Advisor Finder</title>
+    <title>Advisor Finder - Пошук наукового керівника ЛНУ</title>
+    <meta name="description" content="Система пошуку наукового керівника для студентів Львівського національного університету імені Івана Франка. Знайдіть викладача для курсової або дипломної роботи." />
+    <meta name="keywords" content="науковий керівник, ЛНУ, курсова робота, дипломна робота, викладач, студент" />
+    <meta name="author" content="Львівський національний університет" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/LOGO.svg' %}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/LOGO.svg' %}" />
+    <link rel="apple-touch-icon" href="{% static 'images/LOGO.svg' %}" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://advisor-search.lnu.edu.ua/" />
+    <meta property="og:title" content="Advisor Finder - Пошук наукового керівника ЛНУ" />
+    <meta property="og:description" content="Система пошуку наукового керівника для студентів ЛНУ. Знайдіть викладача для курсової або дипломної роботи." />
+    <meta property="og:image" content="{% static 'images/LOGO.svg' %}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Advisor Finder" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://advisor-search.lnu.edu.ua/" />
+    <meta property="twitter:title" content="Advisor Finder - Пошук наукового керівника ЛНУ" />
+    <meta property="twitter:description" content="Система пошуку наукового керівника для студентів ЛНУ" />
+    <meta property="twitter:image" content="{% static 'images/LOGO.svg' %}" />
     {% load static %}
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-    />
-     <link
-      rel="icon"
-      type="image/x-icon"
-      href="{% static 'images/LOGO.svg' %}"
     />
     <link rel="stylesheet" href="{% static 'css/header.css' %}" />
     <link rel="stylesheet" href="{% static 'css/home.css' %}" />

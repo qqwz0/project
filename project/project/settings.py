@@ -33,7 +33,7 @@ print("DB_USER:", os.environ.get('DB_USER'))
 print("DB_PASSWORD:", os.environ.get('DB_PASSWORD'))
 print("DB_NAME:", os.environ.get('DB_NAME'))
 
-# Quick-start development settings - unsuitable for production
+# Production settings for Advisor Finder
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
