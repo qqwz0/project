@@ -36,9 +36,15 @@
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
                             <div class="user-info">
-                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
-                                    {{ request.teacher_id.teacher_id.get_full_name }}
-                                </a>
+                                {% if request.teacher_id and request.teacher_id.teacher_id %}
+                                    <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                        {{ request.teacher_id.teacher_id.get_full_name }}
+                                    </a>
+                                {% else %}
+                                    <span class="profile-link text-muted">
+                                        <em>Викладач не призначений</em>
+                                    </span>
+                                {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
                                 {% if request.custom_student_theme %}
                                     <strong>Тема:</strong>
@@ -109,9 +115,15 @@
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
                             <div class="user-info">
-                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
-                                    {{ request.teacher_id.teacher_id.get_full_name }}
-                                </a>
+                                {% if request.teacher_id and request.teacher_id.teacher_id %}
+                                    <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                        {{ request.teacher_id.teacher_id.get_full_name }}
+                                    </a>
+                                {% else %}
+                                    <span class="profile-link text-muted">
+                                        <em>Викладач не призначений</em>
+                                    </span>
+                                {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
                                 {% if request.custom_student_theme %}
                                     <strong>Тема:</strong>
@@ -168,9 +180,15 @@
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
                             <div class="user-info">
-                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
-                                    {{ request.teacher_id.teacher_id.get_full_name }}
-                                </a>
+                                {% if request.teacher_id and request.teacher_id.teacher_id %}
+                                    <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                        {{ request.teacher_id.teacher_id.get_full_name }}
+                                    </a>
+                                {% else %}
+                                    <span class="profile-link text-muted">
+                                        <em>Викладач не призначений</em>
+                                    </span>
+                                {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
                                 {% if request.custom_student_theme %}
                                     <strong>Тема:</strong>
@@ -230,9 +248,15 @@
                         <div class="request-user">
                             <img src="{% get_profile_picture_url request.teacher_id.teacher_id %}" alt="Фото профілю" class="request-avatar">
                             <div class="user-info">
-                                <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
-                                    {{ request.teacher_id.teacher_id.get_full_name }}
-                                </a>
+                                {% if request.teacher_id and request.teacher_id.teacher_id %}
+                                    <a href="{% url 'profile_detail' request.teacher_id.teacher_id.id %}" class="profile-link">
+                                        {{ request.teacher_id.teacher_id.get_full_name }}
+                                    </a>
+                                {% else %}
+                                    <span class="profile-link text-muted">
+                                        <em>Викладач не призначений</em>
+                                    </span>
+                                {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
                                 {% if request.custom_student_theme %}
                                     <strong>Тема:</strong>

@@ -222,11 +222,19 @@
                 <div class="request-user">
                     <img src="{% get_profile_picture_url request.student_id %}" alt="Фото профілю" class="request-avatar">
                     <div class="user-info">
-                        <a href="{% url 'profile_detail' request.student_id.id %}" class="profile-link">
-                            {{ request.student_id.get_full_name }}
-                        </a>
-                        <p class="role">{{ request.student_id.role }}</p>
-                        <p>Група: {{ request.student_id.academic_group }}</p>
+                        {% if request.student_id %}
+                            <a href="{% url 'profile_detail' request.student_id.id %}" class="profile-link">
+                                {{ request.student_id.get_full_name }}
+                            </a>
+                            <p class="role">{{ request.student_id.role }}</p>
+                            <p>Група: {{ request.student_id.academic_group }}</p>
+                        {% else %}
+                            <span class="profile-link text-muted">
+                                <em>Очікується студент</em>
+                            </span>
+                            <p class="role text-muted">Віртуальний запит</p>
+                            <p class="text-muted">Група: не призначена</p>
+                        {% endif %}
                         {% if request.custom_student_theme %}
                             <strong>Тема:</strong>
                             <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
