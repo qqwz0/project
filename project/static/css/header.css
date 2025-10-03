@@ -116,7 +116,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.nav-tooltip::before {
+.nav-icon .nav-tooltip::before {
   content: "";
   position: absolute;
   top: -6px;
@@ -247,7 +247,6 @@ body {
   gap: 8px;
   max-width: none;
 }
-
 .mobile-menu .nav-icon {
   width: 100%;
   height: 52px;
@@ -259,22 +258,6 @@ body {
   border: 1px solid rgba(226, 232, 240, 0.4);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-}
-
-.mobile-menu .nav-icon::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-  transition: left 0.5s;
 }
 
 .mobile-menu .nav-icon:hover::before {
@@ -555,7 +538,6 @@ body {
   gap: 0.875rem;
   flex-shrink: 2;
   min-width: 0;
-  max-width: 40vw;
 }
 
 .auth-btn {
@@ -652,7 +634,6 @@ body {
 
   .auth-section {
     gap: 0.75rem;
-    max-width: 35vw;
   }
 
   .auth-btn {
@@ -742,7 +723,6 @@ body {
 
   .auth-section {
     gap: 0.5rem;
-    max-width: 30vw;
   }
 
   .auth-btn {
@@ -880,7 +860,6 @@ body {
     gap: 0.25rem;
     flex-shrink: 3;
     min-width: 0;
-    max-width: 25vw;
   }
 
   .auth-btn {

@@ -608,7 +608,7 @@ body {
     font-size: 13px;
     border-radius: 6px;
     min-width: auto;
-    width: 100%;
+    width: 100% !important;
   }
 
   .cancel-button-icon,
@@ -1003,6 +1003,7 @@ h2.mt-4 {
   display: inline-flex;
   align-items: center;
   width: auto;
+  justify-content: center;
 }
 .complete-button:hover {
   background-color: #0e6659;
@@ -1027,6 +1028,7 @@ h2.mt-4 {
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   width: auto;
 }
 
@@ -2245,13 +2247,13 @@ textarea.form-control::placeholder {
    ======================================== */
 
 /* === Body lock when modal is open === */
-body.modal-open, html.modal-open {
-    overflow: hidden;
-    position: relative;
-    height: 100%;
-    width: 100vw;
+body.modal-open,
+html.modal-open {
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  width: 100vw;
 }
-
 
 /* === Base Modal Styles === */
 .modal,
@@ -2309,33 +2311,33 @@ body.modal-open, html.modal-open {
   align-items: stretch;
   overflow-y: auto;
   max-height: 80vh;
-  scrollbar-gutter: stable both-edges;     
-  background-clip: padding-box;            
-  padding-right: 2px;    
+  scrollbar-gutter: stable both-edges;
+  background-clip: padding-box;
+  padding-right: 2px;
 }
 
 .modal-content::-webkit-scrollbar,
 #editThemeModal .edit-theme-modal-content::-webkit-scrollbar,
 .student-modal-content::-webkit-scrollbar,
 .rejection-modal-content::-webkit-scrollbar {
-  width: 12px; 
+  width: 12px;
 }
 
 .modal-content::-webkit-scrollbar-thumb,
 #editThemeModal .edit-theme-modal-content::-webkit-scrollbar-thumb,
 .student-modal-content::-webkit-scrollbar-thumb,
 .rejection-modal-content::-webkit-scrollbar-thumb {
-  border-radius: 10px;               
-  background-color: rgba(0,0,0,.25); 
-  border: 3px solid transparent;      
-  background-clip: padding-box;      
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 .modal-content::-webkit-scrollbar-track,
 #editThemeModal .edit-theme-modal-content::-webkit-scrollbar-track,
 .student-modal-content::-webkit-scrollbar-track,
 .rejection-modal-content::-webkit-scrollbar-track {
-  border-radius: 10px;                
+  border-radius: 10px;
   background: transparent;
 }
 
