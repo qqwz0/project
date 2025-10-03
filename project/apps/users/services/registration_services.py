@@ -394,7 +394,7 @@ def create_automatic_requests_for_student(user, group_code):
                         virtual_request.topic_description = request_mapping.theme_description
                         virtual_request.save()
                         request_obj = virtual_request
-                        created = True  # ВИПРАВЛЕНО: Позначаємо як створений для правильного оновлення слота
+                        created = False
                         logger.info(f"Updated virtual request {virtual_request.id} with student {user.get_full_name_with_patronymic()}")
                     else:
                         # Переконуємося що user збережений в БД
@@ -415,19 +415,13 @@ def create_automatic_requests_for_student(user, group_code):
                             }
                         )
                     
-                    # ВИПРАВЛЕНО: Оновлюємо слот і тему тільки при створенні нового запиту або оновленні віртуального
                     if request_obj:
-                        # Для віртуальних запитів (коли оновлюємо student_id з null на реального студента)
-                        # або для нових запитів - оновлюємо слот
-                        if virtual_request or created:
-                            # Перевіряємо чи слот ще не переповнений (тільки для нових запитів)
-                            if created and slot.occupied < slot.quota:
-                                slot.occupied += 1
-                                slot.save()
-                                logger.info(f"Updated slot occupancy to {slot.occupied}/{slot.quota}")
-                            elif virtual_request:
-                                # Для віртуальних запитів слот вже був оновлений при створенні
-                                logger.info(f"Virtual request updated, slot occupancy remains: {slot.occupied}/{slot.quota}")
+                        if created and slot.occupied < slot.quota:
+                            slot.occupied += 1
+                            slot.save()
+                            logger.info(f"Updated slot occupancy to {slot.occupied}/{slot.quota}")
+                        elif virtual_request:
+                            logger.info(f"Virtual request updated, slot occupancy remains: {slot.occupied}/{slot.quota}")
                         
                         # Позначаємо тему як зайняту
                         teacher_theme.is_occupied = True
