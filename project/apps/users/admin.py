@@ -1002,7 +1002,7 @@ class SemestrAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Основна інформація', {
-            'fields': ('department', 'academic_year', 'semestr'),
+            'fields': ('department', 'academic_year', 'semestr', 'apply_to_all_departments'),
             'description': (
                 "Налаштування семестру для конкретної кафедри. "
                 "Комбінація «Кафедра + Рік + Семестр» має бути унікальною."
@@ -1062,47 +1062,15 @@ class SemestrAdmin(admin.ModelAdmin):
             
         return None
 
-    def _allowed(self, request, obj):
-        try:
-            if request.user.is_superuser:
-                return True
-            if not self._is_dept_admin(request):
-                return False
-            
-            user_dept = self._get_user_department(request)
-            if not user_dept:
-                return False
-                
-            if not obj or not hasattr(obj, 'department_id'):
-                return False
-                
-            return obj.department_id == user_dept.id
-            
-        except Exception:
-            return False
 
-    # ----- queryset and form scoping -----
-    
-    def get_fieldsets(self, request, obj=None):
-        base = super().get_fieldsets(request, obj)
-        result = []
-        for title, opts in base:
-            opts = dict(opts)  # копія словника
-            if 'fields' in opts:
-                fields = list(opts['fields'])
-                if request.user.is_superuser and 'apply_to_all_departments' not in fields:
-                    fields.append('apply_to_all_departments')
-                opts['fields'] = tuple(fields)
-            result.append((title, opts))
-        return result
-    
+
+    # ----- queryset and form scoping -----    
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if self._is_dept_admin(request):
             dept = self._get_user_department(request)
             if dept:
                 return qs.filter(department=dept)
-            # if no OnlyTeacher department, show nothing
             return qs.none()
         return qs
 
@@ -1125,9 +1093,11 @@ class SemestrAdmin(admin.ModelAdmin):
         class ScopedForm(Form):
             def __init__(self2, *a, **k):
                 super().__init__(*a, **k)
-                # Показуємо чекбокс лише суперюзеру
-                if not request.user.is_superuser and 'apply_to_all_departments' in self2.fields:
-                    self2.fields.pop('apply_to_all_departments')
+                # Блокуємо чекбокс для адмінів кафедр
+                if 'apply_to_all_departments' in self2.fields:
+                    if self._is_dept_admin(request):
+                        self2.fields['apply_to_all_departments'].disabled = True
+                        self2.fields['apply_to_all_departments'].help_text = "Доступно лише суперадміністраторам"
         return ScopedForm
 
     def save_model(self, request, obj, form, change):
@@ -1284,14 +1254,28 @@ class SemestrAdmin(admin.ModelAdmin):
     def action_reject_pending_requests(self, request, queryset):
         total = 0
         processed = 0
+        skipped = 0
         errors = []
+        
+        user_dept = None
+        if self._is_dept_admin(request):
+            user_dept = self._get_user_department(request)
+            if not user_dept:
+                self.message_user(request, "Не знайдено кафедру для користувача.", level=messages.ERROR)
+                return
+            
         for sem in queryset:
-            if not self._allowed(request, sem):
-                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
-                continue
-            count = sem.apply_student_requests_cancellation()
-            total += count
-            processed += 1
+            if self._is_dept_admin(request):
+                if not sem.department or sem.department != user_dept.id:
+                    skipped += 1
+                    continue
+            try:
+                count = sem.apply_student_request_cancellations()
+                total += count
+                processed += 1
+            except Exception as e:
+                errors.append(f"Помилка для {sem}: {str(e)}")    
+            
         if errors:
             self.message_user(request, f"Помилки: {'; '.join(errors[:3])}", level=messages.ERROR)
         if total:
@@ -1299,38 +1283,135 @@ class SemestrAdmin(admin.ModelAdmin):
         else:
             self.message_user(request, "Жодних запитів для відхилення не знайдено або дедлайни ще не настали.", level=messages.INFO)
 
+    @admin.action(description="Відхилити запити, що очікують (після дедлайну)")
+    def action_reject_pending_requests(self, request, queryset):
+        total = 0
+        processed = 0
+        skipped = 0
+        errors = []
+
+        user_dept = None
+        if self._is_dept_admin(request):
+            user_dept = self._get_user_department(request)
+            if not user_dept:
+                self.message_user(request, "Не знайдено кафедру для вашого користувача.", level=messages.ERROR)
+                return
+        
+        for sem in queryset:
+            if self._is_dept_admin(request):
+                if not sem.department or sem.department.id != user_dept.id:
+                    skipped += 1
+                    continue
+            
+            try:
+                count = sem.apply_student_requests_cancellation()
+                total += count
+                processed += 1
+            except Exception as e:
+                errors.append(f"Помилка для {sem}: {str(e)}")
+        
+        if errors:
+            self.message_user(request, f"Помилки: {'; '.join(errors[:3])}", level=messages.ERROR)
+        
+        if skipped > 0:
+            self.message_user(request, f"Пропущено {skipped} семестрів (немає прав доступу).", level=messages.WARNING)
+        
+        if total:
+            self.message_user(request, f"Відхилено {total} запитів у {processed} семестрах.", level=messages.SUCCESS)
+        elif processed == 0:
+            self.message_user(request, "Немає семестрів для обробки або немає прав доступу.", level=messages.INFO)
+        else:
+            self.message_user(request, "Жодних запитів для відхилення не знайдено або дедлайни ще не настали.", level=messages.INFO)
+
     @admin.action(description="Заблокувати теми в активних роботах (після дедлайну)")
     def action_lock_active_themes(self, request, queryset):
         total = 0
         processed = 0
+        skipped = 0
+        errors = []
+        
+        user_dept = None
+        if self._is_dept_admin(request):
+            user_dept = self._get_user_department(request)
+            if not user_dept:
+                self.message_user(request, "Не знайдено кафедру для вашого користувача.", level=messages.ERROR)
+                return
+        
         for sem in queryset:
-            if not self._allowed(request, sem):
-                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
-                continue
-            count = sem.apply_teacher_editing_lock()
-            total += count
-            processed += 1
+            if self._is_dept_admin(request):
+                if not sem.department or sem.department.id != user_dept.id:
+                    skipped += 1
+                    continue
+            
+            try:
+                count = sem.apply_teacher_editing_lock()
+                total += count
+                processed += 1
+            except Exception as e:
+                errors.append(f"Помилка для {sem}: {str(e)}")
+        
+        if errors:
+            self.message_user(request, f"Помилки: {'; '.join(errors[:3])}", level=messages.ERROR)
+        
+        if skipped > 0:
+            self.message_user(request, f"Пропущено {skipped} семестрів (немає прав доступу).", level=messages.WARNING)
+        
         if total:
-            self.message_user(request, f"Заблоковано {total} тем (семестрів: {processed}).", level=messages.SUCCESS)
+            self.message_user(request, f"Заблоковано {total} тем у {processed} семестрах.", level=messages.SUCCESS)
+        elif processed == 0:
+            self.message_user(request, "Немає семестрів для обробки або немає прав доступу.", level=messages.INFO)
         else:
             self.message_user(request, "Жодних тем для блокування не знайдено або дедлайни ще не настали.", level=messages.INFO)
 
     @admin.action(description="Застосувати всі дедлайни (комплексна дія)")
     def action_apply_all(self, request, queryset):
-        stats = {'rejected': 0, 'locked': 0, 'processed': 0}
+        stats = {'rejected': 0, 'locked': 0, 'processed': 0, 'skipped': 0}
+        errors = []
+        
+        # Отримуємо кафедру адміна тільки якщо це НЕ суперюзер
+        user_dept = None
+        if self._is_dept_admin(request):
+            user_dept = self._get_user_department(request)
+            if not user_dept:
+                self.message_user(request, "Не знайдено кафедру для вашого користувача.", level=messages.ERROR)
+                return
+        
         for sem in queryset:
-            if not self._allowed(request, sem):
-                self.message_user(request, f"Немає прав для {sem}", level=messages.WARNING)
-                continue
-            result = sem.apply_all_deadlines()
-            stats['rejected'] += result['rejected_pending']
-            stats['locked'] += result['locked_themes']
-            stats['processed'] += 1
+            # Перевіряємо права доступу ТІЛЬКИ для адмінів кафедр
+            if self._is_dept_admin(request):
+                if not sem.department or sem.department.id != user_dept.id:
+                    stats['skipped'] += 1
+                    continue
+            
+            try:
+                result = sem.apply_all_deadlines()
+                stats['rejected'] += result['rejected_pending']
+                stats['locked'] += result['locked_themes']
+                stats['processed'] += 1
+            except Exception as e:
+                errors.append(f"Помилка для {sem}: {str(e)}")
+        
+        if errors:
+            self.message_user(request, f"Помилки: {'; '.join(errors[:3])}", level=messages.ERROR)
+        
+        if stats['skipped'] > 0:
+            self.message_user(
+                request,
+                f"Пропущено {stats['skipped']} семестрів (немає прав доступу).",
+                level=messages.WARNING
+            )
+        
         if stats['rejected'] or stats['locked']:
             self.message_user(
                 request,
                 f"Оброблено {stats['processed']} семестрів. Відхилено: {stats['rejected']}, Заблоковано: {stats['locked']}.",
                 level=messages.SUCCESS
+            )
+        elif stats['processed'] == 0:
+            self.message_user(
+                request,
+                "Немає семестрів для обробки або немає прав доступу.",
+                level=messages.INFO
             )
         else:
             self.message_user(
