@@ -1832,6 +1832,39 @@ body {
   display: inline-flex;
 }
 
+.short_department {
+  position: relative;
+  display: inline-block;
+  max-width: max-content;
+}
+
+.short_department .nav-tooltip {
+  bottom: 100%;
+}
+
+.short_department .nav-tooltip::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #1e293b; /* вказує вниз */
+}
+
+.short_department:hover .nav-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.form-checkbox .short_department {
+  display: flex;
+  flex-direction: row;
+  max-width: none;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 780px) {
   .help-section {

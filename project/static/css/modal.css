@@ -1097,7 +1097,7 @@ textarea.error {
     border-right: none;
     border-bottom: 1px solid #e0e0e0;
     box-shadow: 0 0.25rem 0.25rem -0.25rem rgba(0, 0, 0, 0.1);
-    min-height: auto;
+    min-height: max-content;
   }
 
   .modal .right-container {

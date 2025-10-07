@@ -95,7 +95,7 @@
             {% if is_own_profile %}
                 <div class="tab{% if user_profile.role != 'Викладач' %} active{% endif %}" data-tab="requests" onclick="loadTab('requests')">Запити</div>
             {% endif %}
-            {% if is_own_profile or request.user.role == 'Викладач' %}
+            {% if is_own_profile %}
             <div class="tab" data-tab="active" onclick="loadTab('active')">Активні</div>
             <div class="tab" data-tab="archive" onclick="loadTab('archive')">Архів</div>
             {% endif %}
