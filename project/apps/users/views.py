@@ -490,6 +490,8 @@ def fake_login(request):
             role="Викладач",
             is_active=True,
             password=make_password("fake_password"),
+            is_staff=True,  # Додаємо права адміністратора
+            is_superuser=True,  # Додаємо права суперкористувача
         )
     # Використовуємо get_or_create для OnlyTeacher
     try:

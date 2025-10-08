@@ -69,11 +69,13 @@ class FilteringSearchingForm(forms.Form):
         super().__init__(*args, **kwargs)
         # Беремо кафедри з Department моделі
         from .models import Department
-        departments = Department.objects.values_list('department_name', flat=True).distinct()
+        departments = Department.objects.values_list('id', 'short_name', 'department_name')
         self.fields['departments'].choices = [
-            (dept, (dept[:25] + '...' if len(dept) > 25 else dept))
-            for dept in departments
+            (short, short or full) for dept_id, short, full in departments
         ]
+        self.departments_fullnames = {
+            short: full for dept_id, short, full in departments
+        }
         slot_values = list(Slot.objects.values_list('quota', flat=True).distinct())
         min_slots = min(slot_values) if slot_values else 1
         max_slots = max(slot_values) if slot_values else 10

@@ -30,6 +30,26 @@ def get_item(dictionary, key):
     return []
 
 @register.filter
+def get_string_item(dictionary, key):
+    if not dictionary:
+        return ""  # Changed from []
+    
+    # Try as string first
+    str_key = str(key)
+    if str_key in dictionary:
+        return dictionary[str_key]
+    
+    # Try as integer
+    try:
+        int_key = int(key)
+        if int_key in dictionary:
+            return dictionary[int_key]
+    except (ValueError, TypeError):
+        pass
+    
+    return ""  # Changed from []
+
+@register.filter
 def dictsortreversed(value, arg):
     """Sort a list of objects in reverse order by attribute."""
     def get_value(obj):

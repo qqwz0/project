@@ -132,6 +132,9 @@ class CustomUser(AbstractUser):
         """
         department = self.get_department()
         return department.department_name if department else None
+    
+    def get_department_short_name(self):
+        return self.get_department().short_name if self.get_department() else None
 
 
 # @receiver(pre_save, sender=CustomUser)

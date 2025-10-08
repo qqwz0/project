@@ -37,7 +37,7 @@ class OnlyTeacher(models.Model):
     
     def get_absolute_url(self):
         return reverse("modal", kwargs={"pk": self.pk})
-    
+
     def __str__(self):
         return f"{self.teacher_id.first_name} {self.teacher_id.last_name}"
 
@@ -622,13 +622,26 @@ class Department(models.Model):
     """
     Кафедри - належать факультету
     """
-    department_name = models.CharField(max_length=200, unique=True, 
-                                 verbose_name="Назва кафедри",
-                                 help_text="Наприклад: Кафедра комп'ютерних наук")
-    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, 
-                               related_name='departments',
-                               verbose_name="Факультет")
-    
+    department_name = models.CharField(
+        max_length=200,
+        unique=True, 
+        verbose_name="Назва кафедри",
+        help_text="Наприклад: Кафедра комп'ютерних наук"
+    )
+    short_name = models.CharField(
+        max_length=10,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name="Коротка назва",
+        help_text="Наприклад: СП, КОІТ"
+    )
+    faculty = models.ForeignKey(
+        Faculty,
+        on_delete=models.CASCADE, 
+        related_name='departments',
+        verbose_name="Факультет"
+    )
     
     class Meta:
         verbose_name = "Кафедра"
@@ -637,6 +650,7 @@ class Department(models.Model):
 
     def __str__(self):
         return self.department_name
+
 
 class RequestFile(models.Model):
     """

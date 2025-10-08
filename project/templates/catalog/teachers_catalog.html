@@ -1,6 +1,7 @@
 {% extends "catalog/base.html" %}
 {% load static %}
 {% load widget_tweaks %}
+{% load catalog_extras %}
 
 <!-- Added modern CSS stylesheet -->
 <link rel="stylesheet" href="{% static 'css/modern-academic-style.css' %}">
@@ -321,12 +322,39 @@ When a user triggers the HX request (via button click), the modal is swapped in 
         </div>
         <div class="filter-content">
 
-        {% if not user.get_department %}
-          <hr class="devider">
-          <h3 class="option-label">{{ form.departments.label }}</h3>
-          {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
-        {% endif %}
-        
+     {% if not user.get_department %}
+      <hr class="devider">
+      <h3 class="option-label">{{ form.departments.label }}</h3>
+      <div class="form-checkbox">
+        {% for checkbox in form.departments %}
+          {% with full_name=form.departments_fullnames|get_string_item:checkbox.data.value %}
+            <label class="form-checkbox short_department">
+              <input 
+                type="checkbox" 
+                name="departments" 
+                value="{{ checkbox.data.value }}" 
+                data-short-name="{{ checkbox.data.value }}" 
+                @change="
+                  const shortName = $el.dataset.shortName || $el.value;
+                  console.log('Change event for:', shortName, 'Checked:', $el.checked);
+                  if ($el.checked) {
+                    if (!departments.includes(shortName)) {
+                      departments.push(shortName);
+                    }
+                  } else {
+                    departments = departments.filter(d => d !== shortName);
+                  }
+                  console.log('Departments array:', JSON.parse(JSON.stringify(departments)));
+                "
+              >
+              <span>{{ checkbox.choice_label }}</span>
+              <span class="nav-tooltip">{{ full_name }}</span>
+            </label>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
         <hr class="devider">
         <h3 class="option-label">{{ form.slots.label }}</h3>
         <div class="range-container">
@@ -425,8 +453,35 @@ When a user triggers the HX request (via button click), the modal is swapped in 
              class="filter-section shadow-sm"
              x-cloak>
           <div class="filter-content">
-            <h3 class="option-label">{{ form.departments.label }}</h3>
-            {% render_field form.departments class="form-checkbox" autocomplete="off" @change="departments = changeDepartments($el, departments)" %}
+            {% if not user.get_department %}
+                <h3 class="option-label">{{ form.departments.label }}</h3>
+                <div class="form-checkbox">
+                {% for checkbox in form.departments %}
+                  {% with full_name=form.departments_fullnames|get_string_item:checkbox.data.value %}
+                    <label class="form-checkbox short_department">
+                      <input 
+                        type="checkbox" 
+                        name="departments" 
+                        value="{{ checkbox.data.value }}" 
+                        data-short-name="{{ checkbox.data.value }}" 
+                        @change="
+                          const shortName = $el.dataset.shortName || $el.value;
+                          if ($el.checked) {
+                            if (!departments.includes(shortName)) {
+                              departments.push(shortName);
+                            }
+                          } else {
+                            departments = departments.filter(d => d !== shortName);
+                          }
+                        "
+                      >
+                      <span>{{ checkbox.choice_label }}</span>
+                      <span class="nav-tooltip">{{ full_name }}</span>
+                    </label>
+                  {% endwith %}
+                {% endfor %}
+              </div>
+            {% endif %}
 
             <hr class="devider">
             <h3 class="option-label">{{ form.slots.label }}</h3>

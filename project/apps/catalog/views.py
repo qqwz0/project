@@ -234,6 +234,8 @@ class TeachersListView(LoginRequiredMixin, ListView):
                                 "first_name": teacher.teacher_id.first_name,
                                 "last_name": teacher.teacher_id.last_name,
                                 "department": teacher.teacher_id.get_department_name(),
+                                "department_short_name":
+                                    teacher.teacher_id.get_department_short_name(),
                                 "full_name": full_name,
                             },
                         },
