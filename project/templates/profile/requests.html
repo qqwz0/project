@@ -551,6 +551,15 @@
                                 {% endif %}
                                 <strong>Дата запиту:</strong>
                                 <p class="date">{{ request.request_date|date:"d.m.Y" }}</p>
+                                
+                                {% if request.rejected_reason %}
+                                    <div style="margin-top: 15px; padding: 12px; background-color: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+                                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #dc2626; font-size: 16px; font-weight: 600;">
+                                            <i class="fas fa-info-circle" style="margin-right: 5px;"></i> Причина відхилення
+                                        </h4>
+                                        <p style="margin: 0; color: #7f1d1d;">{{ request.rejected_reason }}</p>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <!-- Button to restore request -->

@@ -173,9 +173,14 @@ class TeachersListView(LoginRequiredMixin, ListView):
                 course = None
                 is_master = "М" in user.academic_group.upper()
                 if user.academic_group:
-                    match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
+                    # Оновлений регулярний вираз для обробки ВПК груп
+                    match = re.match(r"^ФЕ[СМЛПІ]-(\d+)(ВПК)?", user.academic_group)
                     if match:
-                        course = int(match.group(1))
+                        course_str = match.group(1)
+                        if len(course_str) > 1:
+                            course = int(course_str[0])
+                        else:
+                            course = int(course_str)
                 
                 # Оновлена, більш точна умова фільтрації
                 user_department = user.get_department()
@@ -190,14 +195,19 @@ class TeachersListView(LoginRequiredMixin, ListView):
                     student_id=user, teacher_id__in=teacher_ids, request_status="Очікує"
                 ).values_list("teacher_id", flat=True)
                 already_requested_set = set(already_requested_qs)
-                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
+                # Оновлений регулярний вираз для обробки ВПК груп
+                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", user.academic_group)
                 if match:
-                    user_stream = (
-                        match.group(1)
-                        + "-"
-                        + match.group(2)
-                        + ("м" if is_master else "")
-                    )
+                    faculty = match.group(1)
+                    course = match.group(2)
+                    vpk = match.group(3) if match.group(3) else ''
+                    
+                    # Для ВПК груп: ФЕП-24ВПК -> ФЕП-2ВПК, ФЕП-14ВПК -> ФЕП-1ВПК
+                    if vpk == 'ВПК' and len(course) > 1:
+                        # Якщо курс має 2 цифри (14, 24, 34, 44), беремо першу цифру
+                        course = course[0]
+                    
+                    user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
 
                     # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
                     slots = slots.filter(stream_id__stream_code__iexact=user_stream)
@@ -321,11 +331,17 @@ class TeacherModalView(
         # Безпечна обробка відсутнього academic_group
         user_academic_group = getattr(user, "academic_group", "") or ""
         is_master = "М" in user_academic_group.upper()
-        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user_academic_group)
+        # Оновлений регулярний вираз для обробки ВПК груп
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", user_academic_group)
         if match:
-            user_stream = (
-                match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
-            )
+            faculty = match.group(1)
+            course = match.group(2)
+            vpk = match.group(3) if match.group(3) else ''
+            
+            if vpk == 'ВПК' and len(course) > 1:
+                course = course[0]
+            
+            user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
             print(f"User stream: {user_stream}")
             # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
             
@@ -1225,9 +1241,15 @@ class ThemesAPIView(LoginRequiredMixin, View):
                 course = None
                 is_master = 'М' in user.academic_group.upper() if getattr(user, 'academic_group', '') else False
                 if getattr(user, 'academic_group', None):
-                    match = re.match(r"^ФЕ[СМЛПІ]-(\d)", user.academic_group)
+                    # Оновлений регулярний вираз для обробки ВПК груп
+                    match = re.match(r"^ФЕ[СМЛПІ]-(\d+)(ВПК)?", user.academic_group)
                     if match:
-                        course = int(match.group(1))
+                        course_str = match.group(1)
+                        # Для ВПК груп: ФЕП-24ВПК -> курс 2, ФЕП-14ВПК -> курс 1
+                        if len(course_str) > 1:
+                            course = int(course_str[0])
+                        else:
+                            course = int(course_str)
                 user_department = user.get_department()
                 if user_department and ((course and course >= 3) or is_master):
                     teachers = teachers.filter(department=user_department)
@@ -1235,9 +1257,17 @@ class ThemesAPIView(LoginRequiredMixin, View):
                 # Витягуємо потік студента
                 slots = Slot.filter_by_available_slots()
                 is_matched = False
-                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", getattr(user, 'academic_group', '') )
+                # Оновлений регулярний вираз для обробки ВПК груп
+                match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", getattr(user, 'academic_group', '') )
                 if match:
-                    user_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                    faculty = match.group(1)
+                    course = match.group(2)
+                    vpk = match.group(3) if match.group(3) else ''
+                    
+                    if vpk == 'ВПК' and len(course) > 1:
+                        course = course[0]
+                    
+                    user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
                     slots = slots.filter(stream_id__stream_code__iexact=user_stream)
                     is_matched = True
                 

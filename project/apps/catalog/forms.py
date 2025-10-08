@@ -141,9 +141,17 @@ class RequestForm(forms.ModelForm):
             
             # Extract stream code from academic group (e.g., ФЕС-22 -> ФЕС-2)
             is_master = "М" in user.academic_group.upper()
-            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", user.academic_group)
+            # Оновлений регулярний вираз для обробки ВПК груп
+            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", user.academic_group)
             if match:
-                user_stream_code = match.group(1) + "-" + match.group(2) + ("м" if is_master else "")
+                faculty = match.group(1)
+                course = match.group(2)
+                vpk = match.group(3) if match.group(3) else ''
+                
+                if vpk == 'ВПК' and len(course) > 1:
+                    course = course[0]
+                
+                user_stream_code = faculty + "-" + course + vpk + ("м" if is_master else "")
                 print(f"Student academic group: {user.academic_group}, extracted stream: {user_stream_code}")
                 try:
                     user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)

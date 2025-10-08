@@ -55,7 +55,13 @@
   /* Error Message Styling */
   .success-popup.error {
     border-color: #EB5757; /* Red border for errors */
+    max-width: 500px; /* Wider for longer error messages */
   }
+  
+  .success-popup.error .success-icon {
+    display: none; /* Hide the success icon for errors */
+  }
+  
     
       /* Animation for Popup */
       @keyframes fadeIn {

@@ -134,11 +134,9 @@
     {% if messages %}
         <div class="messages">
             {% for message in messages %}
-                <div class="success-popup {{ message.tags }}">
+                <div class="success-popup {% if message.tags == 'error' %}error{% endif %} {{ message.tags }}">
                     {% if message.tags == 'success' %}
                         <img src="{% static 'images/toastIcon.svg' %}" alt="Success" class="success-icon" />
-                    {% elif message.tags == 'error' %}
-                        <img src="{% static 'images/errorIcon.svg' %}" alt="Error" class="success-icon" />
                     {% endif %}
                     <div>
                         <div class="popup-content">

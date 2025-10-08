@@ -510,6 +510,8 @@ def fake_login(request):
     return redirect("profile")
 
 
+
+
 def fake_student_login(request):
     email = "STUDENT.STUDENT@lnu.edu.ua"
     try:
@@ -1384,10 +1386,40 @@ def restore_request(request, request_id):
 
             # Check if the user is the teacher who rejected the request
             if req.teacher_id.teacher_id == request.user:
-                # Check if request is in rejected status
                 if req.request_status == "Відхилено":
+                    if req.rejected_reason and "Автоматично скасовано" in req.rejected_reason:
+                        error_msg = "Цей запит був автоматично скасований через прийняття іншого запиту. Ви не можете його повернути, адже студент вже має активну роботу з іншим викладачем."
+                        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                            return JsonResponse({"success": False, "error": error_msg})
+                        else:
+                            messages.error(request, error_msg)
+                            return redirect("profile")
+                    
+                    if Request.objects.filter(
+                        student_id=req.student_id, 
+                        request_status="Активний"
+                    ).exists():
+                        error_msg = "Студент вже має активний запит. Відновлення неможливе."
+                        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                            return JsonResponse({"success": False, "error": "Студент вже має активний запит"})
+                        else:
+                            messages.error(request, error_msg)
+                            return redirect("profile")
+                    
+                    if Request.objects.filter(
+                        student_id=req.student_id, 
+                        request_status="Очікує"
+                    ).exclude(id=req.id).exists():
+                        error_msg = "Студент вже має запити в обробці. Відновлення неможливе."
+                        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                            return JsonResponse({"success": False, "error": "Студент вже має запити в обробці"})
+                        else:
+                            messages.error(request, error_msg)
+                            return redirect("profile")
+                    
                     # Update request status back to pending
                     req.request_status = "Очікує"
+                    req.rejected_reason = None  # Очищаємо причину відхилення
                     req.save()
 
                     messages.success(request, "Запит успішно відновлено")
@@ -1543,9 +1575,17 @@ def request_details_for_approve(request, request_id):
         student = req.student_id
         if hasattr(student, 'academic_group') and student.academic_group:
             is_master = "м" in student.academic_group.lower()
-            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", student.academic_group)
+            # Оновлений регулярний вираз для обробки ВПК груп
+            match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", student.academic_group)
             if match:
-                stream_code_base = f"{match.group(1)}-{match.group(2)}"
+                faculty = match.group(1)
+                course = match.group(2)
+                vpk = match.group(3) if match.group(3) else ''
+                
+                if vpk == 'ВПК' and len(course) > 1:
+                    course = course[0]
+                
+                stream_code_base = f"{faculty}-{course}{vpk}"
                 user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
                 try:
                     user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
@@ -1856,9 +1896,17 @@ def get_student_request_details(request, request_id):
     student = req.student_id
     if hasattr(student, 'academic_group') and student.academic_group:
         is_master = "м" in student.academic_group.lower()
-        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d)", student.academic_group)
+        # Оновлений регулярний вираз для обробки ВПК груп
+        match = re.match(r"([А-ЯІЇЄҐ]+)-(\d+)(ВПК)?", student.academic_group)
         if match:
-            stream_code_base = f"{match.group(1)}-{match.group(2)}"
+            faculty = match.group(1)
+            course = match.group(2)
+            vpk = match.group(3) if match.group(3) else ''
+            
+            if vpk == 'ВПК' and len(course) > 1:
+                course = course[0]
+            
+            stream_code_base = f"{faculty}-{course}{vpk}"
             user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
             try:
                 user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
@@ -2356,7 +2404,8 @@ def cancel_active_request(request, request_id):
             return JsonResponse({"success": False, "error": "У вас немає прав для скасування цього запиту"})
             
         try:
-            assert_can_cancel(req)
+            from apps.catalog.semestr_rules import assert_can_cancel_request
+            assert_can_cancel_request(req)
         except ValidationError as e:
             return JsonResponse({"success": False, "error": e.message}, status=400)
         
