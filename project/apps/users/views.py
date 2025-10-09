@@ -1582,7 +1582,7 @@ def request_details_for_approve(request, request_id):
                 course = match.group(2)
                 vpk = match.group(3) if match.group(3) else ''
                 
-                if vpk == 'ВПК' and len(course) > 1:
+                if len(course) > 1:
                     course = course[0]
                 
                 stream_code_base = f"{faculty}-{course}{vpk}"
@@ -1903,7 +1903,7 @@ def get_student_request_details(request, request_id):
             course = match.group(2)
             vpk = match.group(3) if match.group(3) else ''
             
-            if vpk == 'ВПК' and len(course) > 1:
+            if len(course) > 1:
                 course = course[0]
             
             stream_code_base = f"{faculty}-{course}{vpk}"

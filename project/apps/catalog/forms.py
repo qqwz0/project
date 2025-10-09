@@ -148,7 +148,7 @@ class RequestForm(forms.ModelForm):
                 course = match.group(2)
                 vpk = match.group(3) if match.group(3) else ''
                 
-                if vpk == 'ВПК' and len(course) > 1:
+                if len(course) > 1:
                     course = course[0]
                 
                 user_stream_code = faculty + "-" + course + vpk + ("м" if is_master else "")

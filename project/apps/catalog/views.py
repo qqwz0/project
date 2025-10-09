@@ -202,9 +202,7 @@ class TeachersListView(LoginRequiredMixin, ListView):
                     course = match.group(2)
                     vpk = match.group(3) if match.group(3) else ''
                     
-                    # Для ВПК груп: ФЕП-24ВПК -> ФЕП-2ВПК, ФЕП-14ВПК -> ФЕП-1ВПК
-                    if vpk == 'ВПК' and len(course) > 1:
-                        # Якщо курс має 2 цифри (14, 24, 34, 44), беремо першу цифру
+                    if len(course) > 1:
                         course = course[0]
                     
                     user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
@@ -338,7 +336,7 @@ class TeacherModalView(
             course = match.group(2)
             vpk = match.group(3) if match.group(3) else ''
             
-            if vpk == 'ВПК' and len(course) > 1:
+            if len(course) > 1:
                 course = course[0]
             
             user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
@@ -1264,7 +1262,7 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     course = match.group(2)
                     vpk = match.group(3) if match.group(3) else ''
                     
-                    if vpk == 'ВПК' and len(course) > 1:
+                    if len(course) > 1:
                         course = course[0]
                     
                     user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
