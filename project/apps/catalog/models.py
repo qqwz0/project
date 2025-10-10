@@ -252,13 +252,24 @@ class Request(models.Model):
     def extract_stream_from_academic_group(self):
         """
         Extracts the stream code from the student's academic group using a regular expression.
-        Example: 'ФЕС-23' -> 'ФЕС-2', 'ФЕІ-21м' -> 'ФЕІ-2'.
+        Example: 'ФЕС-23' -> 'ФЕС-2', 'ФЕІ-21м' -> 'ФЕІ-2', 'ФЕП-24ВПК' -> 'ФЕП-24ВПК'.
         """
         if not self.student_id or not self.student_id.academic_group:
             return None
         
-        # Цей вираз знаходить префікс (напр. ФЕІ) та першу цифру курсу (напр. 2)
-        match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', self.student_id.academic_group)
+        academic_group = self.student_id.academic_group
+        
+        # Спочатку перевіряємо чи це ВПК група
+        vpk_match = re.match(r'([А-ЯІЇЄҐ]+)-(\d+)(ВПК)', academic_group)
+        if vpk_match:
+            # Для ВПК груп також використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+            course = vpk_match.group(2)
+            if len(course) > 1:
+                course = course[0]
+            return f"{vpk_match.group(1)}-{course}{vpk_match.group(3)}"
+        
+        # Для звичайних груп використовуємо стару логіку
+        match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', academic_group)
         if match:
             # Складаємо їх у код потоку (напр. ФЕІ-2)
             return f"{match.group(1)}-{match.group(2)}"

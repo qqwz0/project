@@ -148,10 +148,17 @@ class RequestForm(forms.ModelForm):
                 course = match.group(2)
                 vpk = match.group(3) if match.group(3) else ''
                 
-                if len(course) > 1:
-                    course = course[0]
-                
-                user_stream_code = faculty + "-" + course + vpk + ("м" if is_master else "")
+                # Для ВПК груп також використовуємо тільки першу цифру курсу
+                if vpk:
+                    # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                    if len(course) > 1:
+                        course = course[0]
+                    user_stream_code = faculty + "-" + course + vpk + ("м" if is_master else "")
+                else:
+                    # Звичайна група: використовуємо тільки першу цифру курсу
+                    if len(course) > 1:
+                        course = course[0]
+                    user_stream_code = faculty + "-" + course + ("м" if is_master else "")
                 print(f"Student academic group: {user.academic_group}, extracted stream: {user_stream_code}")
                 try:
                     user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)

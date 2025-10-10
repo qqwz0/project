@@ -650,9 +650,23 @@ class RequestForm(forms.ModelForm):
             try:
                 # Визначаємо потік студента за його групою
                 is_master = student.academic_group.endswith('м')
-                match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', student.academic_group)
-                if match:
-                    student_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                
+                # Спочатку перевіряємо чи це ВПК група
+                vpk_match = re.match(r'([А-ЯІЇЄҐ]+)-(\d+)(ВПК)', student.academic_group)
+                if vpk_match:
+                    # Для ВПК груп також використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                    course = vpk_match.group(2)
+                    if len(course) > 1:
+                        course = course[0]
+                    student_stream = f"{vpk_match.group(1)}-{course}{vpk_match.group(3)}"
+                else:
+                    # Для звичайних груп використовуємо стару логіку
+                    match = re.match(r'([А-ЯІЇЄҐ]+)-(\d)', student.academic_group)
+                    if match:
+                        student_stream = match.group(1) + '-' + match.group(2) + ('м' if is_master else '')
+                    else:
+                        raise forms.ValidationError(f"Некоректний формат групи: {student.academic_group}")
+                
                 stream = Stream.objects.get(stream_code__iexact=student_stream)
 
                 # Шукаємо відповідний слот

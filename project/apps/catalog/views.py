@@ -202,10 +202,17 @@ class TeachersListView(LoginRequiredMixin, ListView):
                     course = match.group(2)
                     vpk = match.group(3) if match.group(3) else ''
                     
-                    if len(course) > 1:
-                        course = course[0]
-                    
-                    user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+                    # Для ВПК груп також використовуємо тільки першу цифру курсу
+                    if vpk:
+                        # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                        if len(course) > 1:
+                            course = course[0]
+                        user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+                    else:
+                        # Звичайна група: використовуємо тільки першу цифру курсу
+                        if len(course) > 1:
+                            course = course[0]
+                        user_stream = faculty + '-' + course + ('м' if is_master else '')
 
                     # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
                     slots = slots.filter(stream_id__stream_code__iexact=user_stream)
@@ -336,10 +343,17 @@ class TeacherModalView(
             course = match.group(2)
             vpk = match.group(3) if match.group(3) else ''
             
-            if len(course) > 1:
-                course = course[0]
-            
-            user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+            # Для ВПК груп також використовуємо тільки першу цифру курсу
+            if vpk:
+                # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                if len(course) > 1:
+                    course = course[0]
+                user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+            else:
+                # Звичайна група: використовуємо тільки першу цифру курсу
+                if len(course) > 1:
+                    course = course[0]
+                user_stream = faculty + '-' + course + ('м' if is_master else '')
             print(f"User stream: {user_stream}")
             # Фільтруємо по коду потоку та освітньому ступеню, але дозволяємо None значення
             
@@ -1262,10 +1276,17 @@ class ThemesAPIView(LoginRequiredMixin, View):
                     course = match.group(2)
                     vpk = match.group(3) if match.group(3) else ''
                     
-                    if len(course) > 1:
-                        course = course[0]
-                    
-                    user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+                    # Для ВПК груп також використовуємо тільки першу цифру курсу
+                    if vpk:
+                        # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                        if len(course) > 1:
+                            course = course[0]
+                        user_stream = faculty + '-' + course + vpk + ('м' if is_master else '')
+                    else:
+                        # Звичайна група: використовуємо тільки першу цифру курсу
+                        if len(course) > 1:
+                            course = course[0]
+                        user_stream = faculty + '-' + course + ('м' if is_master else '')
                     slots = slots.filter(stream_id__stream_code__iexact=user_stream)
                     is_matched = True
                 

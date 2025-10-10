@@ -1582,10 +1582,17 @@ def request_details_for_approve(request, request_id):
                 course = match.group(2)
                 vpk = match.group(3) if match.group(3) else ''
                 
-                if len(course) > 1:
-                    course = course[0]
-                
-                stream_code_base = f"{faculty}-{course}{vpk}"
+                # Для ВПК груп також використовуємо тільки першу цифру курсу
+                if vpk:
+                    # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                    if len(course) > 1:
+                        course = course[0]
+                    stream_code_base = f"{faculty}-{course}{vpk}"
+                else:
+                    # Звичайна група: використовуємо тільки першу цифру курсу
+                    if len(course) > 1:
+                        course = course[0]
+                    stream_code_base = f"{faculty}-{course}"
                 user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
                 try:
                     user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
@@ -1903,10 +1910,17 @@ def get_student_request_details(request, request_id):
             course = match.group(2)
             vpk = match.group(3) if match.group(3) else ''
             
-            if len(course) > 1:
-                course = course[0]
-            
-            stream_code_base = f"{faculty}-{course}{vpk}"
+            # Для ВПК груп також використовуємо тільки першу цифру курсу
+            if vpk:
+                # ВПК група: використовуємо тільки першу цифру курсу (напр. ФЕП-24ВПК -> ФЕП-2ВПК)
+                if len(course) > 1:
+                    course = course[0]
+                stream_code_base = f"{faculty}-{course}{vpk}"
+            else:
+                # Звичайна група: використовуємо тільки першу цифру курсу
+                if len(course) > 1:
+                    course = course[0]
+                stream_code_base = f"{faculty}-{course}"
             user_stream_code = f"{stream_code_base}м" if is_master else stream_code_base
             try:
                 user_stream = Stream.objects.get(stream_code__iexact=user_stream_code)
