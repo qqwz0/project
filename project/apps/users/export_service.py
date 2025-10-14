@@ -24,7 +24,7 @@ def export_requests_to_word(queryset):
     if not queryset:
         raise ValueError('Нічого не обрано.')
 
-    # Validate uniformity for year and specialty (derived from stream)
+    # Collect year and specialty (derived from stream) – allow multiple, no hard failure
     years = set(q.academic_year for q in queryset)
     def _specialty_display(stream):
         if getattr(stream, 'specialty', None):
@@ -32,11 +32,15 @@ def export_requests_to_word(queryset):
             return sp.name or f"{sp.code}"
         return stream.specialty_name or ''
 
-    streams = set(_specialty_display(q.slot.stream_id) for q in queryset)
-    if len(years) != 1 or len(streams) != 1:
-        raise ValueError('Запити мають бути з одного року й одного потоку.')
-    year = years.pop()
-    specialty_display = streams.pop()
+    def _safe_stream(req):
+        try:
+            return _specialty_display(req.slot.stream_id)
+        except Exception:
+            return ''
+
+    streams = set(_safe_stream(q) for q in queryset)
+    year = years.pop() if len(years) == 1 else ''
+    specialty_display = streams.pop() if len(streams) == 1 else ''
 
     # Departments: якщо кілька кафедр — не вказуємо кафедру у заголовку
     depts = set(
@@ -125,7 +129,9 @@ def export_requests_to_word(queryset):
     doc.save(buffer)
     buffer.seek(0)
 
-    raw_name = f"Report_{group_fname}_{specialty_display}_{year}.docx"
+    # Build a safe filename even if fields are blank or mixed
+    parts = ["Report", group_fname or "groups", specialty_display or "mixed", str(year or "all")]
+    raw_name = "_".join(parts) + ".docx"
     ascii_fallback = "report.docx"  # safe ASCII fallback
     quoted_utf8 = urlquote(raw_name)
 
