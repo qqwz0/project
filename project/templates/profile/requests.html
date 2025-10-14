@@ -46,15 +46,12 @@
                                     </span>
                                 {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.custom_student_theme %}
+                                {% if request.topic_name %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                                {% elif request.approved_student_theme %}
+                                    <p class="theme">{{ request.topic_name }}</p>
+                                {% else %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                                {% elif request.teacher_theme %}
-                                    <strong>Тема:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                    <p class="theme text-muted">Тема не вказана</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
                                     <strong>Тематика студента:</strong>
@@ -125,15 +122,12 @@
                                     </span>
                                 {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.custom_student_theme %}
+                                {% if request.topic_name %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                                {% elif request.approved_student_theme %}
+                                    <p class="theme">{{ request.topic_name }}</p>
+                                {% else %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                                {% elif request.teacher_theme %}
-                                    <strong>Тема:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                    <p class="theme text-muted">Тема не вказана</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
                                     <strong>Тематика студента:</strong>
@@ -190,15 +184,12 @@
                                     </span>
                                 {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.custom_student_theme %}
+                                {% if request.topic_name %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                                {% elif request.approved_student_theme %}
+                                    <p class="theme">{{ request.topic_name }}</p>
+                                {% else %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                                {% elif request.teacher_theme %}
-                                    <strong>Тема:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                    <p class="theme text-muted">Тема не вказана</p>
                                 {% endif %}
                                 {% if request.motivation_text %}
                                     <strong>Мотивація:</strong>
@@ -258,15 +249,12 @@
                                     </span>
                                 {% endif %}
                                 <p class="role">{{ request.teacher_id.teacher_id.role }}</p>
-                                {% if request.custom_student_theme %}
+                                {% if request.topic_name %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                                {% elif request.approved_student_theme %}
+                                    <p class="theme">{{ request.topic_name }}</p>
+                                {% else %}
                                     <strong>Тема:</strong>
-                                    <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                                {% elif request.teacher_theme %}
-                                    <strong>Тема:</strong>
-                                    <p class="theme">{{ request.teacher_theme.theme }}</p>
+                                    <p class="theme text-muted">Тема не вказана</p>
                                 {% endif %}
                                 {% if request.student_themes.all %}
                                     <strong>Тематика студента:</strong>
@@ -345,15 +333,12 @@
                         <h3>{{ request.student_id.get_full_name }}</h3>
                         <p class="role">{{ request.student_id.academic_group }}</p>
 
-                        {% if request.custom_student_theme %}
+                        {% if request.topic_name %}
                             <strong>Обрана тема:</strong>
-                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                        {% elif request.approved_student_theme %}
+                            <p class="theme">{{ request.topic_name }}</p>
+                        {% else %}
                             <strong>Обрана тема:</strong>
-                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                        {% elif request.teacher_theme %}
-                            <strong>Обрана тема:</strong>
-                            <p class="theme">{{ request.teacher_theme.theme }}</p>
+                            <p class="theme text-muted">Тема не вказана</p>
                         {% endif %}
 
                         {% if request.student_themes.all %}

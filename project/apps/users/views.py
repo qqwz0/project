@@ -1827,38 +1827,10 @@ def edit_request_theme(request, request_id):
             logger.warning("Empty theme provided")
             return JsonResponse({"error": "Тема не може бути порожньою"}, status=400)
 
-        # Update the theme based on what type it currently is, preserving the type
-        if req.custom_student_theme:
-            # If it's a custom student theme, update it directly
-            logger.info(
-                f"Updating custom student theme: {req.custom_student_theme} -> {new_theme}"
-            )
-            req.custom_student_theme = new_theme
-            req.save()
-        elif req.approved_student_theme:
-            # If it's an approved student theme, update the theme text
-            logger.info(
-                f"Updating approved student theme: {req.approved_student_theme.theme} -> {new_theme}"
-            )
-            req.approved_student_theme.theme = new_theme
-            req.approved_student_theme.save()
-        elif req.teacher_theme:
-            logger.info(
-                f"Updating existing teacher theme: {req.teacher_theme.theme} -> {new_theme}"
-            )
-            req.teacher_theme.theme = new_theme
-            req.teacher_theme.save()
-        else:
-            logger.info("Creating new teacher theme")
-            # If no theme exists, create a new teacher theme
-            teacher_profile = OnlyTeacher.objects.get(teacher_id=request.user)
-            new_teacher_theme = TeacherTheme.objects.create(
-                teacher_id=teacher_profile,
-                theme=new_theme,
-                theme_description="Тема, створена під час редагування",
-            )
-            req.teacher_theme = new_teacher_theme
-            req.save()
+        # Update the topic_name field (main theme field)
+        logger.info(f"Updating topic_name: {req.topic_name} -> {new_theme}")
+        req.topic_name = new_theme
+        req.save()
 
         logger.info("Theme updated successfully")
         return JsonResponse({"success": True, "message": "Тему успішно оновлено"})

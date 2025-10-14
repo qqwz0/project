@@ -337,7 +337,8 @@ class Request(models.Model):
         self.clean()
 
         # 2. Логіка, яка модифікує поля перед збереженням
-        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked:
+        # Тільки якщо topic_name не встановлений вручну (не порожній)
+        if self.request_status in ['Активний', 'Завершено'] and not self.is_topic_locked and not self.topic_name:
             if self.teacher_theme:
                 self.topic_name = self.teacher_theme.theme
                 self.topic_description = self.teacher_theme.theme_description

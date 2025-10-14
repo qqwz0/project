@@ -18,15 +18,12 @@
                             {{ request_obj.teacher_id.teacher_id.get_full_name }}
                         </a>
                         <p class="role">{{ request_obj.teacher_id.teacher_id.role }}</p>
-                        {% if request_obj.custom_student_theme %}
+                        {% if request_obj.topic_name %}
                             <strong>Тема:</strong>
-                            <p class="theme">{{ request_obj.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
-                        {% elif request_obj.approved_student_theme %}
+                            <p class="theme">{{ request_obj.topic_name }}</p>
+                        {% else %}
                             <strong>Тема:</strong>
-                            <p class="theme">{{ request_obj.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                        {% elif request_obj.teacher_theme %}
-                            <strong>Тема:</strong>
-                            <p class="theme">{{ request_obj.teacher_theme.theme }}</p>
+                            <p class="theme text-muted">Тема не вказана</p>
                         {% endif %}
                         {% if request_obj.student_themes.all %}
                             <strong>Тематика студента:</strong>
@@ -235,36 +232,19 @@
                             <p class="role text-muted">Віртуальний запит</p>
                             <p class="text-muted">Група: не призначена</p>
                         {% endif %}
-                        {% if request.custom_student_theme %}
+                        {% if request.topic_name %}
                             <strong>Тема:</strong>
-                            <p class="theme">{{ request.custom_student_theme }} <span style="color:#888;font-size:0.9em;">(довільна тема студента)</span></p>
+                            <p class="theme">{{ request.topic_name }}</p>
                             {% if user_profile.role == "Викладач" %}
-                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.custom_student_theme|escapejs }}')" 
+                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.topic_name|escapejs }}')" 
                                         class="edit-theme-btn" 
                                         style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
                                     <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
                                 </button>
                             {% endif %}
-                        {% elif request.approved_student_theme %}
+                        {% else %}
                             <strong>Тема:</strong>
-                            <p class="theme">{{ request.approved_student_theme.theme }} <span style="color:#888;font-size:0.9em;">(запропоновано студентом)</span></p>
-                            {% if user_profile.role == "Викладач" %}
-                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.approved_student_theme.theme|escapejs }}')" 
-                                        class="edit-theme-btn" 
-                                        style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
-                                    <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
-                                </button>
-                            {% endif %}
-                        {% elif request.teacher_theme %}
-                            <strong>Тема:</strong>
-                            <p class="theme">{{ request.teacher_theme.theme }}</p>
-                            {% if user_profile.role == "Викладач" %}
-                                <button onclick="showEditThemeModal('{{ request.id }}', '{{ request.teacher_theme.theme|escapejs }}')" 
-                                        class="edit-theme-btn" 
-                                        style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.1);background:#6B7280;color:#fff;border:none;cursor:pointer;transition:background 0.2s,box-shadow 0.2s;margin-top:8px;margin-bottom:8px;line-height:1.2;">
-                                    <i class="fas fa-edit" style="margin-right:6px;font-size:0.8rem;"></i> Редагувати тему
-                                </button>
-                            {% endif %}
+                            <p class="theme text-muted">Тема не вказана</p>
                         {% endif %}
                     </div>
                 </div>
