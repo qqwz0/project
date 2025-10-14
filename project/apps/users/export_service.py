@@ -24,13 +24,19 @@ def export_requests_to_word(queryset):
     if not queryset:
         raise ValueError('Нічого не обрано.')
 
-    # Validate uniformity for year and stream
+    # Validate uniformity for year and specialty (derived from stream)
     years = set(q.academic_year for q in queryset)
-    streams = set(q.slot.stream_id.specialty_name for q in queryset)
+    def _specialty_display(stream):
+        if getattr(stream, 'specialty', None):
+            sp = stream.specialty
+            return sp.name or f"{sp.code}"
+        return stream.specialty_name or ''
+
+    streams = set(_specialty_display(q.slot.stream_id) for q in queryset)
     if len(years) != 1 or len(streams) != 1:
         raise ValueError('Запити мають бути з одного року й одного потоку.')
     year = years.pop()
-    stream = streams.pop()
+    specialty_display = streams.pop()
 
     # Departments: якщо кілька кафедр — не вказуємо кафедру у заголовку
     depts = set(
@@ -76,13 +82,12 @@ def export_requests_to_word(queryset):
             if req.student_id:
                 student = " ".join(req.student_id.get_full_name_with_patronymic().split()[:2])
 
-            # theme: priority approved_student_theme > teacher_theme > custom_student_theme
-            if req.approved_student_theme and getattr(req.approved_student_theme, 'theme', None):
-                theme = req.approved_student_theme.theme
-            elif req.teacher_theme and getattr(req.teacher_theme, 'theme', None):
-                theme = req.teacher_theme.theme
-            else:
-                theme = req.custom_student_theme or ''
+            theme = (
+                (req.topic_name or '').strip()
+                or (req.approved_student_theme.theme if getattr(req.approved_student_theme, 'theme', None) else '')
+                or (req.teacher_theme.theme if getattr(req.teacher_theme, 'theme', None) else '')
+                or (req.custom_student_theme or '')
+            )
 
             # teacher string
             teacher_str = ''
@@ -107,7 +112,7 @@ def export_requests_to_word(queryset):
 
     context = {
         'groups': groups_list,
-        'stream': stream,
+        'stream': specialty_display,
         'department': department,
         'year': year,
     }
@@ -120,7 +125,7 @@ def export_requests_to_word(queryset):
     doc.save(buffer)
     buffer.seek(0)
 
-    raw_name = f"Report_{group_fname}_{stream}_{year}.docx"
+    raw_name = f"Report_{group_fname}_{specialty_display}_{year}.docx"
     ascii_fallback = "report.docx"  # safe ASCII fallback
     quoted_utf8 = urlquote(raw_name)
 
