@@ -2262,9 +2262,9 @@ def update_teacher_theme(request, theme_id):
                 {"error": "Назва теми не може бути порожньою"}, status=400
             )
 
-        if len(theme_name) > 100:
+        if len(theme_name) > 200:
             return JsonResponse(
-                {"error": "Назва теми занадто довга (максимум 100 символів)"},
+                {"error": "Назва теми занадто довга (максимум 200 символів)"},
                 status=400,
             )
 

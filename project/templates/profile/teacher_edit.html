@@ -265,7 +265,7 @@
                 <div id="new-theme-template" style="display: none;">
                     <div class="theme-card new-theme">
                         <div class="theme-title-container">
-                            <input type="text" class="theme-title-input" placeholder="Назва теми" maxlength="100">
+                            <input type="text" class="theme-title-input" placeholder="Назва теми" maxlength="200">
                         </div>
                         
                         <div class="theme-status-container">
@@ -925,7 +925,7 @@ function editTheme(themeId) {
     const originalActions = actionsDiv.innerHTML;
     
     // Перетворити заголовок на поле введення
-    titleContainer.innerHTML = `<input type="text" class="theme-title-input" value="${originalTitle}" maxlength="100">`;
+    titleContainer.innerHTML = `<input type="text" class="theme-title-input" value="${originalTitle}" maxlength="200">`;
     
     // Перетворити опис на textarea або створити поле якщо його немає
     if (descriptionDiv) {
